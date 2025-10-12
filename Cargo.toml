@@ -1,0 +1,49 @@
+[workspace]
+members  = ["benches/*", "crates/*", "examples/*"]
+resolver = "2"
+
+[workspace.dependencies]
+
+# External
+
+bytes             = { version = "1" }
+derive_more       = { version = "2", features = ["full"] }
+fancy_constructor = { version = "2" }
+fjall             = { version = "=3.0.0-pre.0" }
+rapidhash         = { version = "4" }
+self_cell         = { version = "1" }
+
+# Workspace
+
+[workspace.lints.clippy]
+cargo       = "warn"
+complexity  = "warn"
+correctness = "deny"
+pedantic    = "warn"
+perf        = "warn"
+restriction = "allow"
+style       = "warn"
+suspicious  = "warn"
+
+[workspace.lints.rust]
+deprecated_safe         = "warn"
+future_incompatible     = "warn"
+keyword_idents          = "warn"
+let_underscore          = "warn"
+nonstandard_style       = "warn"
+refining_impl_trait     = "warn"
+rust_2018_compatibility = "warn"
+rust_2018_idioms        = "warn"
+rust_2021_compatibility = "warn"
+rust_2024_compatibility = "warn"
+unused                  = "warn"
+
+[workspace.package]
+authors    = ["Andrew Cherry (@kolektiv)"]
+categories = ["data-structures"]
+edition    = "2024"
+keywords   = ["event", "sourcing", "streaming"]
+license    = "AGPL-3.0-only"
+readme     = "README.md"
+repository = "https://github.com/eventrica/eventric-core"
+version    = "0.1.0"
