@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.dependencies]
 
-# External
+eventric-core = { path = "crates/eventric-core" }
 
 bytes             = { version = "1" }
 derive_more       = { version = "2", features = ["full"] }
@@ -12,8 +12,6 @@ fancy_constructor = { version = "2" }
 fjall             = { version = "=3.0.0-pre.0" }
 rapidhash         = { version = "4" }
 self_cell         = { version = "1" }
-
-# Workspace
 
 [workspace.lints.clippy]
 cargo       = "warn"
