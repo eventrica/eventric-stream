@@ -4,7 +4,8 @@ resolver = "2"
 
 [workspace.dependencies]
 
-eventric-core = { path = "crates/eventric-core" }
+eventric-core       = { path = "crates/eventric-core" }
+eventric-core-model = { path = "crates/eventric-core-model" }
 
 bytes             = { version = "1" }
 derive_more       = { version = "2", features = ["full"] }

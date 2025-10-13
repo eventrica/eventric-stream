@@ -1,19 +1,19 @@
 use std::error::Error;
 
 use eventric_core::{
-    model::{
-        event::{
-            Tag,
-            insertion::Event,
-        },
-        query::Specifier,
-        stream::Stream,
-    },
+    model::Stream,
     persistence::{
         self,
         operation::Read,
     },
     utility::iter,
+};
+use eventric_core_model::{
+    event::{
+        Tag,
+        insertion::Event,
+    },
+    query::Specifier,
 };
 
 static PATH: &str = "./temp/data/experiments";

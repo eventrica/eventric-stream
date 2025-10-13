@@ -1,14 +1,13 @@
 use std::ops::Deref;
 
+use eventric_core_model::event::{
+    self,
+    insertion,
+};
 use fancy_constructor::new;
 use rapidhash::v3::{
     self,
     RapidSecrets,
-};
-
-use crate::model::{
-    event,
-    event::insertion,
 };
 
 // =================================================================================================

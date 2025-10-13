@@ -1,14 +1,12 @@
 use std::ops::Range;
 
+use eventric_core_model::{
+    event,
+    query,
+};
 use fancy_constructor::new;
 
-use crate::{
-    model::{
-        event,
-        query,
-    },
-    persistence::model::event::Identifier,
-};
+use crate::persistence::model::event::Identifier;
 
 // =================================================================================================
 // Query

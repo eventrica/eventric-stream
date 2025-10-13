@@ -2,6 +2,7 @@ use bytes::{
     Buf as _,
     BufMut as _,
 };
+use eventric_core_model::stream::Position;
 use fjall::{
     Error,
     Guard,
@@ -9,27 +10,24 @@ use fjall::{
     Slice,
 };
 
-use crate::{
-    model::stream::Position,
-    persistence::{
-        index::{
-            ID_LEN,
-            OwnedSequentialIterator,
-            POSITION_LEN,
-            SequentialIterator,
-            descriptor::HASH_LEN,
+use crate::persistence::{
+    index::{
+        ID_LEN,
+        OwnedSequentialIterator,
+        POSITION_LEN,
+        SequentialIterator,
+        descriptor::HASH_LEN,
+    },
+    model::{
+        event::{
+            Descriptor,
+            Identifier,
         },
-        model::{
-            event::{
-                Descriptor,
-                Identifier,
-            },
-            query::Specifier,
-        },
-        operation::{
-            Read,
-            Write,
-        },
+        query::Specifier,
+    },
+    operation::{
+        Read,
+        Write,
     },
 };
 

@@ -1,11 +1,9 @@
 use bytes::BufMut as _;
+use eventric_core_model::stream::Position;
 
-use crate::{
-    model::stream::Position,
-    persistence::{
-        model::event::Event,
-        operation::Write,
-    },
+use crate::persistence::{
+    model::event::Event,
+    operation::Write,
 };
 
 // =================================================================================================

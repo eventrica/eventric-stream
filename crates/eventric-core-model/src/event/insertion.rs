@@ -1,6 +1,6 @@
 use fancy_constructor::new;
 
-use crate::model::event::{
+use crate::event::{
     Descriptor,
     Tag,
 };

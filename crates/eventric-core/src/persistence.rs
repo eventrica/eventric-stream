@@ -10,19 +10,17 @@ use std::{
 };
 
 use derive_more::Debug;
+use eventric_core_model::{
+    event::insertion::Event,
+    stream::Position,
+};
 use fancy_constructor::new;
 use fjall::{
     Database,
     Keyspace,
 };
 
-use crate::{
-    model::{
-        event::insertion::Event,
-        stream::Position,
-    },
-    persistence::operation::Write,
-};
+use crate::persistence::operation::Write;
 
 // =================================================================================================
 // Persistence

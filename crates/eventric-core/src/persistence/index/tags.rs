@@ -1,11 +1,10 @@
 pub mod forward;
 
-use crate::{
-    model::stream::Position,
-    persistence::{
-        model::event::Tag,
-        operation::Write,
-    },
+use eventric_core_model::stream::Position;
+
+use crate::persistence::{
+    model::event::Tag,
+    operation::Write,
 };
 
 // =================================================================================================

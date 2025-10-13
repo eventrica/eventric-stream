@@ -4,6 +4,7 @@ pub mod tags;
 use std::error::Error;
 
 use derive_more::Debug;
+use eventric_core_model::stream::Position;
 use fjall::{
     Keyspace,
     KeyspaceCreateOptions,
@@ -11,7 +12,6 @@ use fjall::{
 use self_cell::self_cell;
 
 use crate::{
-    model::stream::Position,
     persistence::{
         Context,
         model::event::Event,

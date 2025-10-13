@@ -3,20 +3,18 @@ mod event;
 use std::error::Error;
 
 use bytes::Buf as _;
+use eventric_core_model::stream::Position;
 use fjall::{
     Keyspace,
     KeyspaceCreateOptions,
 };
 
-use crate::{
-    model::stream::Position,
-    persistence::{
-        Context,
-        model::event::Event,
-        operation::{
-            Read,
-            Write,
-        },
+use crate::persistence::{
+    Context,
+    model::event::Event,
+    operation::{
+        Read,
+        Write,
     },
 };
 

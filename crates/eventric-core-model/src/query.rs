@@ -3,7 +3,7 @@ use std::ops::Range;
 use derive_more::Debug;
 use fancy_constructor::new;
 
-use crate::model::event::{
+use crate::event::{
     Identifier,
     Tag,
     Version,
