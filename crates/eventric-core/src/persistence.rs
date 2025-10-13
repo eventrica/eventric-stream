@@ -1,6 +1,7 @@
 pub mod data;
 pub mod index;
 pub mod model;
+pub mod operation;
 pub mod reference;
 
 use std::{
@@ -13,41 +14,19 @@ use fancy_constructor::new;
 use fjall::{
     Database,
     Keyspace,
-    WriteBatch,
 };
 
-use crate::model::{
-    Position,
-    event::InsertionEvent,
+use crate::{
+    model::{
+        event::insertion::Event,
+        stream::Position,
+    },
+    persistence::operation::Write,
 };
 
 // =================================================================================================
 // Persistence
 // =================================================================================================
-
-// Configuration
-
-static POSITION_LEN: usize = size_of::<u64>();
-
-// -------------------------------------------------------------------------------------------------
-
-// Context
-
-#[derive(new, Debug)]
-#[new(vis(pub))]
-pub struct Read<'a> {
-    keyspaces: &'a Keyspaces,
-}
-
-#[derive(new, Debug)]
-#[new(vis(pub))]
-pub struct Write<'a> {
-    #[debug("Batch")]
-    batch: &'a mut WriteBatch,
-    keyspaces: &'a Keyspaces,
-}
-
-// -------------------------------------------------------------------------------------------------
 
 // Context
 
@@ -98,12 +77,10 @@ pub fn keyspaces(context: &Context) -> Result<Keyspaces, Box<dyn Error>> {
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: InsertionEvent) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: Event) {
     let event = event.into();
 
     data::insert(write, position, &event);
     index::insert(write, position, &event);
     reference::insert(write, &event);
 }
-
-// -------------------------------------------------------------------------------------------------

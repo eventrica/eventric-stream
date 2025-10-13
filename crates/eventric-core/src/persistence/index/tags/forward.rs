@@ -10,18 +10,20 @@ use fjall::{
 };
 
 use crate::{
-    model::Position,
+    model::stream::Position,
     persistence::{
-        POSITION_LEN,
-        Read,
-        Write,
         index::{
             ID_LEN,
             OwnedSequentialIterator,
+            POSITION_LEN,
             SequentialIterator,
             tags::HASH_LEN,
         },
-        model::event::HashedTag,
+        model::event::Tag,
+        operation::{
+            Read,
+            Write,
+        },
     },
 };
 
@@ -37,7 +39,7 @@ static PREFIX_LEN: usize = ID_LEN + HASH_LEN;
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, tags: &[HashedTag]) {
+pub fn insert(write: &mut Write<'_>, position: Position, tags: &[Tag]) {
     let mut key = [0u8; KEY_LEN];
 
     for tag in tags {
@@ -52,7 +54,7 @@ pub fn insert(write: &mut Write<'_>, position: Position, tags: &[HashedTag]) {
 // Iterate
 
 #[must_use]
-pub fn iterate(read: &Read<'_>, position: Option<Position>, tag: &HashedTag) -> SequentialIterator {
+pub fn iterate(read: &Read<'_>, position: Option<Position>, tag: &Tag) -> SequentialIterator {
     let map = |key: Result<Slice, Error>| {
         let key = key.expect("invalid key/value during iteration");
 
@@ -70,7 +72,7 @@ pub fn iterate(read: &Read<'_>, position: Option<Position>, tag: &HashedTag) -> 
     }
 }
 
-fn prefix<F>(index: Keyspace, tag: &HashedTag, map: F) -> SequentialIterator
+fn prefix<F>(index: Keyspace, tag: &Tag, map: F) -> SequentialIterator
 where
     F: Fn(Result<Slice, Error>) -> u64 + 'static,
 {
@@ -84,7 +86,7 @@ where
     .into()
 }
 
-fn range<F>(index: Keyspace, position: Position, tag: &HashedTag, map: F) -> SequentialIterator
+fn range<F>(index: Keyspace, position: Position, tag: &Tag, map: F) -> SequentialIterator
 where
     F: Fn(Result<Slice, Error>) -> u64 + 'static,
 {
@@ -110,7 +112,7 @@ where
 
 // Keys/Prefixes
 
-fn write_key(key: &mut [u8; KEY_LEN], position: Position, tag: &HashedTag) {
+fn write_key(key: &mut [u8; KEY_LEN], position: Position, tag: &Tag) {
     let mut key = &mut key[..];
 
     let index_id = INDEX_ID;
@@ -122,7 +124,7 @@ fn write_key(key: &mut [u8; KEY_LEN], position: Position, tag: &HashedTag) {
     key.put_u64(position);
 }
 
-fn write_prefix(prefix: &mut [u8; PREFIX_LEN], tag: &HashedTag) {
+fn write_prefix(prefix: &mut [u8; PREFIX_LEN], tag: &Tag) {
     let mut prefix = &mut prefix[..];
 
     let index_id = INDEX_ID;

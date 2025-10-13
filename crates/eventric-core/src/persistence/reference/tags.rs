@@ -1,8 +1,8 @@
 mod lookup;
 
 use crate::persistence::{
-    Write,
-    model::event::HashedTag,
+    model::event::Tag,
+    operation::Write,
 };
 
 // =================================================================================================
@@ -15,6 +15,6 @@ static HASH_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, tags: &[HashedTag]) {
+pub fn insert(write: &mut Write<'_>, tags: &[Tag]) {
     lookup::insert(write, tags);
 }

@@ -1,8 +1,8 @@
 mod lookup;
 
 use crate::persistence::{
-    Write,
-    model::event::PersistenceDescriptor,
+    model::event::Descriptor,
+    operation::Write,
 };
 
 // =================================================================================================
@@ -15,6 +15,6 @@ static HASH_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, descriptor: &PersistenceDescriptor) {
+pub fn insert(write: &mut Write<'_>, descriptor: &Descriptor) {
     lookup::insert(write, descriptor);
 }

@@ -11,11 +11,11 @@ use fjall::{
 use self_cell::self_cell;
 
 use crate::{
-    model::Position,
+    model::stream::Position,
     persistence::{
         Context,
-        Write,
-        model::event::PersistenceEvent,
+        model::event::Event,
+        operation::Write,
     },
     utility::iter::{
         SequentialAnd,
@@ -29,6 +29,7 @@ use crate::{
 
 static ID_LEN: usize = size_of::<u8>();
 static KEYSPACE_NAME: &str = "index";
+static POSITION_LEN: usize = size_of::<u64>();
 
 // -------------------------------------------------------------------------------------------------
 
@@ -44,7 +45,7 @@ pub fn keyspace(context: &Context) -> Result<Keyspace, Box<dyn Error>> {
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &PersistenceEvent) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: &Event) {
     descriptor::insert(write, position, &event.descriptor);
     tags::insert(write, position, &event.tags);
 }

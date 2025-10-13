@@ -10,23 +10,25 @@ use fjall::{
 };
 
 use crate::{
-    model::Position,
+    model::stream::Position,
     persistence::{
-        POSITION_LEN,
-        Read,
-        Write,
         index::{
             ID_LEN,
             OwnedSequentialIterator,
+            POSITION_LEN,
             SequentialIterator,
             descriptor::HASH_LEN,
         },
         model::{
-            HashedSpecifier,
             event::{
-                PersistenceDescriptor,
-                PersistenceIdentifier,
+                Descriptor,
+                Identifier,
             },
+            query::Specifier,
+        },
+        operation::{
+            Read,
+            Write,
         },
     },
 };
@@ -43,7 +45,7 @@ static PREFIX_LEN: usize = ID_LEN + HASH_LEN;
 
 //  Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &PersistenceDescriptor) {
+pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &Descriptor) {
     let mut key = [0u8; KEY_LEN];
 
     let identifier = descriptor.identifer();
@@ -63,7 +65,7 @@ pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &Persistenc
 pub fn iterate(
     read: &Read<'_>,
     position: Option<Position>,
-    specifier: &HashedSpecifier,
+    specifier: &Specifier,
 ) -> SequentialIterator {
     let version_bounds = specifier
         .range()
@@ -106,11 +108,7 @@ pub fn iterate(
     iterator.into()
 }
 
-fn prefix<F>(
-    index: Keyspace,
-    specification: &HashedSpecifier,
-    filter_map: F,
-) -> OwnedSequentialIterator
+fn prefix<F>(index: Keyspace, specification: &Specifier, filter_map: F) -> OwnedSequentialIterator
 where
     F: Fn(Result<(Slice, Slice), Error>) -> Option<u64> + 'static,
 {
@@ -133,7 +131,7 @@ where
 fn range<F>(
     index: Keyspace,
     position: Position,
-    specifier: &HashedSpecifier,
+    specifier: &Specifier,
     filter_map: F,
 ) -> OwnedSequentialIterator
 where
@@ -167,7 +165,7 @@ where
 
 // Keys/Prefixes
 
-fn write_key(key: &mut [u8; KEY_LEN], position: Position, identifier: &PersistenceIdentifier) {
+fn write_key(key: &mut [u8; KEY_LEN], position: Position, identifier: &Identifier) {
     let mut key = &mut key[..];
 
     let index_id = INDEX_ID;
@@ -179,7 +177,7 @@ fn write_key(key: &mut [u8; KEY_LEN], position: Position, identifier: &Persisten
     key.put_u64(position);
 }
 
-fn write_prefix(prefix: &mut [u8; PREFIX_LEN], identifier: &PersistenceIdentifier) {
+fn write_prefix(prefix: &mut [u8; PREFIX_LEN], identifier: &Identifier) {
     let mut prefix = &mut prefix[..];
 
     let index_id = INDEX_ID;

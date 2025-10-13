@@ -6,12 +6,9 @@ use rapidhash::v3::{
     RapidSecrets,
 };
 
-use crate::model::event::{
-    Descriptor,
-    Identifier,
-    InsertionEvent,
-    Tag,
-    Version,
+use crate::model::{
+    event,
+    event::insertion,
 };
 
 // =================================================================================================
@@ -28,16 +25,16 @@ static SEED: RapidSecrets = RapidSecrets::seed(0x2811_2017);
 
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct PersistenceEvent {
+pub struct Event {
     #[new(into)]
     pub data: Vec<u8>,
     #[new(into)]
-    pub descriptor: PersistenceDescriptor,
-    pub tags: Vec<HashedTag>,
+    pub descriptor: Descriptor,
+    pub tags: Vec<Tag>,
 }
 
-impl From<InsertionEvent> for PersistenceEvent {
-    fn from(event: InsertionEvent) -> Self {
+impl From<insertion::Event> for Event {
+    fn from(event: insertion::Event) -> Self {
         Self::new(
             event.data,
             event.descriptor,
@@ -52,22 +49,22 @@ impl From<InsertionEvent> for PersistenceEvent {
 
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct PersistenceDescriptor(PersistenceIdentifier, Version);
+pub struct Descriptor(Identifier, event::Version);
 
-impl PersistenceDescriptor {
+impl Descriptor {
     #[must_use]
-    pub fn identifer(&self) -> &PersistenceIdentifier {
+    pub fn identifer(&self) -> &Identifier {
         &self.0
     }
 
     #[must_use]
-    pub fn version(&self) -> &Version {
+    pub fn version(&self) -> &event::Version {
         &self.1
     }
 }
 
-impl From<Descriptor> for PersistenceDescriptor {
-    fn from(descriptor: Descriptor) -> Self {
+impl From<event::Descriptor> for Descriptor {
+    fn from(descriptor: event::Descriptor) -> Self {
         let descriptor = descriptor.take();
         let identifier = descriptor.0.into();
         let version = descriptor.1;
@@ -82,25 +79,25 @@ impl From<Descriptor> for PersistenceDescriptor {
 
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct PersistenceIdentifier(u64, Identifier);
+pub struct Identifier(u64, event::Identifier);
 
-impl PersistenceIdentifier {
+impl Identifier {
     #[must_use]
     pub fn hash(&self) -> u64 {
         self.0
     }
 }
 
-impl Deref for PersistenceIdentifier {
-    type Target = Identifier;
+impl Deref for Identifier {
+    type Target = event::Identifier;
 
     fn deref(&self) -> &Self::Target {
         &self.1
     }
 }
 
-impl From<Identifier> for PersistenceIdentifier {
-    fn from(descriptor_identifier: Identifier) -> Self {
+impl From<event::Identifier> for Identifier {
+    fn from(descriptor_identifier: event::Identifier) -> Self {
         Self::new(
             v3::rapidhash_v3_seeded(descriptor_identifier.value().as_bytes(), &SEED),
             descriptor_identifier,
@@ -114,25 +111,25 @@ impl From<Identifier> for PersistenceIdentifier {
 
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct HashedTag(u64, Tag);
+pub struct Tag(u64, event::Tag);
 
-impl HashedTag {
+impl Tag {
     #[must_use]
     pub fn hash(&self) -> u64 {
         self.0
     }
 }
 
-impl Deref for HashedTag {
-    type Target = Tag;
+impl Deref for Tag {
+    type Target = event::Tag;
 
     fn deref(&self) -> &Self::Target {
         &self.1
     }
 }
 
-impl From<Tag> for HashedTag {
-    fn from(tag: Tag) -> Self {
+impl From<event::Tag> for Tag {
+    fn from(tag: event::Tag) -> Self {
         Self::new(v3::rapidhash_v3_seeded(tag.value().as_bytes(), &SEED), tag)
     }
 }

@@ -10,8 +10,8 @@ use fjall::{
 
 use crate::persistence::{
     Context,
-    Write,
-    model::event::PersistenceEvent,
+    model::event::Event,
+    operation::Write,
 };
 
 // =================================================================================================
@@ -35,7 +35,7 @@ pub fn keyspace(context: &Context) -> Result<Keyspace, Box<dyn Error>> {
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, event: &PersistenceEvent) {
+pub fn insert(write: &mut Write<'_>, event: &Event) {
     descriptor::insert(write, &event.descriptor);
     tags::insert(write, &event.tags);
 }

@@ -1,22 +1,10 @@
+pub mod insertion;
+
 use fancy_constructor::new;
 
 // =================================================================================================
 // Event
 // =================================================================================================
-
-// Event
-
-#[derive(new, Debug)]
-pub struct InsertionEvent {
-    #[new(into)]
-    pub data: Vec<u8>,
-    #[new(into)]
-    pub descriptor: Descriptor,
-    #[new(into)]
-    pub tags: Vec<Tag>,
-}
-
-// -------------------------------------------------------------------------------------------------
 
 // Descriptor
 

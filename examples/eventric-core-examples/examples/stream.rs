@@ -2,16 +2,16 @@ use std::error::Error;
 
 use eventric_core::{
     model::{
-        Specifier,
-        Stream,
         event::{
-            InsertionEvent,
             Tag,
+            insertion::Event,
         },
+        query::Specifier,
+        stream::Stream,
     },
     persistence::{
         self,
-        Read,
+        operation::Read,
     },
     utility::iter,
 };
@@ -23,14 +23,14 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         let mut stream = Stream::new(PATH)?;
 
         stream.append(vec![
-            InsertionEvent::new("hello world!", ("StudentSubscribedToCourse", 0), vec![
+            Event::new("hello world!", ("StudentSubscribedToCourse", 0), vec![
                 "student:3242".into(),
                 "course:523".into(),
             ]),
-            InsertionEvent::new("oh, no!", ("CourseCapacityChanged", 0), vec![
+            Event::new("oh, no!", ("CourseCapacityChanged", 0), vec![
                 "course:523".into(),
             ]),
-            InsertionEvent::new("goodbye world...", ("StudentSubscribedToCourse", 1), vec![
+            Event::new("goodbye world...", ("StudentSubscribedToCourse", 1), vec![
                 "student:7642".into(),
                 "course:63".into(),
             ]),

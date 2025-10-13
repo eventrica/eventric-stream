@@ -1,10 +1,10 @@
 pub mod forward;
 
 use crate::{
-    model::Position,
+    model::stream::Position,
     persistence::{
-        Write,
-        model::event::HashedTag,
+        model::event::Tag,
+        operation::Write,
     },
 };
 
@@ -18,6 +18,6 @@ static HASH_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, tags: &[HashedTag]) {
+pub fn insert(write: &mut Write<'_>, position: Position, tags: &[Tag]) {
     forward::insert(write, position, tags);
 }

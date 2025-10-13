@@ -9,12 +9,14 @@ use fjall::{
 };
 
 use crate::{
-    model::Position,
+    model::stream::Position,
     persistence::{
         Context,
-        Read,
-        Write,
-        model::event::PersistenceEvent,
+        model::event::Event,
+        operation::{
+            Read,
+            Write,
+        },
     },
 };
 
@@ -57,6 +59,6 @@ pub fn len(read: &Read<'_>) -> Result<u64, Box<dyn Error>> {
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &PersistenceEvent) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: &Event) {
     event::insert(write, position, event);
 }

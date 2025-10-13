@@ -1,8 +1,8 @@
 use bytes::BufMut as _;
 
 use crate::persistence::{
-    Write,
-    model::event::HashedTag,
+    model::event::Tag,
+    operation::Write,
     reference::{
         ID_LEN,
         tags::HASH_LEN,
@@ -20,7 +20,7 @@ static KEY_LEN: usize = ID_LEN + HASH_LEN;
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, tags: &[HashedTag]) {
+pub fn insert(write: &mut Write<'_>, tags: &[Tag]) {
     let mut key = [0u8; KEY_LEN];
 
     for tag in tags {
@@ -36,7 +36,7 @@ pub fn insert(write: &mut Write<'_>, tags: &[HashedTag]) {
 
 // Keys/Prefixes
 
-fn write_key(key: &mut [u8; KEY_LEN], tag: &HashedTag) {
+fn write_key(key: &mut [u8; KEY_LEN], tag: &Tag) {
     let mut key = &mut key[..];
 
     let reference_id = REFERENCE_ID;
