@@ -1,4 +1,5 @@
 [dependencies]
+eventric-core.workspace = true
 
 [lints]
 workspace = true
