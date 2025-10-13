@@ -1,0 +1,7 @@
+#![allow(clippy::multiple_crate_versions)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_panics_doc)]
+
+pub mod configuration;
+pub mod iter;
+pub mod operation;

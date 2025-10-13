@@ -1,6 +1,7 @@
 [dependencies]
-eventric-core-model.workspace  = true
-eventric-core-stream.workspace = true
+bytes.workspace                     = true
+eventric-core-persistence.workspace = true
+fjall.workspace                     = true
 
 [lints]
 workspace = true
@@ -8,11 +9,11 @@ workspace = true
 [package]
 authors.workspace    = true
 categories.workspace = true
-description          = "Eventric Core"
+description          = "Eventric Core Persistence Reference"
 edition.workspace    = true
 keywords.workspace   = true
 license.workspace    = true
-name                 = "eventric-core"
+name                 = "eventric-core-persistence-reference"
 readme.workspace     = true
 repository.workspace = true
 version.workspace    = true

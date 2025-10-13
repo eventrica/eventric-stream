@@ -4,8 +4,14 @@ resolver = "2"
 
 [workspace.dependencies]
 
-eventric-core       = { path = "crates/eventric-core" }
-eventric-core-model = { path = "crates/eventric-core-model" }
+eventric-core                       = { path = "crates/eventric-core" }
+eventric-core-model                 = { path = "crates/eventric-core-model" }
+eventric-core-persistence           = { path = "crates/eventric-core-persistence" }
+eventric-core-persistence-data      = { path = "crates/eventric-core-persistence-data" }
+eventric-core-persistence-index     = { path = "crates/eventric-core-persistence-index" }
+eventric-core-persistence-reference = { path = "crates/eventric-core-persistence-reference" }
+eventric-core-stream                = { path = "crates/eventric-core-stream" }
+eventric-core-util                  = { path = "crates/eventric-core-util" }
 
 bytes             = { version = "1" }
 derive_more       = { version = "2", features = ["full"] }

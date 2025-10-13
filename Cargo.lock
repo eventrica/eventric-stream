@@ -140,13 +140,8 @@ dependencies = [
 name = "eventric-core"
 version = "0.1.0"
 dependencies = [
- "bytes",
- "derive_more",
  "eventric-core-model",
- "fancy_constructor",
- "fjall",
- "rapidhash",
- "self_cell",
+ "eventric-core-stream",
 ]
 
 [[package]]
@@ -158,11 +153,78 @@ name = "eventric-core-examples"
 version = "0.1.0"
 dependencies = [
  "eventric-core",
- "eventric-core-model",
+ "eventric-core-persistence",
+ "eventric-core-persistence-data",
+ "eventric-core-persistence-index",
+ "eventric-core-persistence-reference",
+ "eventric-core-util",
 ]
 
 [[package]]
 name = "eventric-core-model"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "fancy_constructor",
+]
+
+[[package]]
+name = "eventric-core-persistence"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "eventric-core-model",
+ "fancy_constructor",
+ "fjall",
+ "rapidhash",
+]
+
+[[package]]
+name = "eventric-core-persistence-data"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "eventric-core-model",
+ "eventric-core-persistence",
+ "fjall",
+]
+
+[[package]]
+name = "eventric-core-persistence-index"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "derive_more",
+ "eventric-core-model",
+ "eventric-core-persistence",
+ "eventric-core-util",
+ "fjall",
+ "self_cell",
+]
+
+[[package]]
+name = "eventric-core-persistence-reference"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "eventric-core-persistence",
+ "fjall",
+]
+
+[[package]]
+name = "eventric-core-stream"
+version = "0.1.0"
+dependencies = [
+ "eventric-core-model",
+ "eventric-core-persistence",
+ "eventric-core-persistence-data",
+ "eventric-core-persistence-index",
+ "eventric-core-persistence-reference",
+ "fancy_constructor",
+]
+
+[[package]]
+name = "eventric-core-util"
 version = "0.1.0"
 dependencies = [
  "derive_more",
