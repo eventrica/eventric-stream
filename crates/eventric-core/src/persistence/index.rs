@@ -15,7 +15,7 @@ use crate::{
     persistence::{
         Context,
         Write,
-        model::HashedEvent,
+        model::event::PersistenceEvent,
     },
     utility::iter::{
         SequentialAnd,
@@ -44,7 +44,7 @@ pub fn keyspace(context: &Context) -> Result<Keyspace, Box<dyn Error>> {
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &HashedEvent) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: &PersistenceEvent) {
     descriptor::insert(write, position, &event.descriptor);
     tags::insert(write, position, &event.tags);
 }

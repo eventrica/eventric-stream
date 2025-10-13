@@ -4,7 +4,7 @@ use crate::{
     model::Position,
     persistence::{
         Write,
-        model::HashedEvent,
+        model::event::PersistenceEvent,
     },
 };
 
@@ -14,7 +14,7 @@ use crate::{
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &HashedEvent) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: &PersistenceEvent) {
     let key = position.value().to_be_bytes();
 
     let mut value = Vec::new();
@@ -28,7 +28,7 @@ pub fn insert(write: &mut Write<'_>, position: Position, event: &HashedEvent) {
 
 // Values
 
-fn write_value(value: &mut Vec<u8>, event: &HashedEvent) {
+fn write_value(value: &mut Vec<u8>, event: &PersistenceEvent) {
     let descriptor_identifier = event.descriptor.identifer().hash();
     let descriptor_version = event.descriptor.version().value();
     let tags_len = u8::try_from(event.tags.len()).expect("max tag count exceeded");

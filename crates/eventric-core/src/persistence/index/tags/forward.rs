@@ -21,7 +21,7 @@ use crate::{
             SequentialIterator,
             tags::HASH_LEN,
         },
-        model::HashedTag,
+        model::event::HashedTag,
     },
 };
 

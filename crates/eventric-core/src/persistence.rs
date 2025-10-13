@@ -17,8 +17,8 @@ use fjall::{
 };
 
 use crate::model::{
-    Event,
     Position,
+    event::InsertionEvent,
 };
 
 // =================================================================================================
@@ -98,7 +98,7 @@ pub fn keyspaces(context: &Context) -> Result<Keyspaces, Box<dyn Error>> {
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: Event) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: InsertionEvent) {
     let event = event.into();
 
     data::insert(write, position, &event);

@@ -4,7 +4,7 @@ use crate::{
     model::Position,
     persistence::{
         Write,
-        model::HashedTag,
+        model::event::HashedTag,
     },
 };
 

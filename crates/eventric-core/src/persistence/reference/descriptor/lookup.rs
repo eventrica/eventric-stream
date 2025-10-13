@@ -2,7 +2,7 @@ use bytes::BufMut as _;
 
 use crate::persistence::{
     Write,
-    model::HashedDescriptor,
+    model::event::PersistenceDescriptor,
     reference::{
         ID_LEN,
         descriptor::HASH_LEN,
@@ -20,7 +20,7 @@ static KEY_LEN: usize = ID_LEN + HASH_LEN;
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, descriptor: &HashedDescriptor) {
+pub fn insert(write: &mut Write<'_>, descriptor: &PersistenceDescriptor) {
     let mut key = [0u8; KEY_LEN];
 
     write_key(&mut key, descriptor);
@@ -34,7 +34,7 @@ pub fn insert(write: &mut Write<'_>, descriptor: &HashedDescriptor) {
 
 // Keys/Prefixes
 
-fn write_key(key: &mut [u8; KEY_LEN], descriptor: &HashedDescriptor) {
+fn write_key(key: &mut [u8; KEY_LEN], descriptor: &PersistenceDescriptor) {
     let mut key = &mut key[..];
 
     let reference_id = REFERENCE_ID;

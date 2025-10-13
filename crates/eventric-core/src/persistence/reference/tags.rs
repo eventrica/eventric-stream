@@ -2,7 +2,7 @@ mod lookup;
 
 use crate::persistence::{
     Write,
-    model::HashedTag,
+    model::event::HashedTag,
 };
 
 // =================================================================================================

@@ -11,7 +11,7 @@ use fjall::{
 use crate::persistence::{
     Context,
     Write,
-    model::HashedEvent,
+    model::event::PersistenceEvent,
 };
 
 // =================================================================================================
@@ -35,7 +35,7 @@ pub fn keyspace(context: &Context) -> Result<Keyspace, Box<dyn Error>> {
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, event: &HashedEvent) {
+pub fn insert(write: &mut Write<'_>, event: &PersistenceEvent) {
     descriptor::insert(write, &event.descriptor);
     tags::insert(write, &event.tags);
 }

@@ -22,9 +22,11 @@ use crate::{
             descriptor::HASH_LEN,
         },
         model::{
-            HashedDescriptor,
-            HashedIdentifier,
             HashedSpecifier,
+            event::{
+                PersistenceDescriptor,
+                PersistenceIdentifier,
+            },
         },
     },
 };
@@ -41,7 +43,7 @@ static PREFIX_LEN: usize = ID_LEN + HASH_LEN;
 
 //  Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &HashedDescriptor) {
+pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &PersistenceDescriptor) {
     let mut key = [0u8; KEY_LEN];
 
     let identifier = descriptor.identifer();
@@ -165,7 +167,7 @@ where
 
 // Keys/Prefixes
 
-fn write_key(key: &mut [u8; KEY_LEN], position: Position, identifier: &HashedIdentifier) {
+fn write_key(key: &mut [u8; KEY_LEN], position: Position, identifier: &PersistenceIdentifier) {
     let mut key = &mut key[..];
 
     let index_id = INDEX_ID;
@@ -177,7 +179,7 @@ fn write_key(key: &mut [u8; KEY_LEN], position: Position, identifier: &HashedIde
     key.put_u64(position);
 }
 
-fn write_prefix(prefix: &mut [u8; PREFIX_LEN], identifier: &HashedIdentifier) {
+fn write_prefix(prefix: &mut [u8; PREFIX_LEN], identifier: &PersistenceIdentifier) {
     let mut prefix = &mut prefix[..];
 
     let index_id = INDEX_ID;

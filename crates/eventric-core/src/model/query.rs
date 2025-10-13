@@ -1,6 +1,6 @@
 use derive_more::Debug;
 
-use crate::model::{
+use crate::model::event::{
     Descriptor,
     Tag,
 };

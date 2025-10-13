@@ -2,7 +2,7 @@ use bytes::BufMut as _;
 
 use crate::persistence::{
     Write,
-    model::HashedTag,
+    model::event::HashedTag,
     reference::{
         ID_LEN,
         tags::HASH_LEN,

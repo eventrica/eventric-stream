@@ -1,4 +1,6 @@
+pub mod event;
 pub mod query;
+pub mod stream;
 
 use std::{
     error::Error,
@@ -9,29 +11,25 @@ use std::{
 use derive_more::Debug;
 use fancy_constructor::new;
 
-use crate::persistence::{
-    self,
-    Context,
-    Keyspaces,
-    Read,
-    Write,
+use crate::{
+    model::event::{
+        Identifier,
+        InsertionEvent,
+        Version,
+    },
+    persistence::{
+        self,
+        Context,
+        Keyspaces,
+        Read,
+        Write,
+        data,
+    },
 };
 
 // =================================================================================================
 // Model
 // =================================================================================================
-
-// Event
-
-#[derive(new, Debug)]
-pub struct Event {
-    #[new(into)]
-    pub data: Vec<u8>,
-    #[new(into)]
-    pub descriptor: Descriptor,
-    #[new(into)]
-    pub tags: Vec<Tag>,
-}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -53,7 +51,7 @@ impl Stream {
         let context = persistence::context(path)?;
         let keyspaces = persistence::keyspaces(&context)?;
 
-        let len = persistence::data::len(&Read::new(&keyspaces))?;
+        let len = data::len(&Read::new(&keyspaces))?;
         let position = len.into();
 
         Ok(Self::inner_new(context, keyspaces, position))
@@ -63,7 +61,7 @@ impl Stream {
 impl Stream {
     pub fn append<E>(&mut self, events: E) -> Result<(), Box<dyn Error>>
     where
-        E: IntoIterator<Item = Event>,
+        E: IntoIterator<Item = InsertionEvent>,
     {
         let mut batch = self.context.as_ref().batch();
 
@@ -85,11 +83,11 @@ impl Stream {
 
 impl Stream {
     pub fn is_empty(&self) -> Result<bool, Box<dyn Error>> {
-        persistence::data::is_empty(&Read::new(&self.keyspaces))
+        data::is_empty(&Read::new(&self.keyspaces))
     }
 
     pub fn len(&self) -> Result<u64, Box<dyn Error>> {
-        persistence::data::len(&Read::new(&self.keyspaces))
+        data::len(&Read::new(&self.keyspaces))
     }
 }
 
@@ -115,65 +113,6 @@ impl Position {
 impl<T> From<T> for Position
 where
     T: Into<u64>,
-{
-    fn from(value: T) -> Self {
-        Self::new(value)
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Descriptor
-
-// Descriptor
-
-#[derive(new, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[new(vis())]
-pub struct Descriptor(#[new(into)] Identifier, #[new(into)] Version);
-
-impl Descriptor {
-    #[must_use]
-    pub fn identifier(&self) -> &Identifier {
-        &self.0
-    }
-
-    #[must_use]
-    pub fn version(&self) -> &Version {
-        &self.1
-    }
-
-    #[must_use]
-    pub fn take(self) -> (Identifier, Version) {
-        (self.0, self.1)
-    }
-}
-
-impl<T, U> From<(T, U)> for Descriptor
-where
-    T: Into<Identifier>,
-    U: Into<Version>,
-{
-    fn from(value: (T, U)) -> Self {
-        Self::new(value.0, value.1)
-    }
-}
-
-// Identifier
-
-#[derive(new, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[new(vis())]
-pub struct Identifier(#[new(into)] String);
-
-impl Identifier {
-    #[must_use]
-    pub fn value(&self) -> &str {
-        &self.0
-    }
-}
-
-impl<T> From<T> for Identifier
-where
-    T: Into<String>,
 {
     fn from(value: T) -> Self {
         Self::new(value)
@@ -210,53 +149,5 @@ where
 {
     fn from(value: (T, U)) -> Self {
         Self::new(value.0, value.1)
-    }
-}
-
-// Version
-
-#[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[new(vis())]
-pub struct Version(#[new(into)] u8);
-
-impl Version {
-    #[must_use]
-    pub fn value(self) -> u8 {
-        self.0
-    }
-}
-
-impl<T> From<T> for Version
-where
-    T: Into<u8>,
-{
-    fn from(value: T) -> Self {
-        Self::new(value)
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Tag
-
-// Tag
-
-#[derive(new, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[new(vis(pub))]
-pub struct Tag(#[new(into)] String);
-
-impl Tag {
-    #[must_use]
-    pub fn value(&self) -> &str {
-        &self.0
-    }
-}
-
-impl<T> From<T> for Tag
-where
-    T: Into<String>,
-{
-    fn from(value: T) -> Self {
-        Self::new(value)
     }
 }

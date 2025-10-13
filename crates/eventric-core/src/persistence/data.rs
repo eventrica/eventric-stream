@@ -14,7 +14,7 @@ use crate::{
         Context,
         Read,
         Write,
-        model::HashedEvent,
+        model::event::PersistenceEvent,
     },
 };
 
@@ -57,6 +57,6 @@ pub fn len(read: &Read<'_>) -> Result<u64, Box<dyn Error>> {
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &HashedEvent) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: &PersistenceEvent) {
     event::insert(write, position, event);
 }
