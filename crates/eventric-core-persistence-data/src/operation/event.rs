@@ -11,7 +11,7 @@ use eventric_core_persistence::{
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &EventRef<'_>) {
+pub fn insert<'a>(write: &mut Write<'_>, position: Position, event: &'a EventRef<'a>) {
     let key = position.value().to_be_bytes();
 
     let mut value = Vec::new();
@@ -25,7 +25,7 @@ pub fn insert(write: &mut Write<'_>, position: Position, event: &EventRef<'_>) {
 
 // Values
 
-fn write_value(value: &mut Vec<u8>, event: &EventRef<'_>) {
+fn write_value<'a>(value: &mut Vec<u8>, event: &'a EventRef<'a>) {
     let identifier = event.descriptor.identifer().hash();
     let version = event.descriptor.version().value();
     let tags_len = u8::try_from(event.tags.len()).expect("max tag count exceeded");

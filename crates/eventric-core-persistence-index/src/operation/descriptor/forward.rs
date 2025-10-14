@@ -47,7 +47,7 @@ static PREFIX_LEN: usize = ID_LEN + HASH_LEN;
 
 //  Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &DescriptorRef<'_>) {
+pub fn insert<'a>(write: &mut Write<'_>, position: Position, descriptor: &'a DescriptorRef<'a>) {
     let mut key = [0u8; KEY_LEN];
 
     let identifier = descriptor.identifer();
@@ -64,10 +64,10 @@ pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &Descriptor
 // Iterate
 
 #[must_use]
-pub fn iterate(
+pub fn iterate<'a>(
     read: &Read<'_>,
     position: Option<Position>,
-    specifier: &SpecifierRef<'_>,
+    specifier: &'a SpecifierRef<'a>,
 ) -> SequentialIterator {
     let version_bounds = specifier
         .range()
@@ -110,9 +110,9 @@ pub fn iterate(
     iterator.into()
 }
 
-fn prefix<F>(
+fn prefix<'a, F>(
     index: Keyspace,
-    specification: &SpecifierRef<'_>,
+    specification: &'a SpecifierRef<'a>,
     filter_map: F,
 ) -> OwnedSequentialIterator
 where
@@ -134,10 +134,10 @@ where
     })
 }
 
-fn range<F>(
+fn range<'a, F>(
     index: Keyspace,
     position: Position,
-    specifier: &SpecifierRef<'_>,
+    specifier: &'a SpecifierRef<'a>,
     filter_map: F,
 ) -> OwnedSequentialIterator
 where
@@ -171,7 +171,7 @@ where
 
 // Keys/Prefixes
 
-fn write_key(key: &mut [u8; KEY_LEN], position: Position, identifier: &IdentifierRef<'_>) {
+fn write_key<'a>(key: &mut [u8; KEY_LEN], position: Position, identifier: &'a IdentifierRef<'a>) {
     let mut key = &mut key[..];
 
     let index_id = INDEX_ID;
@@ -183,7 +183,7 @@ fn write_key(key: &mut [u8; KEY_LEN], position: Position, identifier: &Identifie
     key.put_u64(position);
 }
 
-fn write_prefix(prefix: &mut [u8; PREFIX_LEN], identifier: &IdentifierRef<'_>) {
+fn write_prefix<'a>(prefix: &mut [u8; PREFIX_LEN], identifier: &'a IdentifierRef<'a>) {
     let mut prefix = &mut prefix[..];
 
     let index_id = INDEX_ID;

@@ -35,7 +35,7 @@ static POSITION_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &EventRef<'_>) {
+pub fn insert<'a>(write: &mut Write<'_>, position: Position, event: &'a EventRef<'a>) {
     descriptor::insert(write, position, &event.descriptor);
     tags::insert(write, position, &event.tags);
 }
@@ -45,17 +45,17 @@ pub fn insert(write: &mut Write<'_>, position: Position, event: &EventRef<'_>) {
 // Query
 
 #[must_use]
-pub fn query(
+pub fn query<'a>(
     read: &Read<'_>,
     position: Option<Position>,
-    query: &QueryRef<'_>,
+    query: &'a QueryRef<'a>,
 ) -> SequentialIterator {
     or::sequential_or(query.items().iter().map(|item| match item {
-        QueryItemRef::Specifiers(specifiers) => descriptor::query(read, position, specifiers),
-        QueryItemRef::SpecifiersAndTags(specifiers, tags) => and::sequential_and([
-            descriptor::query(read, position, specifiers),
-            tags::query(read, position, tags),
+        QueryItemRef::Specifiers(specs) => descriptor::query(read, position, specs.iter()),
+        QueryItemRef::SpecifiersAndTags(specs, tags) => and::sequential_and([
+            descriptor::query(read, position, specs.iter()),
+            tags::query(read, position, tags.iter()),
         ]),
-        QueryItemRef::Tags(tags) => tags::query(read, position, tags),
+        QueryItemRef::Tags(tags) => tags::query(read, position, tags.iter()),
     }))
 }

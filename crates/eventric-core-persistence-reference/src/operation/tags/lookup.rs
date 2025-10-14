@@ -20,7 +20,7 @@ static KEY_LEN: usize = ID_LEN + HASH_LEN;
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, tags: &[TagRef<'_>]) {
+pub fn insert<'a>(write: &mut Write<'_>, tags: &'a [TagRef<'a>]) {
     let mut key = [0u8; KEY_LEN];
 
     for tag in tags {
@@ -36,7 +36,7 @@ pub fn insert(write: &mut Write<'_>, tags: &[TagRef<'_>]) {
 
 // Keys/Prefixes
 
-fn write_key(key: &mut [u8; KEY_LEN], tag: &TagRef<'_>) {
+fn write_key<'a>(key: &mut [u8; KEY_LEN], tag: &'a TagRef<'a>) {
     let mut key = &mut key[..];
 
     let reference_id = REFERENCE_ID;

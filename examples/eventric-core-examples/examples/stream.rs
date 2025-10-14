@@ -3,6 +3,10 @@ use std::error::Error;
 use eventric_core::{
     event::{
         // Tag,
+        Descriptor,
+        Identifier,
+        Tag,
+        Version,
         insertion::Event,
     },
     query::{
@@ -20,26 +24,34 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         let mut stream = Stream::new(PATH)?;
 
         stream.append(vec![
-            Event::new("hello world!", ("StudentSubscribedToCourse", 0), vec![
-                "student:3242".into(),
-                "course:523".into(),
-            ]),
-            Event::new("oh, no!", ("CourseCapacityChanged", 0), vec![
-                "course:523".into(),
-            ]),
-            Event::new("goodbye world...", ("StudentSubscribedToCourse", 1), vec![
-                "student:7642".into(),
-                "course:63".into(),
-            ]),
+            Event::new(
+                Vec::from_iter(b"hello world!".to_owned()),
+                Descriptor::new(
+                    Identifier::new("StudentSubscribedToCourse"),
+                    Version::new(0),
+                ),
+                Vec::from_iter([Tag::new("student:3242"), Tag::new("course:523")]),
+            ),
+            Event::new(
+                Vec::from_iter(b"oh, no!".to_owned()),
+                Descriptor::new(Identifier::new("CourseCapacityChanged"), Version::new(0)),
+                Vec::from_iter([Tag::new("course:523")]),
+            ),
+            Event::new(
+                Vec::from_iter(b"goodbye world...".to_owned()),
+                Descriptor::new(
+                    Identifier::new("StudentSubscribedToCourse"),
+                    Version::new(1),
+                ),
+                Vec::from_iter([Tag::new("student:7642"), Tag::new("course:63")]),
+            ),
         ])?;
 
-        let student_or_course_query = Query::new([QueryItem::Specifiers(
-            [
-                Specifier::new("StudentSubscribedToCourse", None),
-                Specifier::new("CourseCapacityChanged", None),
-            ]
-            .into(),
-        )]);
+        let student_or_course_query =
+            Query::new(Vec::from_iter([QueryItem::Specifiers(Vec::from_iter([
+                Specifier::new(Identifier::new("StudentSubscribedToCourse"), None),
+                Specifier::new(Identifier::new("CourseCapacityChanged"), None),
+            ]))]));
 
         for id in stream.query(None, &student_or_course_query) {
             println!("student or course id: {id}");

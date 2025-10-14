@@ -38,9 +38,9 @@ pub struct EventRef<'a> {
 impl<'a> From<&'a Event> for EventRef<'a> {
     fn from(event: &'a Event) -> Self {
         Self::new(
-            &event.data,
-            &event.descriptor,
-            event.tags.iter().map(Into::into).collect(),
+            event.data(),
+            event.descriptor(),
+            event.tags().iter().map(Into::into).collect(),
         )
     }
 }

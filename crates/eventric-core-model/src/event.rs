@@ -9,7 +9,7 @@ use fancy_constructor::new;
 // Descriptor
 
 #[derive(new, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[new(vis())]
+#[new(vis(pub))]
 pub struct Descriptor(#[new(into)] Identifier, #[new(into)] Version);
 
 impl Descriptor {
@@ -24,26 +24,10 @@ impl Descriptor {
     }
 }
 
-impl From<Descriptor> for (Identifier, Version) {
-    fn from(value: Descriptor) -> Self {
-        (value.0, value.1)
-    }
-}
-
-impl<T, U> From<(T, U)> for Descriptor
-where
-    T: Into<Identifier>,
-    U: Into<Version>,
-{
-    fn from(value: (T, U)) -> Self {
-        Self::new(value.0, value.1)
-    }
-}
-
 // Identifier
 
 #[derive(new, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[new(vis())]
+#[new(vis(pub))]
 pub struct Identifier(#[new(into)] String);
 
 impl Identifier {
@@ -53,34 +37,16 @@ impl Identifier {
     }
 }
 
-impl<T> From<T> for Identifier
-where
-    T: Into<String>,
-{
-    fn from(value: T) -> Self {
-        Self::new(value)
-    }
-}
-
 // Version
 
 #[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[new(vis())]
+#[new(vis(pub))]
 pub struct Version(#[new(into)] u8);
 
 impl Version {
     #[must_use]
     pub fn value(self) -> u8 {
         self.0
-    }
-}
-
-impl<T> From<T> for Version
-where
-    T: Into<u8>,
-{
-    fn from(value: T) -> Self {
-        Self::new(value)
     }
 }
 
@@ -96,14 +62,5 @@ impl Tag {
     #[must_use]
     pub fn value(&self) -> &str {
         &self.0
-    }
-}
-
-impl<T> From<T> for Tag
-where
-    T: Into<String>,
-{
-    fn from(value: T) -> Self {
-        Self::new(value)
     }
 }

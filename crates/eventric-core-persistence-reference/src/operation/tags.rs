@@ -15,6 +15,6 @@ static HASH_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, tags: &[TagRef<'_>]) {
+pub fn insert<'a>(write: &mut Write<'_>, tags: &'a [TagRef<'a>]) {
     lookup::insert(write, tags);
 }

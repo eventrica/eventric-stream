@@ -18,7 +18,7 @@ use eventric_core_persistence::{
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &EventRef<'_>) {
+pub fn insert<'a>(write: &mut Write<'_>, position: Position, event: &'a EventRef<'a>) {
     event::insert(write, position, event);
 }
 

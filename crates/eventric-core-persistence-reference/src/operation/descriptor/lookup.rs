@@ -20,7 +20,7 @@ static KEY_LEN: usize = ID_LEN + HASH_LEN;
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, descriptor: &DescriptorRef<'_>) {
+pub fn insert<'a>(write: &mut Write<'_>, descriptor: &'a DescriptorRef<'a>) {
     let mut key = [0u8; KEY_LEN];
 
     write_key(&mut key, descriptor);
@@ -34,7 +34,7 @@ pub fn insert(write: &mut Write<'_>, descriptor: &DescriptorRef<'_>) {
 
 // Keys/Prefixes
 
-fn write_key(key: &mut [u8; KEY_LEN], descriptor: &DescriptorRef<'_>) {
+fn write_key<'a>(key: &mut [u8; KEY_LEN], descriptor: &'a DescriptorRef<'a>) {
     let mut key = &mut key[..];
 
     let reference_id = REFERENCE_ID;

@@ -41,7 +41,7 @@ static PREFIX_LEN: usize = ID_LEN + HASH_LEN;
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, tags: &[TagRef<'_>]) {
+pub fn insert<'a>(write: &mut Write<'_>, position: Position, tags: &'a [TagRef<'a>]) {
     let mut key = [0u8; KEY_LEN];
 
     for tag in tags {
@@ -56,10 +56,10 @@ pub fn insert(write: &mut Write<'_>, position: Position, tags: &[TagRef<'_>]) {
 // Iterate
 
 #[must_use]
-pub fn iterate(
+pub fn iterate<'a>(
     read: &Read<'_>,
     position: Option<Position>,
-    tag: &TagRef<'_>,
+    tag: &'a TagRef<'a>,
 ) -> SequentialIterator {
     let map = |key: Result<Slice, Error>| {
         let key = key.expect("invalid key/value during iteration");
@@ -78,7 +78,7 @@ pub fn iterate(
     }
 }
 
-fn prefix<F>(index: Keyspace, tag: &TagRef<'_>, map: F) -> SequentialIterator
+fn prefix<'a, F>(index: Keyspace, tag: &'a TagRef<'a>, map: F) -> SequentialIterator
 where
     F: Fn(Result<Slice, Error>) -> u64 + 'static,
 {
@@ -92,7 +92,12 @@ where
     .into()
 }
 
-fn range<F>(index: Keyspace, position: Position, tag: &TagRef<'_>, map: F) -> SequentialIterator
+fn range<'a, F>(
+    index: Keyspace,
+    position: Position,
+    tag: &'a TagRef<'a>,
+    map: F,
+) -> SequentialIterator
 where
     F: Fn(Result<Slice, Error>) -> u64 + 'static,
 {
@@ -118,7 +123,7 @@ where
 
 // Keys/Prefixes
 
-fn write_key(key: &mut [u8; KEY_LEN], position: Position, tag: &TagRef<'_>) {
+fn write_key<'a>(key: &mut [u8; KEY_LEN], position: Position, tag: &'a TagRef<'a>) {
     let mut key = &mut key[..];
 
     let index_id = INDEX_ID;
@@ -130,7 +135,7 @@ fn write_key(key: &mut [u8; KEY_LEN], position: Position, tag: &TagRef<'_>) {
     key.put_u64(position);
 }
 
-fn write_prefix(prefix: &mut [u8; PREFIX_LEN], tag: &TagRef<'_>) {
+fn write_prefix<'a>(prefix: &mut [u8; PREFIX_LEN], tag: &'a TagRef<'a>) {
     let mut prefix = &mut prefix[..];
 
     let index_id = INDEX_ID;

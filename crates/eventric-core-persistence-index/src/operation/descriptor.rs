@@ -25,7 +25,7 @@ static HASH_LEN: usize = size_of::<u64>();
 
 //  Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &DescriptorRef<'_>) {
+pub fn insert<'a>(write: &mut Write<'_>, position: Position, descriptor: &'a DescriptorRef<'a>) {
     forward::insert(write, position, descriptor);
 }
 
@@ -34,14 +34,9 @@ pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &Descriptor
 // Query
 
 #[must_use]
-pub fn query<'a>(
-    read: &Read<'_>,
-    position: Option<Position>,
-    specifiers: impl IntoIterator<Item = &'a SpecifierRef<'a>>,
-) -> SequentialIterator {
-    or::sequential_or(
-        specifiers
-            .into_iter()
-            .map(|specifier| forward::iterate(read, position, specifier)),
-    )
+pub fn query<'a, S>(read: &Read<'_>, position: Option<Position>, specs: S) -> SequentialIterator
+where
+    S: Iterator<Item = &'a SpecifierRef<'a>>,
+{
+    or::sequential_or(specs.map(|spec| forward::iterate(read, position, spec)))
 }

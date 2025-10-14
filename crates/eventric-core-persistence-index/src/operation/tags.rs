@@ -22,7 +22,7 @@ static HASH_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, tags: &[TagRef<'_>]) {
+pub fn insert<'a>(write: &mut Write<'_>, position: Position, tags: &'a [TagRef<'a>]) {
     forward::insert(write, position, tags);
 }
 
@@ -31,13 +31,9 @@ pub fn insert(write: &mut Write<'_>, position: Position, tags: &[TagRef<'_>]) {
 // Query
 
 #[must_use]
-pub fn query<'a>(
-    read: &Read<'_>,
-    position: Option<Position>,
-    tags: impl IntoIterator<Item = &'a TagRef<'a>>,
-) -> SequentialIterator {
-    and::sequential_and(
-        tags.into_iter()
-            .map(|tag| forward::iterate(read, position, tag)),
-    )
+pub fn query<'a, T>(read: &Read<'_>, position: Option<Position>, tags: T) -> SequentialIterator
+where
+    T: Iterator<Item = &'a TagRef<'a>>,
+{
+    and::sequential_and(tags.map(|tag| forward::iterate(read, position, tag)))
 }

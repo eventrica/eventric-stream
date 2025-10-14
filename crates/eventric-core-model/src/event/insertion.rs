@@ -12,9 +12,26 @@ use crate::event::{
 #[derive(new, Debug)]
 pub struct Event {
     #[new(into)]
-    pub data: Vec<u8>,
+    data: Vec<u8>,
     #[new(into)]
-    pub descriptor: Descriptor,
+    descriptor: Descriptor,
     #[new(into)]
-    pub tags: Vec<Tag>,
+    tags: Vec<Tag>,
+}
+
+impl Event {
+    #[must_use]
+    pub fn data(&self) -> &Vec<u8> {
+        &self.data
+    }
+
+    #[must_use]
+    pub fn descriptor(&self) -> &Descriptor {
+        &self.descriptor
+    }
+
+    #[must_use]
+    pub fn tags(&self) -> &Vec<Tag> {
+        &self.tags
+    }
 }
