@@ -13,9 +13,16 @@ use crate::event::{
 // Query
 // =================================================================================================
 
-#[derive(Debug)]
+#[derive(new, Debug)]
 pub struct Query {
-    _items: Vec<QueryItem>,
+    #[new(into)]
+    items: Vec<QueryItem>,
+}
+
+impl From<Query> for Vec<QueryItem> {
+    fn from(value: Query) -> Self {
+        value.items
+    }
 }
 
 #[derive(Debug)]
@@ -43,10 +50,11 @@ impl Specifier {
     pub fn range(&self) -> Option<&Range<Version>> {
         self.1.as_ref()
     }
+}
 
-    #[must_use]
-    pub fn take(self) -> (Identifier, Option<Range<Version>>) {
-        (self.0, self.1)
+impl From<Specifier> for (Identifier, Option<Range<Version>>) {
+    fn from(value: Specifier) -> Self {
+        (value.0, value.1)
     }
 }
 

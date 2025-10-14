@@ -22,10 +22,11 @@ impl Descriptor {
     pub fn version(&self) -> &Version {
         &self.1
     }
+}
 
-    #[must_use]
-    pub fn take(self) -> (Identifier, Version) {
-        (self.0, self.1)
+impl From<Descriptor> for (Identifier, Version) {
+    fn from(value: Descriptor) -> Self {
+        (value.0, value.1)
     }
 }
 

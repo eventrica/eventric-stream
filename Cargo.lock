@@ -220,6 +220,7 @@ dependencies = [
  "eventric-core-persistence-data",
  "eventric-core-persistence-index",
  "eventric-core-persistence-reference",
+ "eventric-core-util",
  "fancy_constructor",
 ]
 

@@ -64,7 +64,7 @@ impl Descriptor {
 
 impl From<event::Descriptor> for Descriptor {
     fn from(descriptor: event::Descriptor) -> Self {
-        let descriptor = descriptor.take();
+        let descriptor: (event::Identifier, event::Version) = descriptor.into();
         let identifier = descriptor.0.into();
         let version = descriptor.1;
 

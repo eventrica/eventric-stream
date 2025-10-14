@@ -1,16 +1,43 @@
 use std::ops::Range;
 
 use eventric_core_model::{
-    event,
+    event::{
+        self,
+        Version,
+    },
     query,
 };
 use fancy_constructor::new;
 
-use crate::model::event::Identifier;
+use crate::model::event::{
+    Identifier,
+    Tag,
+};
 
 // =================================================================================================
 // Query
 // =================================================================================================
+
+#[derive(new, Debug)]
+pub struct Query {
+    #[new(into)]
+    items: Vec<QueryItem>,
+}
+
+impl From<Query> for Vec<QueryItem> {
+    fn from(value: Query) -> Self {
+        value.items
+    }
+}
+
+#[derive(Debug)]
+pub enum QueryItem {
+    Specifiers(Vec<Specifier>),
+    SpecifiersAndTags(Vec<Specifier>, Vec<Tag>),
+    Tags(Vec<Tag>),
+}
+
+// -------------------------------------------------------------------------------------------------
 
 // Specifier
 
@@ -32,7 +59,7 @@ impl Specifier {
 
 impl From<query::Specifier> for Specifier {
     fn from(specifier: query::Specifier) -> Self {
-        let specifier = specifier.take();
+        let specifier: (event::Identifier, Option<Range<Version>>) = specifier.into();
         let identifier = specifier.0.into();
         let range = specifier.1;
 
