@@ -4,10 +4,10 @@ pub mod tags;
 use eventric_core_model::stream::Position;
 use eventric_core_persistence::{
     model::{
-        event::Event,
+        event::EventRef,
         query::{
-            Query,
-            QueryItem,
+            QueryItemRef,
+            QueryRef,
         },
     },
     state::{
@@ -35,7 +35,7 @@ static POSITION_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &Event) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: &EventRef<'_>) {
     descriptor::insert(write, position, &event.descriptor);
     tags::insert(write, position, &event.tags);
 }
@@ -45,15 +45,17 @@ pub fn insert(write: &mut Write<'_>, position: Position, event: &Event) {
 // Query
 
 #[must_use]
-pub fn query(read: &Read<'_>, position: Option<Position>, query: Query) -> SequentialIterator {
-    let items: Vec<QueryItem> = query.into();
-
-    or::sequential_or(items.into_iter().map(|item| match item {
-        QueryItem::Specifiers(specifiers) => descriptor::query(read, position, specifiers),
-        QueryItem::SpecifiersAndTags(specifiers, tags) => and::sequential_and([
+pub fn query(
+    read: &Read<'_>,
+    position: Option<Position>,
+    query: &QueryRef<'_>,
+) -> SequentialIterator {
+    or::sequential_or(query.items().iter().map(|item| match item {
+        QueryItemRef::Specifiers(specifiers) => descriptor::query(read, position, specifiers),
+        QueryItemRef::SpecifiersAndTags(specifiers, tags) => and::sequential_and([
             descriptor::query(read, position, specifiers),
             tags::query(read, position, tags),
         ]),
-        QueryItem::Tags(tags) => tags::query(read, position, tags),
+        QueryItemRef::Tags(tags) => tags::query(read, position, tags),
     }))
 }

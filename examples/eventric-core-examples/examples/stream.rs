@@ -41,7 +41,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
             .into(),
         )]);
 
-        for id in stream.query(None, student_or_course_query) {
+        for id in stream.query(None, &student_or_course_query) {
             println!("student or course id: {id}");
         }
     }

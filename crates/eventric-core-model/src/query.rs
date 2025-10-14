@@ -19,6 +19,13 @@ pub struct Query {
     items: Vec<QueryItem>,
 }
 
+impl Query {
+    #[must_use]
+    pub fn items(&self) -> &Vec<QueryItem> {
+        &self.items
+    }
+}
+
 impl From<Query> for Vec<QueryItem> {
     fn from(value: Query) -> Self {
         value.items

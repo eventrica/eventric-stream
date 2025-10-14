@@ -3,8 +3,8 @@ pub mod forward;
 use eventric_core_model::stream::Position;
 use eventric_core_persistence::{
     model::{
-        event::Descriptor,
-        query::Specifier,
+        event::DescriptorRef,
+        query::SpecifierRef,
     },
     state::{
         Read,
@@ -25,7 +25,7 @@ static HASH_LEN: usize = size_of::<u64>();
 
 //  Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &Descriptor) {
+pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &DescriptorRef<'_>) {
     forward::insert(write, position, descriptor);
 }
 
@@ -34,14 +34,14 @@ pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &Descriptor
 // Query
 
 #[must_use]
-pub fn query(
+pub fn query<'a>(
     read: &Read<'_>,
     position: Option<Position>,
-    specifiers: impl IntoIterator<Item = Specifier>,
+    specifiers: impl IntoIterator<Item = &'a SpecifierRef<'a>>,
 ) -> SequentialIterator {
     or::sequential_or(
         specifiers
             .into_iter()
-            .map(|specifier| forward::iterate(read, position, &specifier)),
+            .map(|specifier| forward::iterate(read, position, specifier)),
     )
 }

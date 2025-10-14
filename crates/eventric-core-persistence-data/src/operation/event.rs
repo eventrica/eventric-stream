@@ -1,7 +1,7 @@
 use bytes::BufMut as _;
 use eventric_core_model::stream::Position;
 use eventric_core_persistence::{
-    model::event::Event,
+    model::event::EventRef,
     state::Write,
 };
 
@@ -11,7 +11,7 @@ use eventric_core_persistence::{
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &Event) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: &EventRef<'_>) {
     let key = position.value().to_be_bytes();
 
     let mut value = Vec::new();
@@ -25,13 +25,13 @@ pub fn insert(write: &mut Write<'_>, position: Position, event: &Event) {
 
 // Values
 
-fn write_value(value: &mut Vec<u8>, event: &Event) {
-    let descriptor_identifier = event.descriptor.identifer().hash();
-    let descriptor_version = event.descriptor.version().value();
+fn write_value(value: &mut Vec<u8>, event: &EventRef<'_>) {
+    let identifier = event.descriptor.identifer().hash();
+    let version = event.descriptor.version().value();
     let tags_len = u8::try_from(event.tags.len()).expect("max tag count exceeded");
 
-    value.put_u64(descriptor_identifier);
-    value.put_u8(descriptor_version);
+    value.put_u64(identifier);
+    value.put_u8(version);
     value.put_u8(tags_len);
 
     for tag in &event.tags {

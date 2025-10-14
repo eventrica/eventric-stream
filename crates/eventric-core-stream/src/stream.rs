@@ -5,10 +5,7 @@ use std::{
 
 use eventric_core_model::{
     event::insertion::Event,
-    query::{
-        Query,
-        QueryItem,
-    },
+    query::Query,
     stream::Position,
 };
 use eventric_core_persistence::{
@@ -20,18 +17,8 @@ use eventric_core_persistence::{
     },
 };
 use eventric_core_persistence_data as data;
-use eventric_core_persistence_index::{
-    self as index,
-    operation::{
-        descriptor,
-        tags,
-    },
-};
+use eventric_core_persistence_index as index;
 use eventric_core_persistence_reference as reference;
-use eventric_core_util::iter::{
-    and,
-    or,
-};
 use fancy_constructor::new;
 
 // =================================================================================================
@@ -76,7 +63,7 @@ impl Stream {
             let mut write = Write::new(&mut batch, &self.keyspaces);
 
             for event in events {
-                let event = event.into();
+                let event = (&event).into();
 
                 data::operation::insert(&mut write, self.position, &event);
                 index::operation::insert(&mut write, self.position, &event);
@@ -91,34 +78,11 @@ impl Stream {
         Ok(())
     }
 
-    pub fn query(&self, position: Option<Position>, query: Query) -> impl Iterator<Item = u64> {
+    pub fn query(&self, position: Option<Position>, query: &Query) -> impl Iterator<Item = u64> {
         let read = Read::new(&self.keyspaces);
-        let items: Vec<QueryItem> = query.into();
+        let query = query.into();
 
-        or::sequential_or(items.into_iter().map(|item| {
-            match item {
-                QueryItem::Specifiers(specifiers) => or::sequential_or(
-                    specifiers
-                        .into_iter()
-                        .map(|s| descriptor::forward::iterate(&read, position, &s.into())),
-                ),
-                QueryItem::SpecifiersAndTags(specifiers, tags) => and::sequential_and([
-                    or::sequential_or(
-                        specifiers
-                            .into_iter()
-                            .map(|s| descriptor::forward::iterate(&read, position, &s.into())),
-                    ),
-                    and::sequential_and(
-                        tags.into_iter()
-                            .map(|t| tags::forward::iterate(&read, position, &t.into())),
-                    ),
-                ]),
-                QueryItem::Tags(tags) => and::sequential_and(
-                    tags.into_iter()
-                        .map(|t| tags::forward::iterate(&read, position, &t.into())),
-                ),
-            }
-        }))
+        index::operation::query(&read, position, &query)
     }
 }
 

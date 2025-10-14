@@ -1,8 +1,11 @@
 use std::ops::Deref;
 
 use eventric_core_model::event::{
-    self,
-    insertion,
+    Descriptor,
+    Identifier,
+    Tag,
+    Version,
+    insertion::Event,
 };
 use fancy_constructor::new;
 use rapidhash::v3::{
@@ -24,20 +27,20 @@ static SEED: RapidSecrets = RapidSecrets::seed(0x2811_2017);
 
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct Event {
+pub struct EventRef<'a> {
     #[new(into)]
-    pub data: Vec<u8>,
+    pub data: &'a Vec<u8>,
     #[new(into)]
-    pub descriptor: Descriptor,
-    pub tags: Vec<Tag>,
+    pub descriptor: DescriptorRef<'a>,
+    pub tags: Vec<TagRef<'a>>,
 }
 
-impl From<insertion::Event> for Event {
-    fn from(event: insertion::Event) -> Self {
+impl<'a> From<&'a Event> for EventRef<'a> {
+    fn from(event: &'a Event) -> Self {
         Self::new(
-            event.data,
-            event.descriptor,
-            event.tags.into_iter().map(Into::into).collect(),
+            &event.data,
+            &event.descriptor,
+            event.tags.iter().map(Into::into).collect(),
         )
     }
 }
@@ -48,25 +51,24 @@ impl From<insertion::Event> for Event {
 
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct Descriptor(Identifier, event::Version);
+pub struct DescriptorRef<'a>(IdentifierRef<'a>, &'a Version);
 
-impl Descriptor {
+impl<'a> DescriptorRef<'a> {
     #[must_use]
-    pub fn identifer(&self) -> &Identifier {
+    pub fn identifer(&self) -> &IdentifierRef<'a> {
         &self.0
     }
 
     #[must_use]
-    pub fn version(&self) -> &event::Version {
-        &self.1
+    pub fn version(&self) -> &Version {
+        self.1
     }
 }
 
-impl From<event::Descriptor> for Descriptor {
-    fn from(descriptor: event::Descriptor) -> Self {
-        let descriptor: (event::Identifier, event::Version) = descriptor.into();
-        let identifier = descriptor.0.into();
-        let version = descriptor.1;
+impl<'a> From<&'a Descriptor> for DescriptorRef<'a> {
+    fn from(descriptor: &'a Descriptor) -> Self {
+        let identifier = descriptor.identifier().into();
+        let version = descriptor.version();
 
         Self::new(identifier, version)
     }
@@ -78,29 +80,28 @@ impl From<event::Descriptor> for Descriptor {
 
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct Identifier(u64, event::Identifier);
+pub struct IdentifierRef<'a>(u64, &'a Identifier);
 
-impl Identifier {
+impl IdentifierRef<'_> {
     #[must_use]
     pub fn hash(&self) -> u64 {
         self.0
     }
 }
 
-impl Deref for Identifier {
-    type Target = event::Identifier;
+impl Deref for IdentifierRef<'_> {
+    type Target = Identifier;
 
     fn deref(&self) -> &Self::Target {
-        &self.1
+        self.1
     }
 }
 
-impl From<event::Identifier> for Identifier {
-    fn from(descriptor_identifier: event::Identifier) -> Self {
-        Self::new(
-            v3::rapidhash_v3_seeded(descriptor_identifier.value().as_bytes(), &SEED),
-            descriptor_identifier,
-        )
+impl<'a> From<&'a Identifier> for IdentifierRef<'a> {
+    fn from(identifier: &'a Identifier) -> Self {
+        let hash = v3::rapidhash_v3_seeded(identifier.value().as_bytes(), &SEED);
+
+        Self::new(hash, identifier)
     }
 }
 
@@ -110,25 +111,27 @@ impl From<event::Identifier> for Identifier {
 
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct Tag(u64, event::Tag);
+pub struct TagRef<'a>(u64, &'a Tag);
 
-impl Tag {
+impl TagRef<'_> {
     #[must_use]
     pub fn hash(&self) -> u64 {
         self.0
     }
 }
 
-impl Deref for Tag {
-    type Target = event::Tag;
+impl Deref for TagRef<'_> {
+    type Target = Tag;
 
     fn deref(&self) -> &Self::Target {
-        &self.1
+        self.1
     }
 }
 
-impl From<event::Tag> for Tag {
-    fn from(tag: event::Tag) -> Self {
-        Self::new(v3::rapidhash_v3_seeded(tag.value().as_bytes(), &SEED), tag)
+impl<'a> From<&'a Tag> for TagRef<'a> {
+    fn from(tag: &'a Tag) -> Self {
+        let hash = v3::rapidhash_v3_seeded(tag.value().as_bytes(), &SEED);
+
+        Self::new(hash, tag)
     }
 }

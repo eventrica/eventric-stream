@@ -1,7 +1,7 @@
 mod lookup;
 
 use eventric_core_persistence::{
-    model::event::Tag,
+    model::event::TagRef,
     state::Write,
 };
 
@@ -15,6 +15,6 @@ static HASH_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, tags: &[Tag]) {
+pub fn insert(write: &mut Write<'_>, tags: &[TagRef<'_>]) {
     lookup::insert(write, tags);
 }
