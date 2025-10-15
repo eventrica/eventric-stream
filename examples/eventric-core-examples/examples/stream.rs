@@ -2,6 +2,7 @@ use std::error::Error;
 
 use eventric_core::{
     event::{
+        Data,
         Descriptor,
         Identifier,
         InsertionEvent,
@@ -24,7 +25,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
         stream.append(vec![
             InsertionEvent::new(
-                Vec::from_iter(b"hello world!".to_owned()),
+                Data::new("hello world!"),
                 Descriptor::new(
                     Identifier::new("StudentSubscribedToCourse"),
                     Version::new(0),
@@ -32,12 +33,12 @@ pub fn main() -> Result<(), Box<dyn Error>> {
                 Vec::from_iter([Tag::new("student:3242"), Tag::new("course:523")]),
             ),
             InsertionEvent::new(
-                Vec::from_iter(b"oh, no!".to_owned()),
+                Data::new("oh, no!"),
                 Descriptor::new(Identifier::new("CourseCapacityChanged"), Version::new(0)),
                 Vec::from_iter([Tag::new("course:523")]),
             ),
             InsertionEvent::new(
-                Vec::from_iter(b"goodbye world...".to_owned()),
+                Data::new("goodbye world..."),
                 Descriptor::new(
                     Identifier::new("StudentSubscribedToCourse"),
                     Version::new(1),
