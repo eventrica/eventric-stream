@@ -1,5 +1,5 @@
-pub mod and;
-pub mod or;
+mod and;
+mod or;
 
 use derive_more::Debug;
 use fancy_constructor::new;
@@ -107,6 +107,21 @@ where
         self.value
     }
 }
+
+// -------------------------------------------------------------------------------------------------
+
+// Re-Exports
+
+pub use self::{
+    and::{
+        SequentialAnd,
+        sequential_and,
+    },
+    or::{
+        SequentialOr,
+        sequential_or,
+    },
+};
 
 // -------------------------------------------------------------------------------------------------
 

@@ -1,11 +1,11 @@
 use std::ops::Deref;
 
-use eventric_core_model::event::{
+use eventric_core_model::{
     Descriptor,
+    Event,
     Identifier,
     Tag,
     Version,
-    insertion::Event,
 };
 use fancy_constructor::new;
 use rapidhash::v3::{

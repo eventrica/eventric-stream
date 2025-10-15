@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use eventric_core_persistence::context::Context;
+use eventric_core_persistence::Context;
 use fjall::{
     Keyspace,
     KeyspaceCreateOptions,

@@ -2,8 +2,8 @@ mod descriptor;
 mod tags;
 
 use eventric_core_persistence::{
-    model::event::EventRef,
-    state::Write,
+    EventRef,
+    Write,
 };
 
 // =================================================================================================

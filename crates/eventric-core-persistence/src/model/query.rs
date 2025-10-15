@@ -1,12 +1,10 @@
 use std::ops::Range;
 
 use eventric_core_model::{
-    event::Version,
-    query::{
-        Query,
-        QueryItem,
-        Specifier,
-    },
+    Query,
+    QueryItem,
+    Specifier,
+    Version,
 };
 use fancy_constructor::new;
 

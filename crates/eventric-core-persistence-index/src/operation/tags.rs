@@ -1,14 +1,12 @@
 pub mod forward;
 
-use eventric_core_model::stream::Position;
+use eventric_core_model::Position;
 use eventric_core_persistence::{
-    model::event::TagRef,
-    state::{
-        Read,
-        Write,
-    },
+    Read,
+    TagRef,
+    Write,
 };
-use eventric_core_util::iter::and;
+use eventric_core_util::iter;
 
 use crate::iter::SequentialIterator;
 
@@ -35,5 +33,5 @@ pub fn query<'a, T>(read: &Read<'_>, position: Option<Position>, tags: T) -> Seq
 where
     T: Iterator<Item = &'a TagRef<'a>>,
 {
-    and::sequential_and(tags.map(|tag| forward::iterate(read, position, tag)))
+    iter::sequential_and(tags.map(|tag| forward::iterate(read, position, tag)))
 }

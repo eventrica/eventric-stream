@@ -2,12 +2,11 @@ use std::error::Error;
 
 use eventric_core::{
     event::{
-        // Tag,
         Descriptor,
+        Event,
         Identifier,
         Tag,
         Version,
-        insertion::Event,
     },
     query::{
         Query,

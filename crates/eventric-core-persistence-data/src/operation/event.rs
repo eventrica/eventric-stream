@@ -1,8 +1,8 @@
 use bytes::BufMut as _;
-use eventric_core_model::stream::Position;
+use eventric_core_model::Position;
 use eventric_core_persistence::{
-    model::event::EventRef,
-    state::Write,
+    EventRef,
+    Write,
 };
 
 // =================================================================================================

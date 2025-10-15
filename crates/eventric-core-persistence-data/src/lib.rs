@@ -2,9 +2,20 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 
-pub mod configuration;
-pub mod operation;
+mod configuration;
+mod operation;
 
 // =================================================================================================
 // Eventric Core Persistence Data
 // =================================================================================================
+
+// Re-Exports
+
+pub use self::{
+    configuration::keyspace,
+    operation::{
+        insert,
+        is_empty,
+        len,
+    },
+};

@@ -1,7 +1,7 @@
 use derive_more::Debug;
 use eventric_core_util::iter::{
-    and::SequentialAnd,
-    or::SequentialOr,
+    SequentialAnd,
+    SequentialOr,
 };
 use fjall::Keyspace;
 use self_cell::self_cell;
@@ -16,7 +16,7 @@ use self_cell::self_cell;
 pub enum SequentialIterator {
     And(SequentialAnd<SequentialIterator, u64>),
     Or(SequentialOr<SequentialIterator, u64>),
-    Owned(#[debug("OwnedPositionIterator")] OwnedSequentialIterator),
+    Owned(#[debug("OwnedSequentialIterator")] OwnedSequentialIterator),
 }
 
 impl Iterator for SequentialIterator {

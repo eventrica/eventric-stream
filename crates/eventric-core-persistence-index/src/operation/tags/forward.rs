@@ -2,13 +2,11 @@ use bytes::{
     Buf as _,
     BufMut as _,
 };
-use eventric_core_model::stream::Position;
+use eventric_core_model::Position;
 use eventric_core_persistence::{
-    model::event::TagRef,
-    state::{
-        Read,
-        Write,
-    },
+    Read,
+    TagRef,
+    Write,
 };
 use fjall::{
     Error,

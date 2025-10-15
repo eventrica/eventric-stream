@@ -2,10 +2,34 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 
-pub mod context;
-pub mod model;
-pub mod state;
+mod context;
+mod model;
+mod state;
 
 // =================================================================================================
 // Eventric Core Persistence
 // =================================================================================================
+
+// Re-Export
+
+pub use self::{
+    context::Context,
+    model::{
+        event::{
+            DescriptorRef,
+            EventRef,
+            IdentifierRef,
+            TagRef,
+        },
+        query::{
+            QueryItemRef,
+            QueryRef,
+            SpecifierRef,
+        },
+    },
+    state::{
+        Keyspaces,
+        Read,
+        Write,
+    },
+};

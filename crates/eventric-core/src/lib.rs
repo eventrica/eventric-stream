@@ -7,14 +7,24 @@
 // Re-Exports
 
 pub mod event {
-    pub use eventric_core_model::event::*;
+    pub use eventric_core_model::{
+        Descriptor,
+        Event,
+        Identifier,
+        Tag,
+        Version,
+    };
 }
 
 pub mod query {
-    pub use eventric_core_model::query::*;
+    pub use eventric_core_model::{
+        Query,
+        QueryItem,
+        Specifier,
+    };
 }
 
 pub mod stream {
-    pub use eventric_core_model::stream::*;
-    pub use eventric_core_stream::stream::*;
+    pub use eventric_core_model::Position;
+    pub use eventric_core_stream::Stream;
 }

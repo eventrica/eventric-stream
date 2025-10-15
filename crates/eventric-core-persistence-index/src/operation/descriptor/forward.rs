@@ -2,19 +2,13 @@ use bytes::{
     Buf as _,
     BufMut as _,
 };
-use eventric_core_model::stream::Position;
+use eventric_core_model::Position;
 use eventric_core_persistence::{
-    model::{
-        event::{
-            DescriptorRef,
-            IdentifierRef,
-        },
-        query::SpecifierRef,
-    },
-    state::{
-        Read,
-        Write,
-    },
+    DescriptorRef,
+    IdentifierRef,
+    Read,
+    SpecifierRef,
+    Write,
 };
 use fjall::{
     Error,

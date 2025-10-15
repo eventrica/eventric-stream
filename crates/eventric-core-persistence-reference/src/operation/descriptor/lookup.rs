@@ -1,7 +1,7 @@
 use bytes::BufMut as _;
 use eventric_core_persistence::{
-    model::event::DescriptorRef,
-    state::Write,
+    DescriptorRef,
+    Write,
 };
 
 use crate::operation::{

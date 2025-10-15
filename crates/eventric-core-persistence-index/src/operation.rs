@@ -1,26 +1,15 @@
 pub mod descriptor;
 pub mod tags;
 
-use eventric_core_model::stream::Position;
+use eventric_core_model::Position;
 use eventric_core_persistence::{
-    model::{
-        event::EventRef,
-        query::{
-            QueryItemRef,
-            QueryRef,
-        },
-    },
-    state::{
-        Read,
-        Write,
-    },
+    EventRef,
+    QueryItemRef,
+    QueryRef,
+    Read,
+    Write,
 };
-use eventric_core_util::iter::{
-    and,
-    or,
-};
-
-use crate::iter::SequentialIterator;
+use eventric_core_util::iter;
 
 // =================================================================================================
 // Operation
@@ -44,15 +33,14 @@ pub fn insert<'a>(write: &mut Write<'_>, position: Position, event: &'a EventRef
 
 // Query
 
-#[must_use]
 pub fn query<'a>(
     read: &Read<'_>,
     position: Option<Position>,
     query: &'a QueryRef<'a>,
-) -> SequentialIterator {
-    or::sequential_or(query.items().iter().map(|item| match item {
+) -> impl Iterator<Item = u64> + use<> {
+    iter::sequential_or(query.items().iter().map(|item| match item {
         QueryItemRef::Specifiers(specs) => descriptor::query(read, position, specs.iter()),
-        QueryItemRef::SpecifiersAndTags(specs, tags) => and::sequential_and([
+        QueryItemRef::SpecifiersAndTags(specs, tags) => iter::sequential_and([
             descriptor::query(read, position, specs.iter()),
             tags::query(read, position, tags.iter()),
         ]),

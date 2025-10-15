@@ -2,10 +2,20 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 
-pub mod configuration;
-pub mod iter;
-pub mod operation;
+mod configuration;
+mod iter;
+mod operation;
 
 // =================================================================================================
 // Eventric Core Persistence Index
 // =================================================================================================
+
+// Re-Export
+
+pub use self::{
+    configuration::keyspace,
+    operation::{
+        insert,
+        query,
+    },
+};

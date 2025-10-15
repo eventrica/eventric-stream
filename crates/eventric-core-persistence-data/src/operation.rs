@@ -3,13 +3,11 @@ mod event;
 use std::error::Error;
 
 use bytes::Buf as _;
-use eventric_core_model::stream::Position;
+use eventric_core_model::Position;
 use eventric_core_persistence::{
-    model::event::EventRef,
-    state::{
-        Read,
-        Write,
-    },
+    EventRef,
+    Read,
+    Write,
 };
 
 // =================================================================================================
@@ -21,6 +19,8 @@ use eventric_core_persistence::{
 pub fn insert<'a>(write: &mut Write<'_>, position: Position, event: &'a EventRef<'a>) {
     event::insert(write, position, event);
 }
+
+// -------------------------------------------------------------------------------------------------
 
 // Properties
 

@@ -1,8 +1,8 @@
 mod lookup;
 
 use eventric_core_persistence::{
-    model::event::DescriptorRef,
-    state::Write,
+    DescriptorRef,
+    Write,
 };
 
 // =================================================================================================

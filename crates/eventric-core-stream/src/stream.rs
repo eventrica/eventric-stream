@@ -4,17 +4,15 @@ use std::{
 };
 
 use eventric_core_model::{
-    event::insertion::Event,
-    query::Query,
-    stream::Position,
+    Event,
+    Position,
+    Query,
 };
 use eventric_core_persistence::{
-    context::Context,
-    state::{
-        Keyspaces,
-        Read,
-        Write,
-    },
+    Context,
+    Keyspaces,
+    Read,
+    Write,
 };
 use eventric_core_persistence_data as data;
 use eventric_core_persistence_index as index;
@@ -40,12 +38,12 @@ impl Stream {
     {
         let context = Context::new(path)?;
         let keyspaces = Keyspaces::new(
-            data::configuration::keyspace(&context)?,
-            index::configuration::keyspace(&context)?,
-            reference::configuration::keyspace(&context)?,
+            data::keyspace(&context)?,
+            index::keyspace(&context)?,
+            reference::keyspace(&context)?,
         );
 
-        let len = data::operation::len(&Read::new(&keyspaces))?;
+        let len = data::len(&Read::new(&keyspaces))?;
         let position = len.into();
 
         Ok(Self::inner_new(context, keyspaces, position))
@@ -65,9 +63,9 @@ impl Stream {
             for event in events {
                 let event = (&event).into();
 
-                data::operation::insert(&mut write, self.position, &event);
-                index::operation::insert(&mut write, self.position, &event);
-                reference::operation::insert(&mut write, &event);
+                data::insert(&mut write, self.position, &event);
+                index::insert(&mut write, self.position, &event);
+                reference::insert(&mut write, &event);
 
                 self.position.increment();
             }
@@ -82,16 +80,16 @@ impl Stream {
         let read = Read::new(&self.keyspaces);
         let query = query.into();
 
-        index::operation::query(&read, position, &query)
+        index::query(&read, position, &query)
     }
 }
 
 impl Stream {
     pub fn is_empty(&self) -> Result<bool, Box<dyn Error>> {
-        data::operation::is_empty(&Read::new(&self.keyspaces))
+        data::is_empty(&Read::new(&self.keyspaces))
     }
 
     pub fn len(&self) -> Result<u64, Box<dyn Error>> {
-        data::operation::len(&Read::new(&self.keyspaces))
+        data::len(&Read::new(&self.keyspaces))
     }
 }

@@ -1,17 +1,13 @@
 pub mod forward;
 
-use eventric_core_model::stream::Position;
+use eventric_core_model::Position;
 use eventric_core_persistence::{
-    model::{
-        event::DescriptorRef,
-        query::SpecifierRef,
-    },
-    state::{
-        Read,
-        Write,
-    },
+    DescriptorRef,
+    Read,
+    SpecifierRef,
+    Write,
 };
-use eventric_core_util::iter::or;
+use eventric_core_util::iter;
 
 use crate::iter::SequentialIterator;
 
@@ -38,5 +34,5 @@ pub fn query<'a, S>(read: &Read<'_>, position: Option<Position>, specs: S) -> Se
 where
     S: Iterator<Item = &'a SpecifierRef<'a>>,
 {
-    or::sequential_or(specs.map(|spec| forward::iterate(read, position, spec)))
+    iter::sequential_or(specs.map(|spec| forward::iterate(read, position, spec)))
 }
