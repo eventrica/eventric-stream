@@ -23,7 +23,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     {
         let mut stream = Stream::new(PATH, true)?;
 
-        stream.append(vec![
+        stream.append(Vec::from_iter([
             &Event::new(
                 Data::new("hello world!"),
                 Descriptor::new(
@@ -45,7 +45,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
                 ),
                 Vec::from_iter([Tag::new("student:7642"), Tag::new("course:63")]),
             ),
-        ])?;
+        ]))?;
 
         let student_or_course_query =
             Query::new(Vec::from_iter([QueryItem::Specifiers(Vec::from_iter([
