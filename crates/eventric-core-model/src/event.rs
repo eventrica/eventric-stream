@@ -6,9 +6,23 @@ use fancy_constructor::new;
 // Event
 // =================================================================================================
 
+// Data
+
+#[derive(new, Debug)]
+#[new(vis(pub))]
+pub struct Data(#[new(into)] Vec<u8>);
+
+impl AsRef<[u8]> for Data {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
 // Descriptor
 
-#[derive(new, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(new, Debug, Eq, PartialEq)]
 #[new(vis(pub))]
 pub struct Descriptor(#[new(into)] Identifier, #[new(into)] Version);
 
@@ -26,7 +40,7 @@ impl Descriptor {
 
 // Identifier
 
-#[derive(new, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(new, Debug, Eq, PartialEq)]
 #[new(vis(pub))]
 pub struct Identifier(#[new(into)] String);
 
@@ -54,7 +68,7 @@ impl Version {
 
 // Tag
 
-#[derive(new, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(new, Debug, Eq, PartialEq)]
 #[new(vis(pub))]
 pub struct Tag(#[new(into)] String);
 

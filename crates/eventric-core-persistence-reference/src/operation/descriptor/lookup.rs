@@ -1,6 +1,6 @@
 use bytes::BufMut as _;
 use eventric_core_persistence::{
-    DescriptorRef,
+    DescriptorHashRef,
     Write,
 };
 
@@ -20,10 +20,10 @@ static KEY_LEN: usize = ID_LEN + HASH_LEN;
 
 // Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, descriptor: &'a DescriptorRef<'a>) {
+pub fn insert(write: &mut Write<'_>, descriptor: &DescriptorHashRef<'_>) {
     let mut key = [0u8; KEY_LEN];
 
-    write_key(&mut key, descriptor);
+    write_key(&mut key, descriptor.identifer().hash());
 
     let value = descriptor.identifer().value().as_bytes();
 
@@ -34,12 +34,11 @@ pub fn insert<'a>(write: &mut Write<'_>, descriptor: &'a DescriptorRef<'a>) {
 
 // Keys/Prefixes
 
-fn write_key<'a>(key: &mut [u8; KEY_LEN], descriptor: &'a DescriptorRef<'a>) {
+fn write_key(key: &mut [u8; KEY_LEN], identifier: u64) {
     let mut key = &mut key[..];
 
     let reference_id = REFERENCE_ID;
-    let descriptor_identifier = descriptor.identifer().hash();
 
     key.put_u8(reference_id);
-    key.put_u64(descriptor_identifier);
+    key.put_u64(identifier);
 }

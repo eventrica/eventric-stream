@@ -1,6 +1,6 @@
 use bytes::BufMut as _;
 use eventric_core_persistence::{
-    TagRef,
+    TagHashRef,
     Write,
 };
 
@@ -20,11 +20,11 @@ static KEY_LEN: usize = ID_LEN + HASH_LEN;
 
 // Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, tags: &'a [TagRef<'a>]) {
+pub fn insert(write: &mut Write<'_>, tags: &[TagHashRef<'_>]) {
     let mut key = [0u8; KEY_LEN];
 
     for tag in tags {
-        write_key(&mut key, tag);
+        write_key(&mut key, tag.hash());
 
         let value = tag.value().as_bytes();
 
@@ -36,11 +36,10 @@ pub fn insert<'a>(write: &mut Write<'_>, tags: &'a [TagRef<'a>]) {
 
 // Keys/Prefixes
 
-fn write_key<'a>(key: &mut [u8; KEY_LEN], tag: &'a TagRef<'a>) {
+fn write_key(key: &mut [u8; KEY_LEN], tag: u64) {
     let mut key = &mut key[..];
 
     let reference_id = REFERENCE_ID;
-    let tag = tag.hash();
 
     key.put_u8(reference_id);
     key.put_u64(tag);

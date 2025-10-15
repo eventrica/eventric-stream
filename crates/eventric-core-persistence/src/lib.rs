@@ -16,15 +16,19 @@ pub use self::{
     context::Context,
     model::{
         event::{
-            DescriptorRef,
-            EventRef,
-            IdentifierRef,
-            TagRef,
+            DescriptorHash,
+            DescriptorHashRef,
+            EventHash,
+            EventHashRef,
+            IdentifierHash,
+            IdentifierHashRef,
+            TagHash,
+            TagHashRef,
         },
         query::{
-            QueryItemRef,
-            QueryRef,
-            SpecifierRef,
+            QueryHash,
+            QueryItemHash,
+            SpecifierHash,
         },
     },
     state::{

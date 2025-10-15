@@ -2,7 +2,7 @@ mod descriptor;
 mod tags;
 
 use eventric_core_persistence::{
-    EventRef,
+    EventHashRef,
     Write,
 };
 
@@ -18,7 +18,7 @@ static ID_LEN: usize = size_of::<u8>();
 
 // Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, event: &'a EventRef<'a>) {
+pub fn insert(write: &mut Write<'_>, event: &EventHashRef<'_>) {
     descriptor::insert(write, &event.descriptor);
     tags::insert(write, &event.tags);
 }

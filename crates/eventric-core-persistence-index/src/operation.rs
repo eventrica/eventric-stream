@@ -3,9 +3,9 @@ pub mod tags;
 
 use eventric_core_model::Position;
 use eventric_core_persistence::{
-    EventRef,
-    QueryItemRef,
-    QueryRef,
+    EventHashRef,
+    QueryHash,
+    QueryItemHash,
     Read,
     Write,
 };
@@ -24,7 +24,7 @@ static POSITION_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, position: Position, event: &'a EventRef<'a>) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: &EventHashRef<'_>) {
     descriptor::insert(write, position, &event.descriptor);
     tags::insert(write, position, &event.tags);
 }
@@ -33,17 +33,17 @@ pub fn insert<'a>(write: &mut Write<'_>, position: Position, event: &'a EventRef
 
 // Query
 
-pub fn query<'a>(
+pub fn query(
     read: &Read<'_>,
     position: Option<Position>,
-    query: &'a QueryRef<'a>,
+    query: &QueryHash,
 ) -> impl Iterator<Item = u64> + use<> {
     iter::sequential_or(query.items().iter().map(|item| match item {
-        QueryItemRef::Specifiers(specs) => descriptor::query(read, position, specs.iter()),
-        QueryItemRef::SpecifiersAndTags(specs, tags) => iter::sequential_and([
+        QueryItemHash::Specifiers(specs) => descriptor::query(read, position, specs.iter()),
+        QueryItemHash::SpecifiersAndTags(specs, tags) => iter::sequential_and([
             descriptor::query(read, position, specs.iter()),
             tags::query(read, position, tags.iter()),
         ]),
-        QueryItemRef::Tags(tags) => tags::query(read, position, tags.iter()),
+        QueryItemHash::Tags(tags) => tags::query(read, position, tags.iter()),
     }))
 }

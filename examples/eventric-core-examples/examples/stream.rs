@@ -2,9 +2,10 @@ use std::error::Error;
 
 use eventric_core::{
     event::{
+        Data,
         Descriptor,
-        Event,
         Identifier,
+        InsertionEvent,
         Tag,
         Version,
     },
@@ -16,28 +17,28 @@ use eventric_core::{
     stream::Stream,
 };
 
-static PATH: &str = "./temp/data/experiments";
+static PATH: &str = "./temp/examples/stream";
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     {
         let mut stream = Stream::new(PATH)?;
 
         stream.append(vec![
-            Event::new(
-                Vec::from_iter(b"hello world!".to_owned()),
+            InsertionEvent::new(
+                Data::new("hello world!"),
                 Descriptor::new(
                     Identifier::new("StudentSubscribedToCourse"),
                     Version::new(0),
                 ),
                 Vec::from_iter([Tag::new("student:3242"), Tag::new("course:523")]),
             ),
-            Event::new(
-                Vec::from_iter(b"oh, no!".to_owned()),
+            InsertionEvent::new(
+                Data::new("oh, no!"),
                 Descriptor::new(Identifier::new("CourseCapacityChanged"), Version::new(0)),
                 Vec::from_iter([Tag::new("course:523")]),
             ),
-            Event::new(
-                Vec::from_iter(b"goodbye world...".to_owned()),
+            InsertionEvent::new(
+                Data::new("goodbye world..."),
                 Descriptor::new(
                     Identifier::new("StudentSubscribedToCourse"),
                     Version::new(1),
@@ -52,8 +53,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
                 Specifier::new(Identifier::new("CourseCapacityChanged"), None),
             ]))]));
 
-        for id in stream.query(None, &student_or_course_query) {
-            println!("student or course id: {id}");
+        for event in stream.query(None, &student_or_course_query) {
+            println!("student or course id: {event:#?}");
         }
     }
 

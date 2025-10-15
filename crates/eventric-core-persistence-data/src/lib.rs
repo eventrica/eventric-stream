@@ -14,6 +14,7 @@ mod operation;
 pub use self::{
     configuration::keyspace,
     operation::{
+        get,
         insert,
         is_empty,
         len,

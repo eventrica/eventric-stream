@@ -4,10 +4,9 @@ use bytes::{
 };
 use eventric_core_model::Position;
 use eventric_core_persistence::{
-    DescriptorRef,
-    IdentifierRef,
+    DescriptorHashRef,
     Read,
-    SpecifierRef,
+    SpecifierHash,
     Write,
 };
 use fjall::{
@@ -41,12 +40,12 @@ static PREFIX_LEN: usize = ID_LEN + HASH_LEN;
 
 //  Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, position: Position, descriptor: &'a DescriptorRef<'a>) {
+pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &DescriptorHashRef<'_>) {
     let mut key = [0u8; KEY_LEN];
 
     let identifier = descriptor.identifer();
 
-    write_key(&mut key, position, identifier);
+    write_key(&mut key, position, identifier.hash());
 
     let value = descriptor.version().value().to_be_bytes();
 
@@ -58,10 +57,10 @@ pub fn insert<'a>(write: &mut Write<'_>, position: Position, descriptor: &'a Des
 // Iterate
 
 #[must_use]
-pub fn iterate<'a>(
+pub fn iterate(
     read: &Read<'_>,
     position: Option<Position>,
-    specifier: &'a SpecifierRef<'a>,
+    specifier: &SpecifierHash,
 ) -> SequentialIterator {
     let version_bounds = specifier
         .range()
@@ -104,9 +103,9 @@ pub fn iterate<'a>(
     iterator.into()
 }
 
-fn prefix<'a, F>(
+fn prefix<F>(
     index: Keyspace,
-    specification: &'a SpecifierRef<'a>,
+    specification: &SpecifierHash,
     filter_map: F,
 ) -> OwnedSequentialIterator
 where
@@ -116,7 +115,7 @@ where
 
     let identifier = specification.identifer();
 
-    write_prefix(&mut prefix, identifier);
+    write_prefix(&mut prefix, identifier.hash());
 
     OwnedSequentialIterator::new(index, |keyspace| {
         Box::new(
@@ -128,10 +127,10 @@ where
     })
 }
 
-fn range<'a, F>(
+fn range<F>(
     index: Keyspace,
     position: Position,
-    specifier: &'a SpecifierRef<'a>,
+    specifier: &SpecifierHash,
     filter_map: F,
 ) -> OwnedSequentialIterator
 where
@@ -141,13 +140,13 @@ where
 
     let identifier = specifier.identifer();
 
-    write_key(&mut lower, position, identifier);
+    write_key(&mut lower, position, identifier.hash());
 
     let mut upper = [0u8; KEY_LEN];
 
     let position = Position::from(u64::MAX);
 
-    write_key(&mut upper, position, identifier);
+    write_key(&mut upper, position, identifier.hash());
 
     let range = lower..=upper;
 
@@ -165,11 +164,10 @@ where
 
 // Keys/Prefixes
 
-fn write_key<'a>(key: &mut [u8; KEY_LEN], position: Position, identifier: &'a IdentifierRef<'a>) {
+fn write_key(key: &mut [u8; KEY_LEN], position: Position, identifier: u64) {
     let mut key = &mut key[..];
 
     let index_id = INDEX_ID;
-    let identifier = identifier.hash();
     let position = position.value();
 
     key.put_u8(index_id);
@@ -177,11 +175,10 @@ fn write_key<'a>(key: &mut [u8; KEY_LEN], position: Position, identifier: &'a Id
     key.put_u64(position);
 }
 
-fn write_prefix<'a>(prefix: &mut [u8; PREFIX_LEN], identifier: &'a IdentifierRef<'a>) {
+fn write_prefix(prefix: &mut [u8; PREFIX_LEN], identifier: u64) {
     let mut prefix = &mut prefix[..];
 
     let index_id = INDEX_ID;
-    let identifier = identifier.hash();
 
     prefix.put_u8(index_id);
     prefix.put_u64(identifier);

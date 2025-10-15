@@ -43,7 +43,7 @@ pub enum QueryItem {
 
 // Specifier
 
-#[derive(new, Clone, Debug, Eq, PartialEq)]
+#[derive(new, Debug, Eq, PartialEq)]
 #[new(vis(pub))]
 pub struct Specifier(#[new(into)] Identifier, #[new(into)] Option<Range<Version>>);
 
