@@ -4,10 +4,10 @@ use bytes::{
 };
 use eventric_core_model::Position;
 use eventric_core_persistence::{
-    DescriptorRef,
-    IdentifierRef,
+    DescriptorHashRef,
+    IdentifierHashRef,
     Read,
-    SpecifierRef,
+    SpecifierHashRef,
     Write,
 };
 use fjall::{
@@ -41,7 +41,11 @@ static PREFIX_LEN: usize = ID_LEN + HASH_LEN;
 
 //  Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, position: Position, descriptor: &'a DescriptorRef<'a>) {
+pub fn insert<'a>(
+    write: &mut Write<'_>,
+    position: Position,
+    descriptor: &'a DescriptorHashRef<'a>,
+) {
     let mut key = [0u8; KEY_LEN];
 
     let identifier = descriptor.identifer();
@@ -61,7 +65,7 @@ pub fn insert<'a>(write: &mut Write<'_>, position: Position, descriptor: &'a Des
 pub fn iterate<'a>(
     read: &Read<'_>,
     position: Option<Position>,
-    specifier: &'a SpecifierRef<'a>,
+    specifier: &'a SpecifierHashRef<'a>,
 ) -> SequentialIterator {
     let version_bounds = specifier
         .range()
@@ -106,7 +110,7 @@ pub fn iterate<'a>(
 
 fn prefix<'a, F>(
     index: Keyspace,
-    specification: &'a SpecifierRef<'a>,
+    specification: &'a SpecifierHashRef<'a>,
     filter_map: F,
 ) -> OwnedSequentialIterator
 where
@@ -131,7 +135,7 @@ where
 fn range<'a, F>(
     index: Keyspace,
     position: Position,
-    specifier: &'a SpecifierRef<'a>,
+    specifier: &'a SpecifierHashRef<'a>,
     filter_map: F,
 ) -> OwnedSequentialIterator
 where
@@ -165,7 +169,11 @@ where
 
 // Keys/Prefixes
 
-fn write_key<'a>(key: &mut [u8; KEY_LEN], position: Position, identifier: &'a IdentifierRef<'a>) {
+fn write_key<'a>(
+    key: &mut [u8; KEY_LEN],
+    position: Position,
+    identifier: &'a IdentifierHashRef<'a>,
+) {
     let mut key = &mut key[..];
 
     let index_id = INDEX_ID;
@@ -177,7 +185,7 @@ fn write_key<'a>(key: &mut [u8; KEY_LEN], position: Position, identifier: &'a Id
     key.put_u64(position);
 }
 
-fn write_prefix<'a>(prefix: &mut [u8; PREFIX_LEN], identifier: &'a IdentifierRef<'a>) {
+fn write_prefix<'a>(prefix: &mut [u8; PREFIX_LEN], identifier: &'a IdentifierHashRef<'a>) {
     let mut prefix = &mut prefix[..];
 
     let index_id = INDEX_ID;

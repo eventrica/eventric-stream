@@ -5,7 +5,7 @@ use bytes::{
 use eventric_core_model::Position;
 use eventric_core_persistence::{
     Read,
-    TagRef,
+    TagHashRef,
     Write,
 };
 use fjall::{
@@ -39,7 +39,7 @@ static PREFIX_LEN: usize = ID_LEN + HASH_LEN;
 
 // Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, position: Position, tags: &'a [TagRef<'a>]) {
+pub fn insert<'a>(write: &mut Write<'_>, position: Position, tags: &'a [TagHashRef<'a>]) {
     let mut key = [0u8; KEY_LEN];
 
     for tag in tags {
@@ -57,7 +57,7 @@ pub fn insert<'a>(write: &mut Write<'_>, position: Position, tags: &'a [TagRef<'
 pub fn iterate<'a>(
     read: &Read<'_>,
     position: Option<Position>,
-    tag: &'a TagRef<'a>,
+    tag: &'a TagHashRef<'a>,
 ) -> SequentialIterator {
     let map = |key: Result<Slice, Error>| {
         let key = key.expect("invalid key/value during iteration");
@@ -76,7 +76,7 @@ pub fn iterate<'a>(
     }
 }
 
-fn prefix<'a, F>(index: Keyspace, tag: &'a TagRef<'a>, map: F) -> SequentialIterator
+fn prefix<'a, F>(index: Keyspace, tag: &'a TagHashRef<'a>, map: F) -> SequentialIterator
 where
     F: Fn(Result<Slice, Error>) -> u64 + 'static,
 {
@@ -93,7 +93,7 @@ where
 fn range<'a, F>(
     index: Keyspace,
     position: Position,
-    tag: &'a TagRef<'a>,
+    tag: &'a TagHashRef<'a>,
     map: F,
 ) -> SequentialIterator
 where
@@ -121,7 +121,7 @@ where
 
 // Keys/Prefixes
 
-fn write_key<'a>(key: &mut [u8; KEY_LEN], position: Position, tag: &'a TagRef<'a>) {
+fn write_key<'a>(key: &mut [u8; KEY_LEN], position: Position, tag: &'a TagHashRef<'a>) {
     let mut key = &mut key[..];
 
     let index_id = INDEX_ID;
@@ -133,7 +133,7 @@ fn write_key<'a>(key: &mut [u8; KEY_LEN], position: Position, tag: &'a TagRef<'a
     key.put_u64(position);
 }
 
-fn write_prefix<'a>(prefix: &mut [u8; PREFIX_LEN], tag: &'a TagRef<'a>) {
+fn write_prefix<'a>(prefix: &mut [u8; PREFIX_LEN], tag: &'a TagHashRef<'a>) {
     let mut prefix = &mut prefix[..];
 
     let index_id = INDEX_ID;

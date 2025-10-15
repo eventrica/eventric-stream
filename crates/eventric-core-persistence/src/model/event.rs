@@ -1,9 +1,10 @@
 use std::ops::Deref;
 
 use eventric_core_model::{
+    Data,
     Descriptor,
-    Event,
     Identifier,
+    InsertionEvent,
     Tag,
     Version,
 };
@@ -25,18 +26,32 @@ static SEED: RapidSecrets = RapidSecrets::seed(0x2811_2017);
 
 // Event
 
+// Hash
+
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct EventRef<'a> {
+pub struct EventHash {
     #[new(into)]
-    pub data: &'a Vec<u8>,
+    pub data: Data,
     #[new(into)]
-    pub descriptor: DescriptorRef<'a>,
-    pub tags: Vec<TagRef<'a>>,
+    pub descriptor: DescriptorHash,
+    pub tags: Vec<TagHash>,
 }
 
-impl<'a> From<&'a Event> for EventRef<'a> {
-    fn from(event: &'a Event) -> Self {
+// HashRef
+
+#[derive(new, Debug)]
+#[new(vis())]
+pub struct EventHashRef<'a> {
+    #[new(into)]
+    pub data: &'a Data,
+    #[new(into)]
+    pub descriptor: DescriptorHashRef<'a>,
+    pub tags: Vec<TagHashRef<'a>>,
+}
+
+impl<'a> From<&'a InsertionEvent> for EventHashRef<'a> {
+    fn from(event: &'a InsertionEvent) -> Self {
         Self::new(
             event.data(),
             event.descriptor(),
@@ -49,13 +64,33 @@ impl<'a> From<&'a Event> for EventRef<'a> {
 
 // Descriptor
 
+// Hash
+
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct DescriptorRef<'a>(IdentifierRef<'a>, &'a Version);
+pub struct DescriptorHash(IdentifierHash, Version);
 
-impl<'a> DescriptorRef<'a> {
+impl DescriptorHash {
     #[must_use]
-    pub fn identifer(&self) -> &IdentifierRef<'a> {
+    pub fn identifer(&self) -> &IdentifierHash {
+        &self.0
+    }
+
+    #[must_use]
+    pub fn version(&self) -> &Version {
+        &self.1
+    }
+}
+
+// HashRef
+
+#[derive(new, Debug)]
+#[new(vis())]
+pub struct DescriptorHashRef<'a>(IdentifierHashRef<'a>, &'a Version);
+
+impl<'a> DescriptorHashRef<'a> {
+    #[must_use]
+    pub fn identifer(&self) -> &IdentifierHashRef<'a> {
         &self.0
     }
 
@@ -65,7 +100,7 @@ impl<'a> DescriptorRef<'a> {
     }
 }
 
-impl<'a> From<&'a Descriptor> for DescriptorRef<'a> {
+impl<'a> From<&'a Descriptor> for DescriptorHashRef<'a> {
     fn from(descriptor: &'a Descriptor) -> Self {
         let identifier = descriptor.identifier().into();
         let version = descriptor.version();
@@ -78,18 +113,41 @@ impl<'a> From<&'a Descriptor> for DescriptorRef<'a> {
 
 // Identifier
 
+// Hash
+
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct IdentifierRef<'a>(u64, &'a Identifier);
+pub struct IdentifierHash(u64);
 
-impl IdentifierRef<'_> {
+impl IdentifierHash {
     #[must_use]
     pub fn hash(&self) -> u64 {
         self.0
     }
 }
 
-impl Deref for IdentifierRef<'_> {
+impl From<&Identifier> for IdentifierHash {
+    fn from(identifier: &Identifier) -> Self {
+        let hash = identifier_hash(identifier);
+
+        Self::new(hash)
+    }
+}
+
+// HashRef
+
+#[derive(new, Debug)]
+#[new(vis())]
+pub struct IdentifierHashRef<'a>(u64, &'a Identifier);
+
+impl IdentifierHashRef<'_> {
+    #[must_use]
+    pub fn hash(&self) -> u64 {
+        self.0
+    }
+}
+
+impl Deref for IdentifierHashRef<'_> {
     type Target = Identifier;
 
     fn deref(&self) -> &Self::Target {
@@ -97,30 +155,59 @@ impl Deref for IdentifierRef<'_> {
     }
 }
 
-impl<'a> From<&'a Identifier> for IdentifierRef<'a> {
+impl<'a> From<&'a Identifier> for IdentifierHashRef<'a> {
     fn from(identifier: &'a Identifier) -> Self {
-        let hash = v3::rapidhash_v3_seeded(identifier.value().as_bytes(), &SEED);
+        let hash = identifier_hash(identifier);
 
         Self::new(hash, identifier)
     }
+}
+
+// Hash Function
+
+fn identifier_hash(identifier: &Identifier) -> u64 {
+    v3::rapidhash_v3_seeded(identifier.value().as_bytes(), &SEED)
 }
 
 // -------------------------------------------------------------------------------------------------
 
 // Tag
 
+// Hash
+
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct TagRef<'a>(u64, &'a Tag);
+pub struct TagHash(u64);
 
-impl TagRef<'_> {
+impl TagHash {
     #[must_use]
     pub fn hash(&self) -> u64 {
         self.0
     }
 }
 
-impl Deref for TagRef<'_> {
+impl From<&Tag> for TagHash {
+    fn from(tag: &Tag) -> Self {
+        let hash = tag_hash(tag);
+
+        Self::new(hash)
+    }
+}
+
+// HashRef
+
+#[derive(new, Debug)]
+#[new(vis())]
+pub struct TagHashRef<'a>(u64, &'a Tag);
+
+impl TagHashRef<'_> {
+    #[must_use]
+    pub fn hash(&self) -> u64 {
+        self.0
+    }
+}
+
+impl Deref for TagHashRef<'_> {
     type Target = Tag;
 
     fn deref(&self) -> &Self::Target {
@@ -128,10 +215,16 @@ impl Deref for TagRef<'_> {
     }
 }
 
-impl<'a> From<&'a Tag> for TagRef<'a> {
+impl<'a> From<&'a Tag> for TagHashRef<'a> {
     fn from(tag: &'a Tag) -> Self {
-        let hash = v3::rapidhash_v3_seeded(tag.value().as_bytes(), &SEED);
+        let hash = tag_hash(tag);
 
         Self::new(hash, tag)
     }
+}
+
+// Hash Function
+
+fn tag_hash(tag: &Tag) -> u64 {
+    v3::rapidhash_v3_seeded(tag.value().as_bytes(), &SEED)
 }

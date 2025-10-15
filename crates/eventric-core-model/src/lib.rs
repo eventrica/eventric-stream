@@ -12,11 +12,12 @@ mod stream;
 
 pub use self::{
     event::{
+        Data,
         Descriptor,
         Identifier,
         Tag,
         Version,
-        insertion::Event,
+        insertion::InsertionEvent,
     },
     query::{
         Query,

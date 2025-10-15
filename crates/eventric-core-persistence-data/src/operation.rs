@@ -5,7 +5,7 @@ use std::error::Error;
 use bytes::Buf as _;
 use eventric_core_model::Position;
 use eventric_core_persistence::{
-    EventRef,
+    EventHashRef,
     Read,
     Write,
 };
@@ -16,7 +16,7 @@ use eventric_core_persistence::{
 
 // Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, position: Position, event: &'a EventRef<'a>) {
+pub fn insert<'a>(write: &mut Write<'_>, position: Position, event: &'a EventHashRef<'a>) {
     event::insert(write, position, event);
 }
 

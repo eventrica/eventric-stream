@@ -4,7 +4,7 @@ use std::{
 };
 
 use eventric_core_model::{
-    Event,
+    InsertionEvent,
     Position,
     Query,
 };
@@ -53,7 +53,7 @@ impl Stream {
 impl Stream {
     pub fn append<E>(&mut self, events: E) -> Result<(), Box<dyn Error>>
     where
-        E: IntoIterator<Item = Event>,
+        E: IntoIterator<Item = InsertionEvent>,
     {
         let mut batch = self.context.as_ref().batch();
 

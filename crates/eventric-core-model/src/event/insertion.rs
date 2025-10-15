@@ -1,6 +1,7 @@
 use fancy_constructor::new;
 
 use crate::event::{
+    Data,
     Descriptor,
     Tag,
 };
@@ -10,18 +11,18 @@ use crate::event::{
 // =================================================================================================
 
 #[derive(new, Debug)]
-pub struct Event {
+pub struct InsertionEvent {
     #[new(into)]
-    data: Vec<u8>,
+    data: Data,
     #[new(into)]
     descriptor: Descriptor,
     #[new(into)]
     tags: Vec<Tag>,
 }
 
-impl Event {
+impl InsertionEvent {
     #[must_use]
-    pub fn data(&self) -> &Vec<u8> {
+    pub fn data(&self) -> &Data {
         &self.data
     }
 

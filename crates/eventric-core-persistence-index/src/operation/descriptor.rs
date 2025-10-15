@@ -2,9 +2,9 @@ pub mod forward;
 
 use eventric_core_model::Position;
 use eventric_core_persistence::{
-    DescriptorRef,
+    DescriptorHashRef,
     Read,
-    SpecifierRef,
+    SpecifierHashRef,
     Write,
 };
 use eventric_core_util::iter;
@@ -21,7 +21,11 @@ static HASH_LEN: usize = size_of::<u64>();
 
 //  Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, position: Position, descriptor: &'a DescriptorRef<'a>) {
+pub fn insert<'a>(
+    write: &mut Write<'_>,
+    position: Position,
+    descriptor: &'a DescriptorHashRef<'a>,
+) {
     forward::insert(write, position, descriptor);
 }
 
@@ -32,7 +36,7 @@ pub fn insert<'a>(write: &mut Write<'_>, position: Position, descriptor: &'a Des
 #[must_use]
 pub fn query<'a, S>(read: &Read<'_>, position: Option<Position>, specs: S) -> SequentialIterator
 where
-    S: Iterator<Item = &'a SpecifierRef<'a>>,
+    S: Iterator<Item = &'a SpecifierHashRef<'a>>,
 {
     iter::sequential_or(specs.map(|spec| forward::iterate(read, position, spec)))
 }
