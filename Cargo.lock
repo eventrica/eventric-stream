@@ -28,9 +28,9 @@ checksum = "1e6b0e42e210b794e14b152c6fe1a55831e30ef4a0f5dc39d73d714fb5f1906c"
 
 [[package]]
 name = "cfg-if"
-version = "1.0.3"
+version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fd1289c04a9ea8cb22300a459a72a385d7c73d3259e2ed7dcb2af674838cfa9"
+checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 
 [[package]]
 name = "compare"
@@ -252,9 +252,9 @@ checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
 name = "fjall"
-version = "3.0.0-pre.1"
+version = "3.0.0-pre.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18a1bca627baf9e6d6abcd449e85fb3065fedc58c159f1b7c34d39ab39b98ca9"
+checksum = "467588c1f15d1cfa9e43f02a45cf55d82fa1f12a6ae961b848c520458525600c"
 dependencies = [
  "byteorder-lite",
  "byteview",
@@ -268,14 +268,14 @@ dependencies = [
 
 [[package]]
 name = "getrandom"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26145e563e54f2cadc477553f1ec5ee650b00862f0a58bcd12cbdc5f0ea2d2f4"
+checksum = "899def5c37c4fd7b2664648c28120ecec138e4d395b459e5ca34f9cce2dd77fd"
 dependencies = [
  "cfg-if",
  "libc",
  "r-efi",
- "wasi",
+ "wasip2",
 ]
 
 [[package]]
@@ -328,9 +328,9 @@ checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
 name = "lsm-tree"
-version = "3.0.0-pre.1"
+version = "3.0.0-pre.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6cd3c8201313b1e0e43fe70c3f112ef374def38ffcf17055d03ad17fb93a987b"
+checksum = "be375d45e348328e78582dffbda4f1709dd52fca27c1a81c7bf6ca134e6335f7"
 dependencies = [
  "byteorder-lite",
  "byteview",
@@ -591,15 +591,6 @@ name = "varint-rs"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f54a172d0620933a27a4360d3db3e2ae0dd6cceae9730751a036bbf182c4b23"
-
-[[package]]
-name = "wasi"
-version = "0.14.7+wasi-0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "883478de20367e224c0090af9cf5f9fa85bed63a95c1abf3afc5c083ebc06e8c"
-dependencies = [
- "wasip2",
-]
 
 [[package]]
 name = "wasip2"
