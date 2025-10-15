@@ -1,5 +1,5 @@
-pub mod insertion;
-pub mod retrieval;
+pub mod append;
+pub mod query;
 
 use std::ops::Deref;
 

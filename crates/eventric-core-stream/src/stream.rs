@@ -4,10 +4,10 @@ use std::{
 };
 
 use eventric_core_model::{
-    Event,
-    EventHash,
+    AppendEvent,
     Position,
     Query,
+    QueryEventHash,
 };
 use eventric_core_state::{
     Context,
@@ -51,7 +51,7 @@ impl Stream {
 impl Stream {
     pub fn append<'a, E>(&mut self, events: E) -> Result<(), Box<dyn Error>>
     where
-        E: IntoIterator<Item = &'a Event>,
+        E: IntoIterator<Item = &'a AppendEvent>,
     {
         let mut batch = self.context.as_ref().batch();
 
@@ -78,7 +78,7 @@ impl Stream {
         &self,
         position: Option<Position>,
         query: &Query,
-    ) -> impl Iterator<Item = EventHash> {
+    ) -> impl Iterator<Item = QueryEventHash> {
         let read = Read::new(&self.keyspaces);
         let query = query.into();
 

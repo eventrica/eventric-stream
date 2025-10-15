@@ -15,7 +15,7 @@ use crate::event::{
 // Event
 
 #[derive(new, Debug)]
-pub struct Event {
+pub struct AppendEvent {
     #[new(into)]
     data: Data,
     #[new(into)]
@@ -24,7 +24,7 @@ pub struct Event {
     tags: Vec<Tag>,
 }
 
-impl Event {
+impl AppendEvent {
     #[must_use]
     pub fn data(&self) -> &Data {
         &self.data
@@ -43,7 +43,7 @@ impl Event {
 
 #[derive(new, Debug)]
 #[new(vis(pub))]
-pub struct EventHashRef<'a> {
+pub struct AppendEventHashRef<'a> {
     #[new(into)]
     pub data: &'a Data,
     #[new(into)]
@@ -51,8 +51,8 @@ pub struct EventHashRef<'a> {
     pub tags: Vec<TagHashRef<'a>>,
 }
 
-impl<'a> From<&'a Event> for EventHashRef<'a> {
-    fn from(event: &'a Event) -> Self {
+impl<'a> From<&'a AppendEvent> for AppendEventHashRef<'a> {
+    fn from(event: &'a AppendEvent) -> Self {
         Self::new(
             event.data(),
             event.descriptor(),

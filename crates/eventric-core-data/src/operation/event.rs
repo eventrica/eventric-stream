@@ -5,12 +5,12 @@ use bytes::{
     BufMut as _,
 };
 use eventric_core_model::{
+    AppendEventHashRef,
     Data,
     DescriptorHash,
-    EventHash,
-    EventHashRef,
     IdentifierHash,
     Position,
+    QueryEventHash,
     TagHash,
     Version,
 };
@@ -25,10 +25,10 @@ use eventric_core_state::{
 
 // Get
 
-pub fn get(read: &Read<'_>, position: Position) -> Result<Option<EventHash>, Box<dyn Error>> {
+pub fn get(read: &Read<'_>, position: Position) -> Result<Option<QueryEventHash>, Box<dyn Error>> {
     let key = position.value().to_be_bytes();
     let value = read.keyspaces.data.get(key)?;
-    let event = value.map(|slice| read_value(&slice[..]));
+    let event = value.map(|slice| read_value(&slice[..], position));
 
     Ok(event)
 }
@@ -37,7 +37,7 @@ pub fn get(read: &Read<'_>, position: Position) -> Result<Option<EventHash>, Box
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &EventHashRef<'_>) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: &AppendEventHashRef<'_>) {
     let key = position.value().to_be_bytes();
 
     let mut value = Vec::new();
@@ -51,7 +51,7 @@ pub fn insert(write: &mut Write<'_>, position: Position, event: &EventHashRef<'_
 
 // Values
 
-fn read_value(mut value: &[u8]) -> EventHash {
+fn read_value(mut value: &[u8], position: Position) -> QueryEventHash {
     let identifier = IdentifierHash::new(value.get_u64());
     let version = Version::new(value.get_u8());
     let descriptor = DescriptorHash::new(identifier, version);
@@ -68,10 +68,10 @@ fn read_value(mut value: &[u8]) -> EventHash {
 
     let data = Data::new(value.iter().map(ToOwned::to_owned).collect::<Vec<_>>());
 
-    EventHash::new(data, descriptor, tags)
+    QueryEventHash::new(data, descriptor, tags, position)
 }
 
-fn write_value(value: &mut Vec<u8>, event: &EventHashRef<'_>) {
+fn write_value(value: &mut Vec<u8>, event: &AppendEventHashRef<'_>) {
     let descriptor = &event.descriptor;
     let identifier = descriptor.identifer().hash();
     let version = descriptor.version().value();

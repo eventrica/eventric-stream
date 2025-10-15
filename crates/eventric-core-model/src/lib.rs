@@ -23,11 +23,11 @@ pub use self::{
         TagHash,
         TagHashRef,
         Version,
-        insertion::{
-            Event,
-            EventHashRef,
+        append::{
+            AppendEvent,
+            AppendEventHashRef,
         },
-        retrieval::EventHash,
+        query::QueryEventHash,
     },
     query::{
         Query,

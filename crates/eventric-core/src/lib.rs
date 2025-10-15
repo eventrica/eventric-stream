@@ -8,9 +8,9 @@
 
 pub mod event {
     pub use eventric_core_model::{
+        AppendEvent,
         Data,
         Descriptor,
-        Event,
         Identifier,
         Tag,
         Version,

@@ -2,7 +2,7 @@ pub mod descriptor;
 pub mod tags;
 
 use eventric_core_model::{
-    EventHashRef,
+    AppendEventHashRef,
     Position,
     QueryHash,
     QueryItemHash,
@@ -26,7 +26,7 @@ static POSITION_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &EventHashRef<'_>) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: &AppendEventHashRef<'_>) {
     descriptor::insert(write, position, &event.descriptor);
     tags::insert(write, position, &event.tags);
 }
