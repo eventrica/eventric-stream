@@ -4,14 +4,11 @@ use std::{
 };
 
 use eventric_core_model::{
-    InsertionEvent,
+    Event,
+    EventHash,
     Position,
     Query,
 };
-use eventric_core_persistence::EventHash;
-use eventric_core_persistence_data as data;
-use eventric_core_persistence_index as index;
-use eventric_core_persistence_reference as reference;
 use eventric_core_state::{
     Context,
     Keyspaces,
@@ -39,12 +36,12 @@ impl Stream {
     {
         let context = Context::new(path)?;
         let keyspaces = Keyspaces::new(
-            data::keyspace(&context)?,
-            index::keyspace(&context)?,
-            reference::keyspace(&context)?,
+            eventric_core_data::keyspace(&context)?,
+            eventric_core_index::keyspace(&context)?,
+            eventric_core_reference::keyspace(&context)?,
         );
 
-        let len = data::len(&Read::new(&keyspaces))?;
+        let len = eventric_core_data::len(&Read::new(&keyspaces))?;
         let position = len.into();
 
         Ok(Self::inner_new(context, keyspaces, position))
@@ -54,7 +51,7 @@ impl Stream {
 impl Stream {
     pub fn append<E>(&mut self, events: E) -> Result<(), Box<dyn Error>>
     where
-        E: IntoIterator<Item = InsertionEvent>,
+        E: IntoIterator<Item = Event>,
     {
         let mut batch = self.context.as_ref().batch();
 
@@ -64,9 +61,9 @@ impl Stream {
             for event in events {
                 let event = (&event).into();
 
-                data::insert(&mut write, self.position, &event);
-                index::insert(&mut write, self.position, &event);
-                reference::insert(&mut write, &event);
+                eventric_core_data::insert(&mut write, self.position, &event);
+                eventric_core_index::insert(&mut write, self.position, &event);
+                eventric_core_reference::insert(&mut write, &event);
 
                 self.position.increment();
             }
@@ -85,10 +82,10 @@ impl Stream {
         let read = Read::new(&self.keyspaces);
         let query = query.into();
 
-        index::query(&read, position, &query)
+        eventric_core_index::query(&read, position, &query)
             .map(Position::from)
             .map(move |position| {
-                data::get(&read, position)
+                eventric_core_data::get(&read, position)
                     .expect("data get error")
                     .expect("data not found error")
             })
@@ -97,10 +94,10 @@ impl Stream {
 
 impl Stream {
     pub fn is_empty(&self) -> Result<bool, Box<dyn Error>> {
-        data::is_empty(&Read::new(&self.keyspaces))
+        eventric_core_data::is_empty(&Read::new(&self.keyspaces))
     }
 
     pub fn len(&self) -> Result<u64, Box<dyn Error>> {
-        data::len(&Read::new(&self.keyspaces))
+        eventric_core_data::len(&Read::new(&self.keyspaces))
     }
 }

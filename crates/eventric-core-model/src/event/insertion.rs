@@ -3,15 +3,19 @@ use fancy_constructor::new;
 use crate::event::{
     Data,
     Descriptor,
+    DescriptorHashRef,
     Tag,
+    TagHashRef,
 };
 
 // =================================================================================================
-// Event
+// Insertion
 // =================================================================================================
 
+// Event
+
 #[derive(new, Debug)]
-pub struct InsertionEvent {
+pub struct Event {
     #[new(into)]
     data: Data,
     #[new(into)]
@@ -20,7 +24,7 @@ pub struct InsertionEvent {
     tags: Vec<Tag>,
 }
 
-impl InsertionEvent {
+impl Event {
     #[must_use]
     pub fn data(&self) -> &Data {
         &self.data
@@ -34,5 +38,25 @@ impl InsertionEvent {
     #[must_use]
     pub fn tags(&self) -> &Vec<Tag> {
         &self.tags
+    }
+}
+
+#[derive(new, Debug)]
+#[new(vis(pub))]
+pub struct EventHashRef<'a> {
+    #[new(into)]
+    pub data: &'a Data,
+    #[new(into)]
+    pub descriptor: DescriptorHashRef<'a>,
+    pub tags: Vec<TagHashRef<'a>>,
+}
+
+impl<'a> From<&'a Event> for EventHashRef<'a> {
+    fn from(event: &'a Event) -> Self {
+        Self::new(
+            event.data(),
+            event.descriptor(),
+            event.tags().iter().map(Into::into).collect(),
+        )
     }
 }

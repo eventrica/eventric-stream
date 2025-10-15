@@ -140,8 +140,14 @@ dependencies = [
 name = "eventric-core"
 version = "0.1.0"
 dependencies = [
+ "eventric-core-data",
+ "eventric-core-index",
  "eventric-core-model",
+ "eventric-core-reference",
+ "eventric-core-state",
  "eventric-core-stream",
+ "eventric-core-util",
+ "fancy_constructor",
 ]
 
 [[package]]
@@ -149,15 +155,37 @@ name = "eventric-core-benches"
 version = "0.1.0"
 
 [[package]]
+name = "eventric-core-data"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "eventric-core-model",
+ "eventric-core-state",
+ "fjall",
+]
+
+[[package]]
 name = "eventric-core-examples"
 version = "0.1.0"
 dependencies = [
  "eventric-core",
- "eventric-core-persistence",
- "eventric-core-persistence-data",
- "eventric-core-persistence-index",
- "eventric-core-persistence-reference",
+ "eventric-core-data",
+ "eventric-core-index",
+ "eventric-core-reference",
  "eventric-core-util",
+]
+
+[[package]]
+name = "eventric-core-index"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "derive_more",
+ "eventric-core-model",
+ "eventric-core-state",
+ "eventric-core-util",
+ "fjall",
+ "self_cell",
 ]
 
 [[package]]
@@ -166,50 +194,15 @@ version = "0.1.0"
 dependencies = [
  "derive_more",
  "fancy_constructor",
-]
-
-[[package]]
-name = "eventric-core-persistence"
-version = "0.1.0"
-dependencies = [
- "derive_more",
- "eventric-core-model",
- "fancy_constructor",
- "fjall",
  "rapidhash",
 ]
 
 [[package]]
-name = "eventric-core-persistence-data"
+name = "eventric-core-reference"
 version = "0.1.0"
 dependencies = [
  "bytes",
  "eventric-core-model",
- "eventric-core-persistence",
- "eventric-core-state",
- "fjall",
-]
-
-[[package]]
-name = "eventric-core-persistence-index"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "derive_more",
- "eventric-core-model",
- "eventric-core-persistence",
- "eventric-core-state",
- "eventric-core-util",
- "fjall",
- "self_cell",
-]
-
-[[package]]
-name = "eventric-core-persistence-reference"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "eventric-core-persistence",
  "eventric-core-state",
  "fjall",
 ]
@@ -227,11 +220,10 @@ dependencies = [
 name = "eventric-core-stream"
 version = "0.1.0"
 dependencies = [
+ "eventric-core-data",
+ "eventric-core-index",
  "eventric-core-model",
- "eventric-core-persistence",
- "eventric-core-persistence-data",
- "eventric-core-persistence-index",
- "eventric-core-persistence-reference",
+ "eventric-core-reference",
  "eventric-core-state",
  "eventric-core-util",
  "fancy_constructor",

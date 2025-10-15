@@ -1,10 +1,9 @@
 [dependencies]
-eventric-core.workspace                       = true
-eventric-core-persistence.workspace           = true
-eventric-core-persistence-data.workspace      = true
-eventric-core-persistence-index.workspace     = true
-eventric-core-persistence-reference.workspace = true
-eventric-core-util.workspace                  = true
+eventric-core.workspace           = true
+eventric-core-data.workspace      = true
+eventric-core-index.workspace     = true
+eventric-core-reference.workspace = true
+eventric-core-util.workspace      = true
 
 [lints]
 workspace = true

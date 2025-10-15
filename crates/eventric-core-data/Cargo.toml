@@ -1,7 +1,8 @@
 [dependencies]
-derive_more.workspace       = true
-fancy_constructor.workspace = true
-rapidhash.workspace         = true
+bytes.workspace               = true
+eventric-core-model.workspace = true
+eventric-core-state.workspace = true
+fjall.workspace               = true
 
 [lints]
 workspace = true
@@ -9,11 +10,11 @@ workspace = true
 [package]
 authors.workspace    = true
 categories.workspace = true
-description          = "Eventric Core Model"
+description          = "Eventric Core Data"
 edition.workspace    = true
 keywords.workspace   = true
 license.workspace    = true
-name                 = "eventric-core-model"
+name                 = "eventric-core-data"
 readme.workspace     = true
 repository.workspace = true
 version.workspace    = true
