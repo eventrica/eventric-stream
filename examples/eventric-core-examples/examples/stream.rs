@@ -4,8 +4,8 @@ use eventric_core::{
     event::{
         Data,
         Descriptor,
-        Identifier,
         Event,
+        Identifier,
         Tag,
         Version,
     },
@@ -24,7 +24,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         let mut stream = Stream::new(PATH)?;
 
         stream.append(vec![
-            Event::new(
+            &Event::new(
                 Data::new("hello world!"),
                 Descriptor::new(
                     Identifier::new("StudentSubscribedToCourse"),
@@ -32,12 +32,12 @@ pub fn main() -> Result<(), Box<dyn Error>> {
                 ),
                 Vec::from_iter([Tag::new("student:3242"), Tag::new("course:523")]),
             ),
-            Event::new(
+            &Event::new(
                 Data::new("oh, no!"),
                 Descriptor::new(Identifier::new("CourseCapacityChanged"), Version::new(0)),
                 Vec::from_iter([Tag::new("course:523")]),
             ),
-            Event::new(
+            &Event::new(
                 Data::new("goodbye world..."),
                 Descriptor::new(
                     Identifier::new("StudentSubscribedToCourse"),

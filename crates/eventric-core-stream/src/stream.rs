@@ -49,9 +49,9 @@ impl Stream {
 }
 
 impl Stream {
-    pub fn append<E>(&mut self, events: E) -> Result<(), Box<dyn Error>>
+    pub fn append<'a, E>(&mut self, events: E) -> Result<(), Box<dyn Error>>
     where
-        E: IntoIterator<Item = Event>,
+        E: IntoIterator<Item = &'a Event>,
     {
         let mut batch = self.context.as_ref().batch();
 
@@ -59,7 +59,7 @@ impl Stream {
             let mut write = Write::new(&mut batch, &self.keyspaces);
 
             for event in events {
-                let event = (&event).into();
+                let event = event.into();
 
                 eventric_core_data::insert(&mut write, self.position, &event);
                 eventric_core_index::insert(&mut write, self.position, &event);
