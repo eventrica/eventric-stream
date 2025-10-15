@@ -4,7 +4,7 @@ use eventric_core_model::Position;
 use eventric_core_persistence::{
     DescriptorHashRef,
     Read,
-    SpecifierHashRef,
+    SpecifierHash,
     Write,
 };
 use eventric_core_util::iter;
@@ -36,7 +36,7 @@ pub fn insert<'a>(
 #[must_use]
 pub fn query<'a, S>(read: &Read<'_>, position: Option<Position>, specs: S) -> SequentialIterator
 where
-    S: Iterator<Item = &'a SpecifierHashRef<'a>>,
+    S: Iterator<Item = &'a SpecifierHash>,
 {
     iter::sequential_or(specs.map(|spec| forward::iterate(read, position, spec)))
 }

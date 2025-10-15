@@ -10,6 +10,7 @@ use eventric_core_model::{
 };
 use eventric_core_persistence::{
     Context,
+    EventHash,
     Keyspaces,
     Read,
     Write,
@@ -76,11 +77,21 @@ impl Stream {
         Ok(())
     }
 
-    pub fn query(&self, position: Option<Position>, query: &Query) -> impl Iterator<Item = u64> {
+    pub fn query(
+        &self,
+        position: Option<Position>,
+        query: &Query,
+    ) -> impl Iterator<Item = EventHash> {
         let read = Read::new(&self.keyspaces);
         let query = query.into();
 
         index::query(&read, position, &query)
+            .map(Position::from)
+            .map(move |position| {
+                data::get(&read, position)
+                    .expect("data get error")
+                    .expect("data not found error")
+            })
     }
 }
 

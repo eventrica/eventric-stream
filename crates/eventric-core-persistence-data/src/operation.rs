@@ -5,6 +5,7 @@ use std::error::Error;
 use bytes::Buf as _;
 use eventric_core_model::Position;
 use eventric_core_persistence::{
+    EventHash,
     EventHashRef,
     Read,
     Write,
@@ -13,6 +14,14 @@ use eventric_core_persistence::{
 // =================================================================================================
 // Operation
 // =================================================================================================
+
+// Get
+
+pub fn get(read: &Read<'_>, position: Position) -> Result<Option<EventHash>, Box<dyn Error>> {
+    event::get(read, position)
+}
+
+// -------------------------------------------------------------------------------------------------
 
 // Insert
 

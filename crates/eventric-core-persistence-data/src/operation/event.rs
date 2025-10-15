@@ -1,13 +1,39 @@
-use bytes::BufMut as _;
-use eventric_core_model::Position;
+use std::error::Error;
+
+use bytes::{
+    Buf as _,
+    BufMut as _,
+};
+use eventric_core_model::{
+    Data,
+    Position,
+    Version,
+};
 use eventric_core_persistence::{
+    DescriptorHash,
+    EventHash,
     EventHashRef,
+    IdentifierHash,
+    Read,
+    TagHash,
     Write,
 };
 
 // =================================================================================================
 // Event
 // =================================================================================================
+
+// Get
+
+pub fn get(read: &Read<'_>, position: Position) -> Result<Option<EventHash>, Box<dyn Error>> {
+    let key = position.value().to_be_bytes();
+    let value = read.keyspaces.data.get(key)?;
+    let event = value.map(|slice| read_value(&slice[..]));
+
+    Ok(event)
+}
+
+// -------------------------------------------------------------------------------------------------
 
 // Insert
 
@@ -24,6 +50,32 @@ pub fn insert<'a>(write: &mut Write<'_>, position: Position, event: &'a EventHas
 // -------------------------------------------------------------------------------------------------
 
 // Values
+
+fn read_value(mut value: &[u8]) -> EventHash {
+    let identifier = value.get_u64();
+    let identifier = IdentifierHash::new(identifier);
+
+    let version = value.get_u8();
+    let version = Version::new(version);
+
+    let descriptor = DescriptorHash::new(identifier, version);
+
+    let tags_len = value.get_u8();
+
+    let mut tags = Vec::with_capacity(tags_len as usize);
+
+    for _ in 0..tags_len {
+        let tag = value.get_u64();
+        let tag = TagHash::new(tag);
+
+        tags.push(tag);
+    }
+
+    let data = value.iter().map(ToOwned::to_owned).collect::<Vec<_>>();
+    let data = Data::new(data);
+
+    EventHash::new(data, descriptor, tags)
+}
 
 fn write_value<'a>(value: &mut Vec<u8>, event: &'a EventHashRef<'a>) {
     let identifier = event.descriptor.identifer().hash();

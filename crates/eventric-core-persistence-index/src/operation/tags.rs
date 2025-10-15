@@ -3,6 +3,7 @@ pub mod forward;
 use eventric_core_model::Position;
 use eventric_core_persistence::{
     Read,
+    TagHash,
     TagHashRef,
     Write,
 };
@@ -31,7 +32,7 @@ pub fn insert<'a>(write: &mut Write<'_>, position: Position, tags: &'a [TagHashR
 #[must_use]
 pub fn query<'a, T>(read: &Read<'_>, position: Option<Position>, tags: T) -> SequentialIterator
 where
-    T: Iterator<Item = &'a TagHashRef<'a>>,
+    T: Iterator<Item = &'a TagHash>,
 {
     iter::sequential_and(tags.map(|tag| forward::iterate(read, position, tag)))
 }

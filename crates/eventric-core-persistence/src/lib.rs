@@ -27,11 +27,8 @@ pub use self::{
         },
         query::{
             QueryHash,
-            QueryHashRef,
             QueryItemHash,
-            QueryItemHashRef,
             SpecifierHash,
-            SpecifierHashRef,
         },
     },
     state::{

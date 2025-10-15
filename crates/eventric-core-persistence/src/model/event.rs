@@ -26,10 +26,8 @@ static SEED: RapidSecrets = RapidSecrets::seed(0x2811_2017);
 
 // Event
 
-// Hash
-
 #[derive(new, Debug)]
-#[new(vis())]
+#[new(vis(pub))]
 pub struct EventHash {
     #[new(into)]
     pub data: Data,
@@ -38,10 +36,8 @@ pub struct EventHash {
     pub tags: Vec<TagHash>,
 }
 
-// HashRef
-
 #[derive(new, Debug)]
-#[new(vis())]
+#[new(vis(pub))]
 pub struct EventHashRef<'a> {
     #[new(into)]
     pub data: &'a Data,
@@ -64,10 +60,8 @@ impl<'a> From<&'a InsertionEvent> for EventHashRef<'a> {
 
 // Descriptor
 
-// Hash
-
 #[derive(new, Debug)]
-#[new(vis())]
+#[new(vis(pub))]
 pub struct DescriptorHash(IdentifierHash, Version);
 
 impl DescriptorHash {
@@ -82,10 +76,8 @@ impl DescriptorHash {
     }
 }
 
-// HashRef
-
 #[derive(new, Debug)]
-#[new(vis())]
+#[new(vis(pub))]
 pub struct DescriptorHashRef<'a>(IdentifierHashRef<'a>, &'a Version);
 
 impl<'a> DescriptorHashRef<'a> {
@@ -113,10 +105,8 @@ impl<'a> From<&'a Descriptor> for DescriptorHashRef<'a> {
 
 // Identifier
 
-// Hash
-
 #[derive(new, Debug)]
-#[new(vis())]
+#[new(vis(pub))]
 pub struct IdentifierHash(u64);
 
 impl IdentifierHash {
@@ -134,10 +124,8 @@ impl From<&Identifier> for IdentifierHash {
     }
 }
 
-// HashRef
-
 #[derive(new, Debug)]
-#[new(vis())]
+#[new(vis(pub))]
 pub struct IdentifierHashRef<'a>(u64, &'a Identifier);
 
 impl IdentifierHashRef<'_> {
@@ -163,8 +151,6 @@ impl<'a> From<&'a Identifier> for IdentifierHashRef<'a> {
     }
 }
 
-// Hash Function
-
 fn identifier_hash(identifier: &Identifier) -> u64 {
     v3::rapidhash_v3_seeded(identifier.value().as_bytes(), &SEED)
 }
@@ -173,10 +159,8 @@ fn identifier_hash(identifier: &Identifier) -> u64 {
 
 // Tag
 
-// Hash
-
 #[derive(new, Debug)]
-#[new(vis())]
+#[new(vis(pub))]
 pub struct TagHash(u64);
 
 impl TagHash {
@@ -194,10 +178,8 @@ impl From<&Tag> for TagHash {
     }
 }
 
-// HashRef
-
 #[derive(new, Debug)]
-#[new(vis())]
+#[new(vis(pub))]
 pub struct TagHashRef<'a>(u64, &'a Tag);
 
 impl TagHashRef<'_> {
@@ -222,8 +204,6 @@ impl<'a> From<&'a Tag> for TagHashRef<'a> {
         Self::new(hash, tag)
     }
 }
-
-// Hash Function
 
 fn tag_hash(tag: &Tag) -> u64 {
     v3::rapidhash_v3_seeded(tag.value().as_bytes(), &SEED)

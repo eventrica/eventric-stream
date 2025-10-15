@@ -17,7 +17,7 @@ use eventric_core::{
     stream::Stream,
 };
 
-static PATH: &str = "./temp/data/experiments";
+static PATH: &str = "./temp/examples/stream";
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     {
@@ -53,8 +53,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
                 Specifier::new(Identifier::new("CourseCapacityChanged"), None),
             ]))]));
 
-        for id in stream.query(None, &student_or_course_query) {
-            println!("student or course id: {id}");
+        for event in stream.query(None, &student_or_course_query) {
+            println!("student or course id: {event:#?}");
         }
     }
 
