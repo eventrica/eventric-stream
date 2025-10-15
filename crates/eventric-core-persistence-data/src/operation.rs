@@ -25,7 +25,7 @@ pub fn get(read: &Read<'_>, position: Position) -> Result<Option<EventHash>, Box
 
 // Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, position: Position, event: &'a EventHashRef<'a>) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: &EventHashRef<'_>) {
     event::insert(write, position, event);
 }
 

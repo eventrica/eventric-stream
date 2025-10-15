@@ -24,7 +24,7 @@ static POSITION_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, position: Position, event: &'a EventHashRef<'a>) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: &EventHashRef<'_>) {
     descriptor::insert(write, position, &event.descriptor);
     tags::insert(write, position, &event.tags);
 }

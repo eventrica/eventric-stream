@@ -40,7 +40,7 @@ static PREFIX_LEN: usize = ID_LEN + HASH_LEN;
 
 // Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, position: Position, tags: &'a [TagHashRef<'a>]) {
+pub fn insert(write: &mut Write<'_>, position: Position, tags: &[TagHashRef<'_>]) {
     let mut key = [0u8; KEY_LEN];
 
     for tag in tags {

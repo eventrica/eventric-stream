@@ -21,7 +21,7 @@ static HASH_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, position: Position, tags: &'a [TagHashRef<'a>]) {
+pub fn insert(write: &mut Write<'_>, position: Position, tags: &[TagHashRef<'_>]) {
     forward::insert(write, position, tags);
 }
 

@@ -37,7 +37,7 @@ pub fn get(read: &Read<'_>, position: Position) -> Result<Option<EventHash>, Box
 
 // Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, position: Position, event: &'a EventHashRef<'a>) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: &EventHashRef<'_>) {
     let key = position.value().to_be_bytes();
 
     let mut value = Vec::new();
@@ -52,12 +52,8 @@ pub fn insert<'a>(write: &mut Write<'_>, position: Position, event: &'a EventHas
 // Values
 
 fn read_value(mut value: &[u8]) -> EventHash {
-    let identifier = value.get_u64();
-    let identifier = IdentifierHash::new(identifier);
-
-    let version = value.get_u8();
-    let version = Version::new(version);
-
+    let identifier = IdentifierHash::new(value.get_u64());
+    let version = Version::new(value.get_u8());
     let descriptor = DescriptorHash::new(identifier, version);
 
     let tags_len = value.get_u8();
@@ -65,25 +61,26 @@ fn read_value(mut value: &[u8]) -> EventHash {
     let mut tags = Vec::with_capacity(tags_len as usize);
 
     for _ in 0..tags_len {
-        let tag = value.get_u64();
-        let tag = TagHash::new(tag);
+        let tag = TagHash::new(value.get_u64());
 
         tags.push(tag);
     }
 
-    let data = value.iter().map(ToOwned::to_owned).collect::<Vec<_>>();
-    let data = Data::new(data);
+    let data = Data::new(value.iter().map(ToOwned::to_owned).collect::<Vec<_>>());
 
     EventHash::new(data, descriptor, tags)
 }
 
-fn write_value<'a>(value: &mut Vec<u8>, event: &'a EventHashRef<'a>) {
-    let identifier = event.descriptor.identifer().hash();
-    let version = event.descriptor.version().value();
-    let tags_len = u8::try_from(event.tags.len()).expect("max tag count exceeded");
+fn write_value(value: &mut Vec<u8>, event: &EventHashRef<'_>) {
+    let descriptor = &event.descriptor;
+    let identifier = descriptor.identifer().hash();
+    let version = descriptor.version().value();
 
     value.put_u64(identifier);
     value.put_u8(version);
+
+    let tags_len = u8::try_from(event.tags.len()).expect("max tag count exceeded");
+
     value.put_u8(tags_len);
 
     for tag in &event.tags {

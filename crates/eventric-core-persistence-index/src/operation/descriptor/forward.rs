@@ -40,11 +40,7 @@ static PREFIX_LEN: usize = ID_LEN + HASH_LEN;
 
 //  Insert
 
-pub fn insert<'a>(
-    write: &mut Write<'_>,
-    position: Position,
-    descriptor: &'a DescriptorHashRef<'a>,
-) {
+pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &DescriptorHashRef<'_>) {
     let mut key = [0u8; KEY_LEN];
 
     let identifier = descriptor.identifer();

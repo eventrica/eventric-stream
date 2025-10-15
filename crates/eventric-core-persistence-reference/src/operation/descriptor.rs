@@ -15,6 +15,6 @@ static HASH_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert<'a>(write: &mut Write<'_>, descriptor: &'a DescriptorHashRef<'a>) {
+pub fn insert(write: &mut Write<'_>, descriptor: &DescriptorHashRef<'_>) {
     lookup::insert(write, descriptor);
 }

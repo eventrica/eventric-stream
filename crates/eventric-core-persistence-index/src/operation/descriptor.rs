@@ -21,11 +21,7 @@ static HASH_LEN: usize = size_of::<u64>();
 
 //  Insert
 
-pub fn insert<'a>(
-    write: &mut Write<'_>,
-    position: Position,
-    descriptor: &'a DescriptorHashRef<'a>,
-) {
+pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &DescriptorHashRef<'_>) {
     forward::insert(write, position, descriptor);
 }
 
