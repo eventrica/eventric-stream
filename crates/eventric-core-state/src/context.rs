@@ -21,11 +21,11 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new<P>(path: P) -> Result<Self, Box<dyn Error>>
+    pub fn new<P>(path: P, temporary: bool) -> Result<Self, Box<dyn Error>>
     where
         P: AsRef<Path>,
     {
-        let database = Database::builder(path).open()?;
+        let database = Database::builder(path).temporary(temporary).open()?;
 
         Ok(Self { database })
     }

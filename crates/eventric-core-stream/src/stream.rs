@@ -30,11 +30,11 @@ pub struct Stream {
 }
 
 impl Stream {
-    pub fn new<P>(path: P) -> Result<Self, Box<dyn Error>>
+    pub fn new<P>(path: P, temporary: bool) -> Result<Self, Box<dyn Error>>
     where
         P: AsRef<Path>,
     {
-        let context = Context::new(path)?;
+        let context = Context::new(path, temporary)?;
         let keyspaces = Keyspaces::new(
             eventric_core_data::keyspace(&context)?,
             eventric_core_index::keyspace(&context)?,

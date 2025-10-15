@@ -17,11 +17,11 @@ use eventric_core::{
     stream::Stream,
 };
 
-static PATH: &str = "./temp/examples/stream";
+static PATH: &str = "./temp";
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     {
-        let mut stream = Stream::new(PATH)?;
+        let mut stream = Stream::new(PATH, true)?;
 
         stream.append(vec![
             &Event::new(
