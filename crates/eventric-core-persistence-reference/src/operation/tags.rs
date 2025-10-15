@@ -1,9 +1,7 @@
 mod lookup;
 
-use eventric_core_persistence::{
-    TagHashRef,
-    Write,
-};
+use eventric_core_persistence::TagHashRef;
+use eventric_core_state::Write;
 
 // =================================================================================================
 // Tags

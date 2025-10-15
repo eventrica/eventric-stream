@@ -1,10 +1,8 @@
 mod descriptor;
 mod tags;
 
-use eventric_core_persistence::{
-    EventHashRef,
-    Write,
-};
+use eventric_core_persistence::EventHashRef;
+use eventric_core_state::Write;
 
 // =================================================================================================
 // Reference

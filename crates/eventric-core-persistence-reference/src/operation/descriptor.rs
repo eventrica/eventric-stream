@@ -1,9 +1,7 @@
 mod lookup;
 
-use eventric_core_persistence::{
-    DescriptorHashRef,
-    Write,
-};
+use eventric_core_persistence::DescriptorHashRef;
+use eventric_core_state::Write;
 
 // =================================================================================================
 // Descriptor

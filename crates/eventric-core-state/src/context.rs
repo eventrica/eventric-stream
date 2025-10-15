@@ -4,7 +4,11 @@ use std::{
 };
 
 use derive_more::Debug;
-use fjall::Database;
+use fancy_constructor::new;
+use fjall::{
+    Database,
+    Keyspace,
+};
 
 // =================================================================================================
 // Context
@@ -31,4 +35,19 @@ impl AsRef<Database> for Context {
     fn as_ref(&self) -> &Database {
         &self.database
     }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Keyspaces
+
+#[derive(new, Clone, Debug)]
+#[new(vis(pub))]
+pub struct Keyspaces {
+    #[debug("Keyspace(\"{}\")", data.name)]
+    pub data: Keyspace,
+    #[debug("Keyspace(\"{}\")", index.name)]
+    pub index: Keyspace,
+    #[debug("Keyspace(\"{}\")", reference.name)]
+    pub reference: Keyspace,
 }

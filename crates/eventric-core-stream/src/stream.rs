@@ -8,16 +8,16 @@ use eventric_core_model::{
     Position,
     Query,
 };
-use eventric_core_persistence::{
+use eventric_core_persistence::EventHash;
+use eventric_core_persistence_data as data;
+use eventric_core_persistence_index as index;
+use eventric_core_persistence_reference as reference;
+use eventric_core_state::{
     Context,
-    EventHash,
     Keyspaces,
     Read,
     Write,
 };
-use eventric_core_persistence_data as data;
-use eventric_core_persistence_index as index;
-use eventric_core_persistence_reference as reference;
 use fancy_constructor::new;
 
 // =================================================================================================

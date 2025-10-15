@@ -4,6 +4,7 @@ eventric-core-persistence.workspace           = true
 eventric-core-persistence-data.workspace      = true
 eventric-core-persistence-index.workspace     = true
 eventric-core-persistence-reference.workspace = true
+eventric-core-state.workspace                 = true
 eventric-core-util.workspace                  = true
 fancy_constructor.workspace                   = true
 

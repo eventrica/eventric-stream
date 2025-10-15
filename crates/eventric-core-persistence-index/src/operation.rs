@@ -6,6 +6,8 @@ use eventric_core_persistence::{
     EventHashRef,
     QueryHash,
     QueryItemHash,
+};
+use eventric_core_state::{
     Read,
     Write,
 };

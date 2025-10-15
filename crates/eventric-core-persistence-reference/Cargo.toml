@@ -1,6 +1,7 @@
 [dependencies]
 bytes.workspace                     = true
 eventric-core-persistence.workspace = true
+eventric-core-state.workspace       = true
 fjall.workspace                     = true
 
 [lints]

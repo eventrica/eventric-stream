@@ -7,6 +7,8 @@ use eventric_core_model::Position;
 use eventric_core_persistence::{
     EventHash,
     EventHashRef,
+};
+use eventric_core_state::{
     Read,
     Write,
 };

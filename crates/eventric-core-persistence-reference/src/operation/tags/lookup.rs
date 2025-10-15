@@ -1,8 +1,6 @@
 use bytes::BufMut as _;
-use eventric_core_persistence::{
-    TagHashRef,
-    Write,
-};
+use eventric_core_persistence::TagHashRef;
+use eventric_core_state::Write;
 
 use crate::operation::{
     ID_LEN,

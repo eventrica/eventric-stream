@@ -3,6 +3,7 @@ bytes.workspace                     = true
 derive_more.workspace               = true
 eventric-core-model.workspace       = true
 eventric-core-persistence.workspace = true
+eventric-core-state.workspace       = true
 eventric-core-util.workspace        = true
 fjall.workspace                     = true
 self_cell.workspace                 = true

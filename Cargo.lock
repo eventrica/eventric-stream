@@ -186,6 +186,7 @@ dependencies = [
  "bytes",
  "eventric-core-model",
  "eventric-core-persistence",
+ "eventric-core-state",
  "fjall",
 ]
 
@@ -197,6 +198,7 @@ dependencies = [
  "derive_more",
  "eventric-core-model",
  "eventric-core-persistence",
+ "eventric-core-state",
  "eventric-core-util",
  "fjall",
  "self_cell",
@@ -208,6 +210,16 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "eventric-core-persistence",
+ "eventric-core-state",
+ "fjall",
+]
+
+[[package]]
+name = "eventric-core-state"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "fancy_constructor",
  "fjall",
 ]
 
@@ -220,6 +232,7 @@ dependencies = [
  "eventric-core-persistence-data",
  "eventric-core-persistence-index",
  "eventric-core-persistence-reference",
+ "eventric-core-state",
  "eventric-core-util",
  "fancy_constructor",
 ]

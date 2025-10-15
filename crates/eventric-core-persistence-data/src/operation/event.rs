@@ -14,8 +14,10 @@ use eventric_core_persistence::{
     EventHash,
     EventHashRef,
     IdentifierHash,
-    Read,
     TagHash,
+};
+use eventric_core_state::{
+    Read,
     Write,
 };
 

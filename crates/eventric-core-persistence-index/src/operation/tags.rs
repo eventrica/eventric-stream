@@ -2,9 +2,11 @@ pub mod forward;
 
 use eventric_core_model::Position;
 use eventric_core_persistence::{
-    Read,
     TagHash,
     TagHashRef,
+};
+use eventric_core_state::{
+    Read,
     Write,
 };
 use eventric_core_util::iter;

@@ -10,6 +10,7 @@ eventric-core-persistence           = { path = "crates/eventric-core-persistence
 eventric-core-persistence-data      = { path = "crates/eventric-core-persistence-data" }
 eventric-core-persistence-index     = { path = "crates/eventric-core-persistence-index" }
 eventric-core-persistence-reference = { path = "crates/eventric-core-persistence-reference" }
+eventric-core-state                 = { path = "crates/eventric-core-state" }
 eventric-core-stream                = { path = "crates/eventric-core-stream" }
 eventric-core-util                  = { path = "crates/eventric-core-util" }
 

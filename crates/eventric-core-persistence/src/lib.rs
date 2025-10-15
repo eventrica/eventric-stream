@@ -2,9 +2,7 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 
-mod context;
 mod model;
-mod state;
 
 // =================================================================================================
 // Eventric Core Persistence
@@ -12,28 +10,20 @@ mod state;
 
 // Re-Export
 
-pub use self::{
-    context::Context,
-    model::{
-        event::{
-            DescriptorHash,
-            DescriptorHashRef,
-            EventHash,
-            EventHashRef,
-            IdentifierHash,
-            IdentifierHashRef,
-            TagHash,
-            TagHashRef,
-        },
-        query::{
-            QueryHash,
-            QueryItemHash,
-            SpecifierHash,
-        },
+pub use self::model::{
+    event::{
+        DescriptorHash,
+        DescriptorHashRef,
+        EventHash,
+        EventHashRef,
+        IdentifierHash,
+        IdentifierHashRef,
+        TagHash,
+        TagHashRef,
     },
-    state::{
-        Keyspaces,
-        Read,
-        Write,
+    query::{
+        QueryHash,
+        QueryItemHash,
+        SpecifierHash,
     },
 };
