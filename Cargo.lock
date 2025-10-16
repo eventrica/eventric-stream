@@ -145,8 +145,6 @@ dependencies = [
  "eventric-core-model",
  "eventric-core-reference",
  "eventric-core-state",
- "eventric-core-stream",
- "eventric-core-util",
  "fancy_constructor",
 ]
 
@@ -214,19 +212,6 @@ dependencies = [
  "derive_more",
  "fancy_constructor",
  "fjall",
-]
-
-[[package]]
-name = "eventric-core-stream"
-version = "0.1.0"
-dependencies = [
- "eventric-core-data",
- "eventric-core-index",
- "eventric-core-model",
- "eventric-core-reference",
- "eventric-core-state",
- "eventric-core-util",
- "fancy_constructor",
 ]
 
 [[package]]

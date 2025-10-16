@@ -99,7 +99,7 @@ where
 
     let mut upper = [0u8; KEY_LEN];
 
-    let position = Position::from(u64::MAX);
+    let position = Position::new(u64::MAX);
 
     write_key(&mut upper, position, tag.hash());
 

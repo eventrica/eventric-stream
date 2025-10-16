@@ -4,9 +4,9 @@ use std::error::Error;
 
 use bytes::Buf as _;
 use eventric_core_model::{
-    AppendEventHashRef,
+    EventHashRef,
     Position,
-    QueryEventHash,
+    SequencedEventHash,
 };
 use eventric_core_state::{
     Read,
@@ -19,7 +19,7 @@ use eventric_core_state::{
 
 // Get
 
-pub fn get(read: &Read<'_>, position: Position) -> Result<Option<QueryEventHash>, Box<dyn Error>> {
+pub fn get(read: &Read<'_>, position: Position) -> Result<Option<SequencedEventHash>, Box<dyn Error>> {
     event::get(read, position)
 }
 
@@ -27,7 +27,7 @@ pub fn get(read: &Read<'_>, position: Position) -> Result<Option<QueryEventHash>
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &AppendEventHashRef<'_>) {
+pub fn insert(write: &mut Write<'_>, position: Position, event: &EventHashRef<'_>) {
     event::insert(write, position, event);
 }
 

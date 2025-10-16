@@ -2,40 +2,41 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 
-mod event;
+mod append;
+mod common;
 mod query;
-mod stream;
 
 // =================================================================================================
 // Eventric Core Model
 // =================================================================================================
 
 pub use self::{
-    event::{
+    append::{
+        DescriptorHashRef,
+        Event,
+        EventHashRef,
+        IdentifierHashRef,
+        TagHashRef,
+    },
+    common::{
         Data,
         Descriptor,
-        DescriptorHash,
-        DescriptorHashRef,
         Identifier,
-        IdentifierHash,
-        IdentifierHashRef,
+        Position,
         Tag,
-        TagHash,
-        TagHashRef,
         Version,
-        append::{
-            AppendEvent,
-            AppendEventHashRef,
-        },
-        query::QueryEventHash,
     },
     query::{
+        DescriptorHash,
+        IdentifierHash,
         Query,
         QueryHash,
         QueryItem,
         QueryItemHash,
+        SequencedEvent,
+        SequencedEventHash,
         Specifier,
         SpecifierHash,
+        TagHash,
     },
-    stream::Position,
 };

@@ -3,11 +3,12 @@ use std::ops::Range;
 use derive_more::Debug;
 use fancy_constructor::new;
 
-use crate::event::{
+use crate::common::{
+    Data,
+    Descriptor,
     Identifier,
-    IdentifierHash,
+    Position,
     Tag,
-    TagHash,
     Version,
 };
 
@@ -15,9 +16,54 @@ use crate::event::{
 // Query
 // =================================================================================================
 
+// Descriptor
+
 #[derive(new, Debug)]
+#[new(vis(pub))]
+pub struct DescriptorHash(IdentifierHash, Version);
+
+impl DescriptorHash {
+    #[must_use]
+    pub fn identifer(&self) -> &IdentifierHash {
+        &self.0
+    }
+
+    #[must_use]
+    pub fn version(&self) -> &Version {
+        &self.1
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Identifier
+
+#[derive(new, Debug)]
+#[new(vis(pub))]
+pub struct IdentifierHash(u64);
+
+impl IdentifierHash {
+    #[must_use]
+    pub fn hash(&self) -> u64 {
+        self.0
+    }
+}
+
+impl From<&Identifier> for IdentifierHash {
+    fn from(identifier: &Identifier) -> Self {
+        let hash = identifier.hash();
+
+        Self::new(hash)
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Query
+
+#[derive(new, Debug)]
+#[new(vis(pub))]
 pub struct Query {
-    #[new(into)]
     items: Vec<QueryItem>,
 }
 
@@ -88,11 +134,77 @@ impl From<&QueryItem> for QueryItemHash {
 
 // -------------------------------------------------------------------------------------------------
 
+// Sequenced Event
+
+#[derive(new, Debug)]
+#[new(vis(pub))]
+pub struct SequencedEvent {
+    pub data: Data,
+    pub descriptor: Descriptor,
+    pub position: Position,
+    pub tags: Vec<Tag>,
+}
+
+impl SequencedEvent {
+    #[must_use]
+    pub fn data(&self) -> &Data {
+        &self.data
+    }
+
+    #[must_use]
+    pub fn descriptor(&self) -> &Descriptor {
+        &self.descriptor
+    }
+
+    #[must_use]
+    pub fn position(&self) -> &Position {
+        &self.position
+    }
+
+    #[must_use]
+    pub fn tags(&self) -> &Vec<Tag> {
+        &self.tags
+    }
+}
+
+#[derive(new, Debug)]
+#[new(vis(pub))]
+pub struct SequencedEventHash {
+    data: Data,
+    descriptor: DescriptorHash,
+    position: Position,
+    tags: Vec<TagHash>,
+}
+
+impl SequencedEventHash {
+    #[must_use]
+    pub fn data(&self) -> &Data {
+        &self.data
+    }
+
+    #[must_use]
+    pub fn descriptor(&self) -> &DescriptorHash {
+        &self.descriptor
+    }
+
+    #[must_use]
+    pub fn position(&self) -> &Position {
+        &self.position
+    }
+
+    #[must_use]
+    pub fn tags(&self) -> &Vec<TagHash> {
+        &self.tags
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
 // Specifier
 
 #[derive(new, Debug, Eq, PartialEq)]
 #[new(vis(pub))]
-pub struct Specifier(#[new(into)] Identifier, #[new(into)] Option<Range<Version>>);
+pub struct Specifier(Identifier, Option<Range<Version>>);
 
 impl Specifier {
     #[must_use]
@@ -106,24 +218,8 @@ impl Specifier {
     }
 }
 
-impl From<Specifier> for (Identifier, Option<Range<Version>>) {
-    fn from(value: Specifier) -> Self {
-        (value.0, value.1)
-    }
-}
-
-impl<T, U> From<(T, U)> for Specifier
-where
-    T: Into<Identifier>,
-    U: Into<Option<Range<Version>>>,
-{
-    fn from(value: (T, U)) -> Self {
-        Self::new(value.0, value.1)
-    }
-}
-
 #[derive(new, Debug)]
-#[new(vis())]
+#[new(vis(pub))]
 pub struct SpecifierHash(IdentifierHash, Option<Range<Version>>);
 
 impl SpecifierHash {
@@ -144,5 +240,28 @@ impl From<&Specifier> for SpecifierHash {
         let range = specifier.range().cloned();
 
         Self::new(identifier, range)
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Tag
+
+#[derive(new, Debug)]
+#[new(vis(pub))]
+pub struct TagHash(u64);
+
+impl TagHash {
+    #[must_use]
+    pub fn hash(&self) -> u64 {
+        self.0
+    }
+}
+
+impl From<&Tag> for TagHash {
+    fn from(tag: &Tag) -> Self {
+        let hash = tag.hash();
+
+        Self::new(hash)
     }
 }

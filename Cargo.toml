@@ -10,7 +10,6 @@ eventric-core-index     = { path = "crates/eventric-core-index" }
 eventric-core-model     = { path = "crates/eventric-core-model" }
 eventric-core-reference = { path = "crates/eventric-core-reference" }
 eventric-core-state     = { path = "crates/eventric-core-state" }
-eventric-core-stream    = { path = "crates/eventric-core-stream" }
 eventric-core-util      = { path = "crates/eventric-core-util" }
 
 bytes             = { version = "1" }

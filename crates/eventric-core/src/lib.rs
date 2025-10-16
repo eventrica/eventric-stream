@@ -1,4 +1,8 @@
 #![allow(clippy::multiple_crate_versions)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_panics_doc)]
+
+mod stream;
 
 // =================================================================================================
 // Eventric Core
@@ -6,15 +10,19 @@
 
 // Re-Exports
 
-pub mod event {
-    pub use eventric_core_model::{
-        AppendEvent,
-        Data,
-        Descriptor,
-        Identifier,
-        Tag,
-        Version,
-    };
+pub use eventric_core_model::{
+    Data,
+    Descriptor,
+    Identifier,
+    Position,
+    Tag,
+    Version,
+};
+
+pub use self::stream::Stream;
+
+pub mod append {
+    pub use eventric_core_model::Event;
 }
 
 pub mod query {
@@ -23,9 +31,4 @@ pub mod query {
         QueryItem,
         Specifier,
     };
-}
-
-pub mod stream {
-    pub use eventric_core_model::Position;
-    pub use eventric_core_stream::Stream;
 }
