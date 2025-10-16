@@ -2,8 +2,7 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 
-mod append;
-mod common;
+mod event;
 mod query;
 
 // =================================================================================================
@@ -11,34 +10,40 @@ mod query;
 // =================================================================================================
 
 pub use self::{
-    append::{
-        DescriptorHashRef,
+    event::{
         Event,
         EventHashRef,
-        IdentifierHashRef,
-        TagHashRef,
-    },
-    common::{
-        Data,
-        Descriptor,
-        Identifier,
-        Position,
-        Tag,
-        Version,
+        SequencedEventHash,
+        SequencedEventRef,
+        data::Data,
+        descriptor::{
+            Descriptor,
+            DescriptorHash,
+            DescriptorHashRef,
+            DescriptorRef,
+        },
+        identifier::{
+            Identifier,
+            IdentifierHash,
+            IdentifierHashRef,
+        },
+        position::Position,
+        tag::{
+            Tag,
+            TagHash,
+            TagHashRef,
+            TagRef,
+        },
+        version::Version,
     },
     query::{
-        DescriptorHash,
-        DescriptorRef,
-        IdentifierHash,
         Query,
         QueryHash,
         QueryItem,
         QueryItemHash,
-        SequencedEventHash,
-        SequencedEventRef,
-        Specifier,
-        SpecifierHash,
-        TagHash,
-        TagRef,
+        specifier::{
+            Specifier,
+            SpecifierHash,
+        },
     },
 };

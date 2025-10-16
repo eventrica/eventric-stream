@@ -1,6 +1,7 @@
 [dependencies]
 derive_more.workspace       = true
 fancy_constructor.workspace = true
+itertools.workspace         = true
 rapidhash.workspace         = true
 
 [lints]
