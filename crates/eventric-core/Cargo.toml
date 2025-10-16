@@ -1,10 +1,6 @@
 [dependencies]
-eventric-core-data.workspace      = true
-eventric-core-index.workspace     = true
-eventric-core-model.workspace     = true
-eventric-core-reference.workspace = true
-eventric-core-state.workspace     = true
-fancy_constructor.workspace       = true
+eventric-core-model.workspace  = true
+eventric-core-stream.workspace = true
 
 [lints]
 workspace = true

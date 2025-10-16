@@ -1,18 +1,20 @@
 use std::error::Error;
 
 use eventric_core::{
-    Data,
-    Descriptor,
-    Identifier,
-    Stream,
-    Tag,
-    Version,
-    append::Event,
+    event::{
+        Data,
+        Descriptor,
+        Event,
+        Identifier,
+        Tag,
+        Version,
+    },
     query::{
         Query,
         QueryItem,
         Specifier,
     },
+    stream::Stream,
 };
 
 static PATH: &str = "./temp";
