@@ -28,15 +28,17 @@ pub use self::{
     },
     query::{
         DescriptorHash,
+        DescriptorRef,
         IdentifierHash,
         Query,
         QueryHash,
         QueryItem,
         QueryItemHash,
-        SequencedEvent,
         SequencedEventHash,
+        SequencedEventRef,
         Specifier,
         SpecifierHash,
         TagHash,
+        TagRef,
     },
 };

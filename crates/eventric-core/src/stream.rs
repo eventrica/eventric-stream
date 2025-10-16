@@ -1,3 +1,5 @@
+mod query;
+
 use std::{
     error::Error,
     path::Path,
@@ -7,7 +9,7 @@ use eventric_core_model::{
     Event,
     Position,
     Query,
-    SequencedEventHash,
+    SequencedEventRef,
 };
 use eventric_core_state::{
     Context,
@@ -74,21 +76,12 @@ impl Stream {
         Ok(())
     }
 
-    pub fn query(
+    pub fn query<'a>(
         &self,
         position: Option<Position>,
-        query: &Query,
-    ) -> impl Iterator<Item = SequencedEventHash> {
-        let read = Read::new(&self.keyspaces);
-        let query = query.into();
-
-        eventric_core_index::query(&read, position, &query)
-            .map(Position::new)
-            .map(move |position| {
-                eventric_core_data::get(&read, position)
-                    .expect("data get error")
-                    .expect("data not found error")
-            })
+        query: &'a Query,
+    ) -> impl Iterator<Item = SequencedEventRef<'a>> {
+        query::query(Read::new(&self.keyspaces), position, query)
     }
 }
 

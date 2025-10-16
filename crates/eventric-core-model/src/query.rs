@@ -1,11 +1,13 @@
-use std::ops::Range;
+use std::ops::{
+    Deref,
+    Range,
+};
 
 use derive_more::Debug;
 use fancy_constructor::new;
 
 use crate::common::{
     Data,
-    Descriptor,
     Identifier,
     Position,
     Tag,
@@ -24,8 +26,19 @@ pub struct DescriptorHash(IdentifierHash, Version);
 
 impl DescriptorHash {
     #[must_use]
-    pub fn identifer(&self) -> &IdentifierHash {
-        &self.0
+    pub fn take(self) -> (IdentifierHash, Version) {
+        (self.0, self.1)
+    }
+}
+
+#[derive(new, Debug)]
+#[new(vis(pub))]
+pub struct DescriptorRef<'a>(&'a Identifier, Version);
+
+impl DescriptorRef<'_> {
+    #[must_use]
+    pub fn identifer(&self) -> &Identifier {
+        self.0
     }
 
     #[must_use]
@@ -138,21 +151,21 @@ impl From<&QueryItem> for QueryItemHash {
 
 #[derive(new, Debug)]
 #[new(vis(pub))]
-pub struct SequencedEvent {
+pub struct SequencedEventRef<'a> {
     pub data: Data,
-    pub descriptor: Descriptor,
+    pub descriptor: DescriptorRef<'a>,
     pub position: Position,
-    pub tags: Vec<Tag>,
+    pub tags: Vec<TagRef<'a>>,
 }
 
-impl SequencedEvent {
+impl SequencedEventRef<'_> {
     #[must_use]
     pub fn data(&self) -> &Data {
         &self.data
     }
 
     #[must_use]
-    pub fn descriptor(&self) -> &Descriptor {
+    pub fn descriptor(&self) -> &DescriptorRef<'_> {
         &self.descriptor
     }
 
@@ -162,7 +175,7 @@ impl SequencedEvent {
     }
 
     #[must_use]
-    pub fn tags(&self) -> &Vec<Tag> {
+    pub fn tags(&self) -> &Vec<TagRef<'_>> {
         &self.tags
     }
 }
@@ -178,23 +191,8 @@ pub struct SequencedEventHash {
 
 impl SequencedEventHash {
     #[must_use]
-    pub fn data(&self) -> &Data {
-        &self.data
-    }
-
-    #[must_use]
-    pub fn descriptor(&self) -> &DescriptorHash {
-        &self.descriptor
-    }
-
-    #[must_use]
-    pub fn position(&self) -> &Position {
-        &self.position
-    }
-
-    #[must_use]
-    pub fn tags(&self) -> &Vec<TagHash> {
-        &self.tags
+    pub fn take(self) -> (Data, DescriptorHash, Position, Vec<TagHash>) {
+        (self.data, self.descriptor, self.position, self.tags)
     }
 }
 
@@ -263,5 +261,17 @@ impl From<&Tag> for TagHash {
         let hash = tag.hash();
 
         Self::new(hash)
+    }
+}
+
+#[derive(new, Debug)]
+#[new(vis(pub))]
+pub struct TagRef<'a>(&'a Tag);
+
+impl Deref for TagRef<'_> {
+    type Target = Tag;
+
+    fn deref(&self) -> &Self::Target {
+        self.0
     }
 }

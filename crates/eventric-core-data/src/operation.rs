@@ -19,7 +19,10 @@ use eventric_core_state::{
 
 // Get
 
-pub fn get(read: &Read<'_>, position: Position) -> Result<Option<SequencedEventHash>, Box<dyn Error>> {
+pub fn get(
+    read: &Read<'_>,
+    position: Position,
+) -> Result<Option<SequencedEventHash>, Box<dyn Error>> {
     event::get(read, position)
 }
 

@@ -50,7 +50,7 @@ impl Descriptor {
 
 // Identifier
 
-#[derive(new, Debug, Eq, PartialEq)]
+#[derive(new, Clone, Debug, Eq, PartialEq)]
 #[new(vis(pub))]
 pub struct Identifier(String);
 
@@ -89,7 +89,7 @@ impl Position {
 
 // Tag
 
-#[derive(new, Debug, Eq, PartialEq)]
+#[derive(new, Clone, Debug, Eq, PartialEq)]
 #[new(vis(pub))]
 pub struct Tag(String);
 
