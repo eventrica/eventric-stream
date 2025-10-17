@@ -8,13 +8,17 @@ use eventric_core_model::{
     QueryHash,
     QueryItem,
     QueryItemHash,
+    SequencedEventHash,
     SequencedEventRef,
+    Specifier,
     SpecifierHash,
     Tag,
     TagHash,
     TagRef,
 };
 use eventric_core_state::Read;
+use fancy_constructor::new;
+use itertools::Itertools;
 
 // =================================================================================================
 // Query
@@ -25,92 +29,151 @@ pub fn query<'a>(
     position: Option<Position>,
     query: &'a Query,
 ) -> impl Iterator<Item = SequencedEventRef<'a>> {
-    let mut items = Vec::new();
-    let mut identifier_cache: HashMap<u64, &'a Identifier> = HashMap::new();
-    let mut tag_cache: HashMap<u64, &'a Tag> = HashMap::new();
+    let mut cache = Cache::new();
 
-    for item in query.items() {
-        match item {
-            QueryItem::Specifiers(specs) => items.push(QueryItemHash::Specifiers(
-                specs
-                    .iter()
-                    .map(|spec| {
-                        let spec_hash = SpecifierHash::from(spec);
-                        let key = spec_hash.identifer().hash();
-                        let default = spec.identifier();
-
-                        identifier_cache.entry(key).or_insert(default);
-
-                        spec_hash
-                    })
-                    .collect(),
-            )),
-            QueryItem::SpecifiersAndTags(specs, tags) => {
-                items.push(QueryItemHash::SpecifiersAndTags(
-                    specs
-                        .iter()
-                        .map(|spec| {
-                            let spec_hash = SpecifierHash::from(spec);
-                            let key = spec_hash.identifer().hash();
-                            let default = spec.identifier();
-
-                            identifier_cache.entry(key).or_insert(default);
-
-                            spec_hash
-                        })
-                        .collect(),
-                    tags.iter()
-                        .map(|tag| {
-                            let tag_hash = TagHash::from(tag);
-                            let key = tag_hash.hash();
-                            let default = tag;
-
-                            tag_cache.entry(key).or_insert(default);
-
-                            tag_hash
-                        })
-                        .collect(),
-                ));
-            }
-            QueryItem::Tags(tags) => items.push(QueryItemHash::Tags(
-                tags.iter()
-                    .map(|tag| {
-                        let tag_hash = TagHash::from(tag);
-                        let key = tag_hash.hash();
-                        let default = tag;
-
-                        tag_cache.entry(key).or_insert(default);
-
-                        tag_hash
-                    })
-                    .collect(),
-            )),
-        }
-    }
-
-    let query = QueryHash::new(items);
+    let query = map_query_with_cache_write(&mut cache, query);
 
     eventric_core_index::query(&read, position, &query)
-        .map(Position::new)
-        .map(move |position| {
-            eventric_core_data::get(&read, position)
-                .expect("data get error")
-                .expect("data not found error")
+        .map(move |position| map_position(&read, position))
+        .map(move |event| map_event_with_cache_read(&cache, event))
+}
+
+fn map_query_with_cache_write<'a>(cache: &mut Cache<'a>, query: &'a Query) -> QueryHash {
+    QueryHash::new(
+        query
+            .items()
+            .iter()
+            .map(|item| map_query_item_with_cache_write(cache, item))
+            .collect_vec(),
+    )
+}
+
+fn map_query_item_with_cache_write<'a>(
+    cache: &mut Cache<'a>,
+    item: &'a QueryItem,
+) -> QueryItemHash {
+    match item {
+        QueryItem::Specifiers(specifiers) => {
+            let specifiers = map_specifiers_with_cache_write(cache, specifiers);
+
+            QueryItemHash::Specifiers(specifiers)
+        }
+        QueryItem::SpecifiersAndTags(specifiers, tags) => {
+            let specifiers = map_specifiers_with_cache_write(cache, specifiers);
+            let tags = map_tags_with_cache_write(cache, tags);
+
+            QueryItemHash::SpecifiersAndTags(specifiers, tags)
+        }
+        QueryItem::Tags(tags) => {
+            let tags = map_tags_with_cache_write(cache, tags);
+
+            QueryItemHash::Tags(tags)
+        }
+    }
+}
+
+fn map_specifiers_with_cache_write<'a>(
+    cache: &mut Cache<'a>,
+    specifiers: &'a [Specifier],
+) -> Vec<SpecifierHash> {
+    specifiers
+        .iter()
+        .map(|specifier| {
+            let spec_hash = SpecifierHash::from(specifier);
+            let hash = spec_hash.identifer().hash();
+            let identifier = specifier.identifier();
+
+            set_identifier(cache, hash, identifier);
+
+            spec_hash
         })
-        .map(move |event| {
-            let (data, descriptor, position, tags) = event.take();
-            let (identifier, version) = descriptor.take();
+        .collect()
+}
 
-            let identifier = identifier_cache
-                .get(&identifier.hash())
-                .expect("identifier not found");
+fn map_tags_with_cache_write<'a>(cache: &mut Cache<'a>, tags: &'a [Tag]) -> Vec<TagHash> {
+    tags.iter()
+        .map(|tag| {
+            let tag_hash = TagHash::from(tag);
+            let hash = tag_hash.hash();
 
-            let descriptor = DescriptorRef::new(identifier, version);
-            let tags = tags
-                .iter()
-                .filter_map(|tag| tag_cache.get(&tag.hash()).map(|tag| TagRef::new(tag)))
-                .collect();
+            set_tag(cache, hash, tag);
 
-            SequencedEventRef::new(data, descriptor, position, tags)
+            tag_hash
         })
+        .collect()
+}
+
+fn map_position(read: &Read<'_>, position: Position) -> SequencedEventHash {
+    eventric_core_data::get(read, position)
+        .expect("data get error")
+        .expect("data not found error")
+}
+
+fn map_event_with_cache_read<'a>(
+    cache: &Cache<'a>,
+    event: SequencedEventHash,
+) -> SequencedEventRef<'a> {
+    let (data, descriptor, position, tags) = event.take();
+    let (identifier, version) = descriptor.take();
+
+    let identifier = get_identifier(cache, identifier.hash());
+    let identifier = identifier.expect("identifier not found");
+    let descriptor = DescriptorRef::new(identifier, version);
+
+    let tags = tags
+        .iter()
+        .filter_map(|tag| get_tag(cache, tag.hash()).map(TagRef::new))
+        .collect();
+
+    SequencedEventRef::new(data, descriptor, position, tags)
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Cache
+
+#[derive(new, Debug)]
+struct Cache<'a> {
+    #[new(default)]
+    entries: HashMap<u64, CacheEntry<'a>>,
+}
+
+impl<'a> Cache<'a> {
+    fn get(&self, key: u64) -> Option<&CacheEntry<'a>> {
+        self.entries.get(&key)
+    }
+}
+
+impl<'a> Cache<'a> {
+    fn register(&mut self, key: u64, value: CacheEntry<'a>) {
+        self.entries.entry(key).or_insert_with(|| value);
+    }
+}
+
+#[derive(Debug)]
+pub enum CacheEntry<'a> {
+    Identifier(&'a Identifier),
+    Tag(&'a Tag),
+}
+
+fn get_identifier<'a>(cache: &Cache<'a>, key: u64) -> Option<&'a Identifier> {
+    cache.get(key).and_then(|entry| match entry {
+        CacheEntry::Identifier(identifier) => Some(*identifier),
+        CacheEntry::Tag(_) => None,
+    })
+}
+
+fn get_tag<'a>(cache: &Cache<'a>, key: u64) -> Option<&'a Tag> {
+    cache.get(key).and_then(|entry| match entry {
+        CacheEntry::Tag(tag) => Some(*tag),
+        CacheEntry::Identifier(_) => None,
+    })
+}
+
+fn set_identifier<'a>(cache: &mut Cache<'a>, hash: u64, identifier: &'a Identifier) {
+    cache.register(hash, CacheEntry::Identifier(identifier));
+}
+
+fn set_tag<'a>(cache: &mut Cache<'a>, hash: u64, tag: &'a Tag) {
+    cache.register(hash, CacheEntry::Tag(tag));
 }

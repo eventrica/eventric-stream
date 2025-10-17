@@ -39,7 +39,7 @@ pub fn query(
     read: &Read<'_>,
     position: Option<Position>,
     query: &QueryHash,
-) -> impl Iterator<Item = u64> + use<> {
+) -> impl Iterator<Item = Position> + use<> {
     iter::sequential_or(query.items().iter().map(|item| match item {
         QueryItemHash::Specifiers(specs) => descriptor::query(read, position, specs.iter()),
         QueryItemHash::SpecifiersAndTags(specs, tags) => iter::sequential_and([
@@ -48,4 +48,5 @@ pub fn query(
         ]),
         QueryItemHash::Tags(tags) => tags::query(read, position, tags.iter()),
     }))
+    .map(Position::new)
 }

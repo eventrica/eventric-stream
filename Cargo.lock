@@ -227,6 +227,7 @@ dependencies = [
  "eventric-core-reference",
  "eventric-core-state",
  "fancy_constructor",
+ "itertools",
 ]
 
 [[package]]

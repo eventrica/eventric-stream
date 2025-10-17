@@ -5,6 +5,7 @@ eventric-core-model.workspace     = true
 eventric-core-reference.workspace = true
 eventric-core-state.workspace     = true
 fancy_constructor.workspace       = true
+itertools.workspace               = true
 
 [lints]
 workspace = true
