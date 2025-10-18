@@ -113,7 +113,7 @@ fn map_event_with_cache_read<'a>(
     cache: &Cache<'a>,
     event: SequencedEventHash,
 ) -> SequencedEventRef<'a> {
-    let (data, descriptor, position, tags) = event.take();
+    let (data, descriptor, position, tags, timestamp) = event.take();
     let (identifier, version) = descriptor.take();
 
     let identifier = get_identifier(cache, identifier.hash());
@@ -125,7 +125,7 @@ fn map_event_with_cache_read<'a>(
         .filter_map(|tag| get_tag(cache, tag.hash()).map(TagRef::new))
         .collect();
 
-    SequencedEventRef::new(data, descriptor, position, tags)
+    SequencedEventRef::new(data, descriptor, position, tags, timestamp)
 }
 
 // -------------------------------------------------------------------------------------------------

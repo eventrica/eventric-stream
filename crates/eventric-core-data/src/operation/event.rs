@@ -12,6 +12,7 @@ use eventric_core_model::{
     Position,
     SequencedEventHash,
     TagHash,
+    Timestamp,
     Version,
 };
 use eventric_core_state::{
@@ -74,9 +75,12 @@ fn read_value(mut value: &[u8], position: Position) -> SequencedEventHash {
         tags.push(tag);
     }
 
+    let timestamp = value.get_u64();
+    let timestamp = Timestamp::new(timestamp);
+
     let data = Data::new(value.iter().map(ToOwned::to_owned).collect::<Vec<_>>());
 
-    SequencedEventHash::new(data, descriptor, position, tags)
+    SequencedEventHash::new(data, descriptor, position, tags, timestamp)
 }
 
 fn write_value(value: &mut Vec<u8>, event: &EventHashRef<'_>) {
@@ -96,6 +100,10 @@ fn write_value(value: &mut Vec<u8>, event: &EventHashRef<'_>) {
 
         value.put_u64(tag);
     }
+
+    let timestamp = event.timestamp().nanos();
+
+    value.put_u64(timestamp);
 
     let data = event.data().as_ref();
 

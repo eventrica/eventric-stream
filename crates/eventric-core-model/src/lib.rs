@@ -34,6 +34,7 @@ pub use self::{
             TagHashRef,
             TagRef,
         },
+        timestamp::Timestamp,
         version::Version,
     },
     query::{

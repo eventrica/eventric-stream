@@ -3,6 +3,7 @@ pub mod descriptor;
 pub mod identifier;
 pub mod position;
 pub mod tag;
+pub mod timestamp;
 pub mod version;
 
 use fancy_constructor::new;
@@ -24,6 +25,7 @@ use crate::event::{
         TagHashRef,
         TagRef,
     },
+    timestamp::Timestamp,
 };
 
 // =================================================================================================
@@ -70,6 +72,7 @@ pub struct EventHashRef<'a> {
     data: &'a Data,
     descriptor: DescriptorHashRef<'a>,
     tags: Vec<TagHashRef<'a>>,
+    timestamp: Timestamp,
 }
 
 impl EventHashRef<'_> {
@@ -87,14 +90,22 @@ impl EventHashRef<'_> {
     pub fn tags(&self) -> &Vec<TagHashRef<'_>> {
         &self.tags
     }
+
+    #[must_use]
+    pub fn timestamp(&self) -> &Timestamp {
+        &self.timestamp
+    }
 }
 
 impl<'a> From<&'a Event> for EventHashRef<'a> {
     fn from(event: &'a Event) -> Self {
+        let timestamp = Timestamp::now();
+
         Self::new(
             event.data(),
             event.descriptor().into(),
             event.tags().iter().map_into().collect_vec(),
+            timestamp,
         )
     }
 }
@@ -112,12 +123,19 @@ pub struct SequencedEventHash {
     descriptor: DescriptorHash,
     position: Position,
     tags: Vec<TagHash>,
+    timestamp: Timestamp,
 }
 
 impl SequencedEventHash {
     #[must_use]
-    pub fn take(self) -> (Data, DescriptorHash, Position, Vec<TagHash>) {
-        (self.data, self.descriptor, self.position, self.tags)
+    pub fn take(self) -> (Data, DescriptorHash, Position, Vec<TagHash>, Timestamp) {
+        (
+            self.data,
+            self.descriptor,
+            self.position,
+            self.tags,
+            self.timestamp,
+        )
     }
 }
 
@@ -130,6 +148,7 @@ pub struct SequencedEventRef<'a> {
     pub descriptor: DescriptorRef<'a>,
     pub position: Position,
     pub tags: Vec<TagRef<'a>>,
+    pub timestamp: Timestamp,
 }
 
 impl SequencedEventRef<'_> {
@@ -151,5 +170,10 @@ impl SequencedEventRef<'_> {
     #[must_use]
     pub fn tags(&self) -> &Vec<TagRef<'_>> {
         &self.tags
+    }
+
+    #[must_use]
+    pub fn timestamp(&self) -> &Timestamp {
+        &self.timestamp
     }
 }
