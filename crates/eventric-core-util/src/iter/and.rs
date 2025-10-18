@@ -76,7 +76,7 @@ where
         [] => None,
         [iter] => iter.next(),
         [iters @ ..] => {
-            let mut current: Option<T> = None;
+            let mut current = None;
 
             'a: loop {
                 'b: for iter in iters.iter_mut() {

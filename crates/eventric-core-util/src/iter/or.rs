@@ -1,6 +1,8 @@
 //! Utilities for set-like intersection combinations of streams (given
 //! sequential input streams).
 
+use std::cmp::Ordering;
+
 use derive_more::Debug;
 use fancy_constructor::new;
 
@@ -63,41 +65,48 @@ where
 
 // Iterate
 
+#[allow(clippy::redundant_at_rest_pattern)]
 fn iterate<I, T>(iterators: &mut CachingIterators<I, T>) -> Option<T>
 where
     I: Iterator<Item = T>,
     T: Item,
 {
-    fn update<T>(new: &mut Option<T>, value: Option<T>)
-    where
-        T: Item,
-    {
-        match (new.as_mut(), value) {
-            (Some(new), Some(value)) if value < *new => *new = value,
-            (None, Some(value)) => *new = Some(value),
-            _ => {}
-        }
-    }
+    match &mut iterators.iterators[..] {
+        [] => None,
+        [iter] => iter.next(),
+        [iters @ ..] => {
+            let mut current = None;
 
-    let mut new = None;
+            for iter in iters.iter_mut() {
+                match (iter.next_cached(), current) {
+                    (Some(iter_val), Some(current_val)) => {
+                        let iter_val = match iterators.value {
+                            Some(previous_val) if iter_val == previous_val => iter.next(),
+                            _ => Some(iter_val),
+                        };
 
-    if let Some(iterators_value) = iterators.value {
-        for iter in &mut iterators.iterators {
-            match iter.next_cached() {
-                Some(iter_value) if iter_value <= iterators_value => update(&mut new, iter.next()),
-                Some(_) => update(&mut new, iter.next_cached()),
-                _ => {}
+                        if let Some(iter_val) = iter_val {
+                            match iter_val.cmp(&current_val) {
+                                Ordering::Less => current = Some(iter_val),
+                                Ordering::Equal | Ordering::Greater => {}
+                            }
+                        }
+                    }
+                    (Some(iter_val), None) => {
+                        current = match iterators.value {
+                            Some(previous_val) if iter_val == previous_val => iter.next(),
+                            _ => Some(iter_val),
+                        }
+                    }
+                    _ => {}
+                }
             }
-        }
-    } else {
-        for iter in &mut iterators.iterators {
-            update(&mut new, iter.next());
+
+            iterators.iterators.retain(|iter| iter.value.is_some());
+            iterators.value = current;
+            iterators.value
         }
     }
-
-    iterators.iterators.retain(|iter| iter.value.is_some());
-    iterators.value = new;
-    iterators.value
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -136,8 +145,8 @@ mod test {
     fn iterators_combine_sequentially_without_duplication() {
         let combined = vec![0, 1, 2, 3, 4, 5];
 
-        let a = TestIterator::new([0, 2, 3, 4]);
-        let b = TestIterator::new([1, 2, 3, 5]);
+        let a = TestIterator::new([0, 3, 4]);
+        let b = TestIterator::new([1, 2, 3]);
         let c = TestIterator::new([0, 1, 4, 5]);
 
         assert_eq!(combined, sequential_or([a, b, c]).collect::<Vec<_>>());
