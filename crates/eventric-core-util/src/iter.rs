@@ -1,7 +1,7 @@
 mod and;
 mod or;
 
-use derive_more::Debug;
+use derive_more::with_trait::Debug;
 use fancy_constructor::new;
 
 // =================================================================================================
@@ -10,7 +10,7 @@ use fancy_constructor::new;
 
 /// A convenience trait alias for items compatible with the various iterator
 /// utilities, which expect items to be comparable, and copy-friendly.
-pub trait Item = Copy + PartialOrd;
+pub trait Item = Copy + Debug + Ord + PartialOrd;
 
 // -------------------------------------------------------------------------------------------------
 
@@ -84,14 +84,6 @@ where
             Some(value) => Some(value),
             None => self.next(),
         }
-    }
-
-    /// Calls [`Self::next`] before returning a mutable reference to Self. A
-    /// convenience method to advance the iterator while passing it to a
-    /// function, etc.
-    fn next_self_ref(&mut self) -> &mut Self {
-        self.next();
-        self
     }
 }
 

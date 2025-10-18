@@ -1,11 +1,12 @@
 //! Utilities for set-like union combinations of streams (given sequential input
 //! streams).
 
+use std::cmp::Ordering;
+
 use derive_more::Debug;
 use fancy_constructor::new;
 
 use crate::iter::{
-    CachingIterator,
     CachingIterators,
     Item,
 };
@@ -65,51 +66,63 @@ where
 
 // Iterate
 
+#[allow(clippy::redundant_at_rest_pattern)]
 fn iterate<I, T>(iterators: &mut CachingIterators<I, T>) -> Option<T>
 where
     I: Iterator<Item = T>,
     T: Item,
 {
-    fn seek<I, T>(iter: &mut CachingIterator<I, T>, value: T) -> Option<bool>
-    where
-        I: Iterator<Item = T>,
-        T: Item,
-    {
-        match iter.next_cached() {
-            Some(iter_value) if iter_value > value => Some(false),
-            Some(iter_value) if iter_value == value => Some(true),
-            Some(_) => seek(iter.next_self_ref(), value),
-            None => None,
-        }
-    }
+    match &mut iterators.iterators[..] {
+        [] => None,
+        [iter] => iter.next(),
+        [iters @ ..] => {
+            let mut current: Option<T> = None;
 
-    let mut new: Option<T> = None;
+            'a: loop {
+                'b: for iter in iters.iter_mut() {
+                    match (iter.next_cached()?, current) {
+                        (iter_val, Some(current_val)) => {
+                            let iter_val = match iterators.value {
+                                Some(previous_val) if iter_val == previous_val => iter.next()?,
+                                _ => iter_val,
+                            };
 
-    'seek_match: loop {
-        let mut matched = false;
+                            match iter_val.cmp(&current_val) {
+                                Ordering::Less => loop {
+                                    let iter_val = iter.next()?;
 
-        for iter in &mut iterators.iterators {
-            match new {
-                Some(new_value) => match seek(iter, new_value) {
-                    Some(new_matched) => matched = new_matched,
-                    None => break 'seek_match,
-                },
-                None => match iter.next() {
-                    Some(iter_value) => new = Some(iter_value),
-                    None => break 'seek_match,
-                },
+                                    match iter_val.cmp(&current_val) {
+                                        Ordering::Less => {}
+                                        Ordering::Equal => continue 'b,
+                                        Ordering::Greater => {
+                                            current = Some(iter_val);
+                                            continue 'a;
+                                        }
+                                    }
+                                },
+                                Ordering::Equal => {}
+                                Ordering::Greater => {
+                                    current = Some(iter_val);
+                                    continue 'a;
+                                }
+                            }
+                        }
+                        (iter_val, _) => {
+                            current = Some(match iterators.value {
+                                Some(previous_val) if iter_val == previous_val => iter.next()?,
+                                _ => iter_val,
+                            });
+                        }
+                    }
+                }
+
+                break 'a;
             }
-        }
 
-        if matched {
-            break 'seek_match;
+            iterators.value = current;
+            iterators.value
         }
-
-        new = None;
     }
-
-    iterators.value = new;
-    iterators.value
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -134,12 +147,44 @@ mod test {
     }
 
     #[test]
-    fn iterators_combine_sequentially() {
+    fn iterators_combine_sequentially_same_lengths() {
         let combined = vec![2, 3];
 
         let a = TestIterator::new([0, 1, 2, 3]);
         let b = TestIterator::new([1, 2, 3, 4]);
         let c = TestIterator::new([2, 3, 4, 5]);
+
+        assert_eq!(combined, sequential_and([a, b, c]).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn iterators_combine_single_iterator() {
+        let combined = vec![0, 1, 2, 3];
+
+        let a = TestIterator::new([0, 1, 2, 3]);
+
+        assert_eq!(combined, sequential_and([a]).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn iterators_combine_sequentially_differing_lengths() {
+        let combined = vec![2, 3];
+
+        let a = TestIterator::new([2, 3]);
+        let b = TestIterator::new([1, 2, 3, 4]);
+        let c = TestIterator::new([2, 3, 4]);
+
+        assert_eq!(combined, sequential_and([a, b, c]).collect::<Vec<_>>());
+
+        let a = TestIterator::new([1, 2, 3, 4]);
+        let b = TestIterator::new([2, 3]);
+        let c = TestIterator::new([2, 3, 4]);
+
+        assert_eq!(combined, sequential_and([a, b, c]).collect::<Vec<_>>());
+
+        let a = TestIterator::new([2, 3, 4]);
+        let b = TestIterator::new([2, 3]);
+        let c = TestIterator::new([1, 2, 3, 4]);
 
         assert_eq!(combined, sequential_and([a, b, c]).collect::<Vec<_>>());
     }
