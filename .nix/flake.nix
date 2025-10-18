@@ -43,6 +43,7 @@
         with pkgs; {
           devShells.default = mkShell {
             buildInputs = [
+              cloc
               rust
             ];
 
