@@ -41,6 +41,7 @@ static SEED: RapidSecrets = RapidSecrets::seed(0x2811_2017);
 // Event
 
 #[derive(new, Debug)]
+#[new(const_fn)]
 pub struct Event {
     data: Data,
     descriptor: Descriptor,
@@ -67,7 +68,7 @@ impl Event {
 // Hash Ref
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct EventHashRef<'a> {
     data: &'a Data,
     descriptor: DescriptorHashRef<'a>,
@@ -117,7 +118,7 @@ impl<'a> From<&'a Event> for EventHashRef<'a> {
 // Hash
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct SequencedEventHash {
     data: Data,
     descriptor: DescriptorHash,
@@ -142,7 +143,7 @@ impl SequencedEventHash {
 // Ref
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct SequencedEventRef<'a> {
     pub data: Data,
     pub descriptor: DescriptorRef<'a>,

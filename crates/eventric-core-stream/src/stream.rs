@@ -24,7 +24,7 @@ use fancy_constructor::new;
 // =================================================================================================
 
 #[derive(new, Debug)]
-#[new(name(inner_new), vis())]
+#[new(const_fn, name(inner_new), vis())]
 pub struct Stream {
     context: Context,
     keyspaces: Keyspaces,

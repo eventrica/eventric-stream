@@ -5,7 +5,7 @@ use fancy_constructor::new;
 // =================================================================================================
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct Data(Vec<u8>);
 
 impl AsRef<[u8]> for Data {

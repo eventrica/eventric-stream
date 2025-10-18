@@ -14,7 +14,7 @@ use crate::event::{
 // =================================================================================================
 
 #[derive(new, Debug, Eq, PartialEq)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct Descriptor(Identifier, Version);
 
 impl Descriptor {
@@ -32,7 +32,7 @@ impl Descriptor {
 // Hash
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct DescriptorHash(IdentifierHash, Version);
 
 impl DescriptorHash {
@@ -45,7 +45,7 @@ impl DescriptorHash {
 // Hash Ref
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct DescriptorHashRef<'a>(IdentifierHashRef<'a>, Version);
 
 impl<'a> DescriptorHashRef<'a> {
@@ -72,7 +72,7 @@ impl<'a> From<&'a Descriptor> for DescriptorHashRef<'a> {
 // Ref
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct DescriptorRef<'a>(&'a Identifier, Version);
 
 impl DescriptorRef<'_> {

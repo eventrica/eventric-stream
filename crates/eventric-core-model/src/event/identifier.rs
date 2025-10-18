@@ -10,7 +10,7 @@ use crate::event::SEED;
 // =================================================================================================
 
 #[derive(new, Clone, Debug, Eq, PartialEq)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct Identifier(String);
 
 impl Identifier {
@@ -28,7 +28,7 @@ impl Identifier {
 // Hash
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct IdentifierHash(u64);
 
 impl IdentifierHash {
@@ -49,7 +49,7 @@ impl From<&Identifier> for IdentifierHash {
 // Hash Ref
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct IdentifierHashRef<'a>(u64, &'a Identifier);
 
 impl IdentifierHashRef<'_> {

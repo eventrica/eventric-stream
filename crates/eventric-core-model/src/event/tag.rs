@@ -10,7 +10,7 @@ use crate::event::SEED;
 // =================================================================================================
 
 #[derive(new, Clone, Debug, Eq, PartialEq)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct Tag(String);
 
 impl Tag {
@@ -28,7 +28,7 @@ impl Tag {
 // Hash
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct TagHash(u64);
 
 impl TagHash {
@@ -49,7 +49,7 @@ impl From<&Tag> for TagHash {
 // Hash Ref
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct TagHashRef<'a>(u64, &'a Tag);
 
 impl TagHashRef<'_> {
@@ -78,7 +78,7 @@ impl<'a> From<&'a Tag> for TagHashRef<'a> {
 // Ref
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct TagRef<'a>(&'a Tag);
 
 impl Deref for TagRef<'_> {

@@ -22,7 +22,7 @@ use crate::{
 // Query
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct Query {
     items: Vec<QueryItem>,
 }

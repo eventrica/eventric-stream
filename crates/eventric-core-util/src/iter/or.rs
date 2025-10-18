@@ -24,7 +24,7 @@ use crate::iter::{
 /// [index]: crate::persistence::index
 /// [seq_int]: crate::persistence::index::SequentialIterator
 #[derive(new, Debug)]
-#[new(vis())]
+#[new(const_fn, vis())]
 pub struct SequentialOr<I, T>(CachingIterators<I, T>)
 where
     I: Iterator<Item = T>,

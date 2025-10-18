@@ -15,7 +15,7 @@ use crate::event::{
 // =================================================================================================
 
 #[derive(new, Debug, Eq, PartialEq)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct Specifier(Identifier, Option<Range<Version>>);
 
 impl Specifier {
@@ -33,7 +33,7 @@ impl Specifier {
 // Hash
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct SpecifierHash(IdentifierHash, Option<Range<Version>>);
 
 impl SpecifierHash {

@@ -5,7 +5,7 @@ use fancy_constructor::new;
 // =================================================================================================
 
 #[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct Version(u8);
 
 impl Version {

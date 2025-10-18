@@ -42,7 +42,7 @@ impl AsRef<Database> for Context {
 // Keyspaces
 
 #[derive(new, Clone, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct Keyspaces {
     #[debug("Keyspace(\"{}\")", data.name)]
     pub data: Keyspace,

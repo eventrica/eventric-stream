@@ -11,13 +11,13 @@ use crate::context::Keyspaces;
 // Read/Write
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct Read<'a> {
     pub keyspaces: &'a Keyspaces,
 }
 
 #[derive(new, Debug)]
-#[new(vis(pub))]
+#[new(const_fn)]
 pub struct Write<'a> {
     #[debug("Batch")]
     pub batch: &'a mut WriteBatch,

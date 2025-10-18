@@ -6,6 +6,7 @@ use fancy_constructor::new;
 // =================================================================================================
 
 #[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[new(const_fn)]
 pub struct Timestamp(u64);
 
 impl Timestamp {
