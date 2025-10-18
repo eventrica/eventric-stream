@@ -1,5 +1,6 @@
 pub mod descriptor;
 pub mod tags;
+pub mod timestamp;
 
 use eventric_core_model::{
     EventHashRef,
@@ -29,6 +30,7 @@ static POSITION_LEN: usize = size_of::<u64>();
 pub fn insert(write: &mut Write<'_>, position: Position, event: &EventHashRef<'_>) {
     descriptor::insert(write, position, event.descriptor());
     tags::insert(write, position, event.tags());
+    timestamp::insert(write, position, *event.timestamp());
 }
 
 // -------------------------------------------------------------------------------------------------

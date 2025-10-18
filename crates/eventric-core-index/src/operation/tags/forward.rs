@@ -34,6 +34,8 @@ use crate::{
 // Forward
 // =================================================================================================
 
+// Configuration
+
 static INDEX_ID: u8 = 1;
 static KEY_LEN: usize = ID_LEN + HASH_LEN + POSITION_LEN;
 static PREFIX_LEN: usize = ID_LEN + HASH_LEN;
