@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use eventric_core_model::{
-    Condition,
     DescriptorRef,
     Identifier,
     Position,
@@ -21,17 +20,23 @@ use eventric_core_state::Read;
 use fancy_constructor::new;
 use itertools::Itertools;
 
-use crate::stream::SequencedEvents;
+use crate::{
+    condition::QueryCondition,
+    event::SequencedEvents,
+};
 
 // =================================================================================================
 // Query
 // =================================================================================================
 
-pub fn query<'a>(read: Read<'_>, condition: Condition<'a>) -> impl SequencedEvents<'a> {
+pub fn query<'a>(read: Read<'_>, condition: QueryCondition<'a>) -> impl SequencedEvents<'a> {
     let mut cache = Cache::new();
 
     let condition = condition.take();
-    let query = map_query_with_cache_write(&mut cache, condition.0);
+
+    // TODO: Don't unwrap here, handle the case where there is no query (All)
+
+    let query = map_query_with_cache_write(&mut cache, condition.0.unwrap());
 
     eventric_core_index::query(&read, condition.1, &query)
         .map(move |position| map_position(&read, position))

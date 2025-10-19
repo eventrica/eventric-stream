@@ -3,6 +3,8 @@
 #![allow(clippy::missing_panics_doc)]
 #![feature(trait_alias)]
 
+mod condition;
+mod event;
 mod stream;
 
 // =================================================================================================
@@ -11,9 +13,13 @@ mod stream;
 
 // Re-Exports
 
-pub use self::stream::{
-    Events,
-    SequencedEvents,
-    Stream,
-    StreamConfigurator,
+pub use self::{
+    condition::{
+        AppendCondition,
+        QueryCondition,
+    },
+    stream::{
+        Stream,
+        StreamConfigurator,
+    },
 };

@@ -3,7 +3,6 @@ use fancy_constructor::new;
 use itertools::Itertools;
 
 use crate::{
-    position::Position,
     specifier::{
         Specifier,
         SpecifierHash,
@@ -17,54 +16,6 @@ use crate::{
 // =================================================================================================
 // Query
 // =================================================================================================
-
-// Condition
-
-#[derive(new, Debug)]
-#[new(const_fn, vis())]
-pub struct Condition<'a> {
-    query: &'a Query,
-    position: Option<Position>,
-}
-
-impl<'a> Condition<'a> {
-    #[must_use]
-    pub fn take(self) -> (&'a Query, Option<Position>) {
-        (self.query, self.position)
-    }
-}
-
-impl<'a> Condition<'a> {
-    #[must_use]
-    pub fn builder(query: &'a Query) -> ConditionBuilder<'a> {
-        ConditionBuilder::new(query)
-    }
-}
-
-#[derive(new, Debug)]
-#[new(vis())]
-pub struct ConditionBuilder<'a> {
-    query: &'a Query,
-    #[new(default)]
-    position: Option<Position>,
-}
-
-impl<'a> ConditionBuilder<'a> {
-    #[must_use]
-    pub fn build(self) -> Condition<'a> {
-        Condition::new(self.query, self.position)
-    }
-}
-
-impl ConditionBuilder<'_> {
-    #[must_use]
-    pub fn position(mut self, position: Position) -> Self {
-        self.position = Some(position);
-        self
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
 
 // Query
 

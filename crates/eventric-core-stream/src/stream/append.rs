@@ -1,10 +1,10 @@
-use eventric_core_model::{
-    Condition,
-    Position,
-};
+use eventric_core_model::Position;
 use eventric_core_state::Write;
 
-use crate::stream::Events;
+use crate::{
+    condition::AppendCondition,
+    event::Events,
+};
 
 // =================================================================================================
 // Append
@@ -13,7 +13,7 @@ use crate::stream::Events;
 pub fn append<'a>(
     write: &mut Write<'_>,
     events: impl Events<'a>,
-    _condition: Option<Condition<'a>>,
+    _condition: Option<AppendCondition<'a>>,
     position: &mut Position,
 ) {
     // Check condition here!

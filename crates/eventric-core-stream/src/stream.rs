@@ -8,12 +8,7 @@ use std::{
 };
 
 use derive_more::Debug;
-use eventric_core_model::{
-    Condition,
-    Event,
-    Position,
-    SequencedEventRef,
-};
+use eventric_core_model::Position;
 use eventric_core_state::{
     Context,
     Keyspaces,
@@ -22,12 +17,20 @@ use eventric_core_state::{
 };
 use fancy_constructor::new;
 
+use crate::{
+    condition::{
+        AppendCondition,
+        QueryCondition,
+    },
+    event::{
+        Events,
+        SequencedEvents,
+    },
+};
+
 // =================================================================================================
 // Stream
 // =================================================================================================
-
-pub trait Events<'a> = IntoIterator<Item = &'a Event>;
-pub trait SequencedEvents<'a> = Iterator<Item = SequencedEventRef<'a>>;
 
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
@@ -41,7 +44,7 @@ impl Stream {
     pub fn append<'a>(
         &mut self,
         events: impl Events<'a>,
-        condition: Option<Condition<'a>>,
+        condition: Option<AppendCondition<'a>>,
     ) -> Result<(), Box<dyn Error>> {
         let mut batch = self.context.database().batch();
         let mut write = Write::new(&mut batch, &self.keyspaces);
@@ -54,7 +57,7 @@ impl Stream {
     }
 
     #[must_use]
-    pub fn query<'a>(&self, condition: Condition<'a>) -> impl SequencedEvents<'a> {
+    pub fn query<'a>(&self, condition: QueryCondition<'a>) -> impl SequencedEvents<'a> {
         let read = Read::new(&self.keyspaces);
 
         query::query(read, condition)

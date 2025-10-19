@@ -48,8 +48,6 @@ pub use self::{
     },
     position::Position,
     query::{
-        Condition,
-        ConditionBuilder,
         Query,
         QueryHash,
         QueryItem,

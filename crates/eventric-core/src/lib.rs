@@ -9,7 +9,7 @@
 // Re-Exports
 
 pub use eventric_core_model::{
-    Condition,
+    // Condition,
     // ConditionBuilder,
     Data,
     Descriptor,
@@ -26,8 +26,9 @@ pub use eventric_core_model::{
     Version,
 };
 pub use eventric_core_stream::{
+    AppendCondition,
+    QueryCondition, // StreamConfigurator,
     // Events,
     // SequencedEvents,
     Stream,
-    // StreamConfigurator,
 };
