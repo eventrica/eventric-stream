@@ -17,6 +17,8 @@ use eventric_core_model::{
 use eventric_core_state::{
     Context,
     Keyspaces,
+    Read,
+    Write,
 };
 use fancy_constructor::new;
 
@@ -37,7 +39,14 @@ impl Stream {
     where
         E: IntoIterator<Item = &'a Event>,
     {
-        append::append(&self.context, &self.keyspaces, &mut self.position, events)
+        let mut batch = self.context.database().batch();
+        let mut write = Write::new(&mut batch, &self.keyspaces);
+
+        append::append(&mut write, &mut self.position, events);
+
+        batch.commit()?;
+
+        Ok(())
     }
 
     pub fn query<'a>(
@@ -45,17 +54,23 @@ impl Stream {
         position: Option<Position>,
         query: &'a Query,
     ) -> impl Iterator<Item = SequencedEventRef<'a>> {
-        query::query(&self.keyspaces, position, query)
+        let read = Read::new(&self.keyspaces);
+
+        query::query(read, position, query)
     }
 }
 
 impl Stream {
     pub fn is_empty(&self) -> Result<bool, Box<dyn Error>> {
-        properties::is_empty(&self.keyspaces)
+        let read = Read::new(&self.keyspaces);
+
+        properties::is_empty(&read)
     }
 
     pub fn len(&self) -> Result<u64, Box<dyn Error>> {
-        properties::len(&self.keyspaces)
+        let read = Read::new(&self.keyspaces);
+
+        properties::len(&read)
     }
 }
 
@@ -88,13 +103,18 @@ where
     P: AsRef<Path>,
 {
     pub fn open(self) -> Result<Stream, Box<dyn Error>> {
-        let context = Context::new(self.path, self.temporary.unwrap_or_default())?;
+        let path = self.path;
+        let temporary = self.temporary.unwrap_or_default();
+        let context = Context::new(path, temporary)?;
+
         let keyspaces = Keyspaces::new(
             eventric_core_data::keyspace(&context)?,
             eventric_core_index::keyspace(&context)?,
             eventric_core_reference::keyspace(&context)?,
         );
-        let position = properties::len(&keyspaces).map(Position::new)?;
+
+        let read = Read::new(&keyspaces);
+        let position = properties::len(&read).map(Position::new)?;
 
         Ok(Stream::new(context, keyspaces, position))
     }

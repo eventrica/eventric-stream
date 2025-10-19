@@ -20,6 +20,6 @@ static KEYSPACE_NAME: &str = "reference";
 
 pub fn keyspace(context: &Context) -> Result<Keyspace, Box<dyn Error>> {
     Ok(context
-        .as_ref()
+        .database()
         .keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?)
 }

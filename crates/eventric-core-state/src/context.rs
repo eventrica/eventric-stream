@@ -31,8 +31,9 @@ impl Context {
     }
 }
 
-impl AsRef<Database> for Context {
-    fn as_ref(&self) -> &Database {
+impl Context {
+    #[must_use]
+    pub fn database(&self) -> &Database {
         &self.database
     }
 }

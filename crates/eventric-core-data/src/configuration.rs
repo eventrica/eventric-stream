@@ -18,8 +18,8 @@ static KEYSPACE_NAME: &str = "data";
 
 // Keyspace
 
-pub fn keyspace(database: &Context) -> Result<Keyspace, Box<dyn Error>> {
-    Ok(database
-        .as_ref()
+pub fn keyspace(context: &Context) -> Result<Keyspace, Box<dyn Error>> {
+    Ok(context
+        .database()
         .keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?)
 }

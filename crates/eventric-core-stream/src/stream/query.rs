@@ -16,10 +16,7 @@ use eventric_core_model::{
     TagHash,
     TagRef,
 };
-use eventric_core_state::{
-    Keyspaces,
-    Read,
-};
+use eventric_core_state::Read;
 use fancy_constructor::new;
 use itertools::Itertools;
 
@@ -28,13 +25,12 @@ use itertools::Itertools;
 // =================================================================================================
 
 pub fn query<'a>(
-    keyspaces: &Keyspaces,
+    read: Read<'_>,
     position: Option<Position>,
     query: &'a Query,
 ) -> impl Iterator<Item = SequencedEventRef<'a>> {
     let mut cache = Cache::new();
 
-    let read = Read::new(keyspaces);
     let query = map_query_with_cache_write(&mut cache, query);
 
     eventric_core_index::query(&read, position, &query)
