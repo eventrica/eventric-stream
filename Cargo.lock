@@ -222,6 +222,7 @@ dependencies = [
 name = "eventric-core-stream"
 version = "0.1.0"
 dependencies = [
+ "derive_more",
  "eventric-core-data",
  "eventric-core-index",
  "eventric-core-model",

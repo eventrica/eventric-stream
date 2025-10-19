@@ -21,7 +21,7 @@ static PATH: &str = "./temp";
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     {
-        let mut stream = Stream::new(PATH, true)?;
+        let mut stream = Stream::configure(PATH).temporary(true).open()?;
 
         stream.append(Vec::from_iter([
             &Event::new(

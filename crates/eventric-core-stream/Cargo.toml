@@ -1,4 +1,5 @@
 [dependencies]
+derive_more.workspace             = true
 eventric-core-data.workspace      = true
 eventric-core-index.workspace     = true
 eventric-core-model.workspace     = true
