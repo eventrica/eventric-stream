@@ -1,6 +1,6 @@
 use fancy_constructor::new;
 
-use crate::event::{
+use crate::{
     identifier::{
         Identifier,
         IdentifierHash,

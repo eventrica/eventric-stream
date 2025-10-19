@@ -1,17 +1,23 @@
 use eventric_core_model::{
-    Event,
+    Condition,
     Position,
 };
 use eventric_core_state::Write;
+
+use crate::stream::Events;
 
 // =================================================================================================
 // Append
 // =================================================================================================
 
-pub fn append<'a, E>(write: &mut Write<'_>, position: &mut Position, events: E)
-where
-    E: IntoIterator<Item = &'a Event>,
-{
+pub fn append<'a>(
+    write: &mut Write<'_>,
+    events: impl Events<'a>,
+    _condition: Option<Condition<'a>>,
+    position: &mut Position,
+) {
+    // Check condition here!
+
     for event in events {
         let event = event.into();
 

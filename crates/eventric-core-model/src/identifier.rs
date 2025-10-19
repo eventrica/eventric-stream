@@ -3,7 +3,7 @@ use std::ops::Deref;
 use fancy_constructor::new;
 use rapidhash::v3;
 
-use crate::event::SEED;
+use crate::SEED;
 
 // =================================================================================================
 // Identifier

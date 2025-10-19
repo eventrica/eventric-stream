@@ -8,29 +8,26 @@
 
 // Re-Exports
 
-pub mod event {
-    pub use eventric_core_model::{
-        Data,
-        Descriptor,
-        DescriptorRef,
-        Event,
-        Identifier,
-        Position,
-        SequencedEventRef,
-        Tag,
-        TagRef,
-        Version,
-    };
-}
-
-pub mod query {
-    pub use eventric_core_model::{
-        Query,
-        QueryItem,
-        Specifier,
-    };
-}
-
-pub mod stream {
-    pub use eventric_core_stream::Stream;
-}
+pub use eventric_core_model::{
+    Condition,
+    // ConditionBuilder,
+    Data,
+    Descriptor,
+    // DescriptorRef,
+    Event,
+    Identifier,
+    Position,
+    Query,
+    QueryItem,
+    // SequencedEventRef,
+    Specifier,
+    Tag,
+    // TagRef,
+    Version,
+};
+pub use eventric_core_stream::{
+    // Events,
+    // SequencedEvents,
+    Stream,
+    // StreamConfigurator,
+};

@@ -11,4 +11,9 @@ mod stream;
 
 // Re-Exports
 
-pub use self::stream::Stream;
+pub use self::stream::{
+    Events,
+    SequencedEvents,
+    Stream,
+    StreamConfigurator,
+};

@@ -9,9 +9,9 @@ use std::{
 
 use derive_more::Debug;
 use eventric_core_model::{
+    Condition,
     Event,
     Position,
-    Query,
     SequencedEventRef,
 };
 use eventric_core_state::{
@@ -26,6 +26,9 @@ use fancy_constructor::new;
 // Stream
 // =================================================================================================
 
+pub trait Events<'a> = IntoIterator<Item = &'a Event>;
+pub trait SequencedEvents<'a> = Iterator<Item = SequencedEventRef<'a>>;
+
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
 pub struct Stream {
@@ -35,28 +38,26 @@ pub struct Stream {
 }
 
 impl Stream {
-    pub fn append<'a, E>(&mut self, events: E) -> Result<(), Box<dyn Error>>
-    where
-        E: IntoIterator<Item = &'a Event>,
-    {
+    pub fn append<'a>(
+        &mut self,
+        events: impl Events<'a>,
+        condition: Option<Condition<'a>>,
+    ) -> Result<(), Box<dyn Error>> {
         let mut batch = self.context.database().batch();
         let mut write = Write::new(&mut batch, &self.keyspaces);
 
-        append::append(&mut write, &mut self.position, events);
+        append::append(&mut write, events, condition, &mut self.position);
 
         batch.commit()?;
 
         Ok(())
     }
 
-    pub fn query<'a>(
-        &self,
-        position: Option<Position>,
-        query: &'a Query,
-    ) -> impl Iterator<Item = SequencedEventRef<'a>> {
+    #[must_use]
+    pub fn query<'a>(&self, condition: Condition<'a>) -> impl SequencedEvents<'a> {
         let read = Read::new(&self.keyspaces);
 
-        query::query(read, position, query)
+        query::query(read, condition)
     }
 }
 
@@ -93,9 +94,9 @@ pub struct StreamConfigurator<P>
 where
     P: AsRef<Path>,
 {
+    path: P,
     #[new(default)]
     temporary: Option<bool>,
-    path: P,
 }
 
 impl<P> StreamConfigurator<P>
@@ -124,6 +125,7 @@ impl<P> StreamConfigurator<P>
 where
     P: AsRef<Path>,
 {
+    #[must_use]
     pub fn temporary(mut self, temporary: bool) -> Self {
         self.temporary = Some(temporary);
         self

@@ -1,16 +1,7 @@
-pub mod data;
-pub mod descriptor;
-pub mod identifier;
-pub mod position;
-pub mod tag;
-pub mod timestamp;
-pub mod version;
-
 use fancy_constructor::new;
 use itertools::Itertools;
-use rapidhash::v3::RapidSecrets;
 
-use crate::event::{
+use crate::{
     data::Data,
     descriptor::{
         Descriptor,
@@ -31,12 +22,6 @@ use crate::event::{
 // =================================================================================================
 // Event
 // =================================================================================================
-
-// Configuration
-
-static SEED: RapidSecrets = RapidSecrets::seed(0x2811_2017);
-
-// -------------------------------------------------------------------------------------------------
 
 // Event
 
