@@ -15,9 +15,9 @@ use eventric_core_model::{
     Timestamp,
     Version,
 };
-use eventric_core_state::{
-    Read,
-    Write,
+use fjall::{
+    Keyspace,
+    WriteBatch,
 };
 
 // =================================================================================================
@@ -27,11 +27,11 @@ use eventric_core_state::{
 // Get
 
 pub fn get(
-    read: &Read<'_>,
+    data: &Keyspace,
     position: Position,
 ) -> Result<Option<SequencedEventHash>, Box<dyn Error>> {
     let key = position.value().to_be_bytes();
-    let value = read.keyspaces.data.get(key)?;
+    let value = data.get(key)?;
     let event = value.map(|slice| read_value(&slice[..], position));
 
     Ok(event)
@@ -41,14 +41,19 @@ pub fn get(
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &EventHashRef<'_>) {
+pub fn insert(
+    batch: &mut WriteBatch,
+    data: &Keyspace,
+    event: &EventHashRef<'_>,
+    position: Position,
+) {
     let key = position.value().to_be_bytes();
 
     let mut value = Vec::new();
 
     write_value(&mut value, event);
 
-    write.batch.insert(&write.keyspaces.data, key, value);
+    batch.insert(data, key, value);
 }
 
 // -------------------------------------------------------------------------------------------------

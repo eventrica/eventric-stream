@@ -31,15 +31,15 @@ pub use self::{
     data::Data,
     descriptor::{
         Descriptor,
+        DescriptorArc,
         DescriptorHash,
         DescriptorHashRef,
-        DescriptorRef,
     },
     event::{
         Event,
         EventHashRef,
+        SequencedEventArc,
         SequencedEventHash,
-        SequencedEventRef,
     },
     identifier::{
         Identifier,
@@ -50,18 +50,21 @@ pub use self::{
     query::{
         Query,
         QueryHash,
+        QueryHashRef,
         QueryItem,
         QueryItemHash,
+        QueryItemHashRef,
     },
     specifier::{
         Specifier,
         SpecifierHash,
+        SpecifierHashRef,
     },
     tag::{
         Tag,
+        TagArc,
         TagHash,
         TagHashRef,
-        TagRef,
     },
     timestamp::Timestamp,
     version::Version,

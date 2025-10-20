@@ -160,7 +160,6 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "eventric-core-model",
- "eventric-core-state",
  "fjall",
 ]
 
@@ -182,7 +181,6 @@ dependencies = [
  "bytes",
  "derive_more",
  "eventric-core-model",
- "eventric-core-state",
  "eventric-core-util",
  "fjall",
  "self_cell",
@@ -205,16 +203,6 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "eventric-core-model",
- "eventric-core-state",
- "fjall",
-]
-
-[[package]]
-name = "eventric-core-state"
-version = "0.1.0"
-dependencies = [
- "derive_more",
- "fancy_constructor",
  "fjall",
 ]
 
@@ -222,13 +210,14 @@ dependencies = [
 name = "eventric-core-stream"
 version = "0.1.0"
 dependencies = [
+ "dashmap",
  "derive_more",
  "eventric-core-data",
  "eventric-core-index",
  "eventric-core-model",
  "eventric-core-reference",
- "eventric-core-state",
  "fancy_constructor",
+ "fjall",
  "itertools",
 ]
 

@@ -7,15 +7,12 @@ use eventric_core_model::{
     TagHash,
     TagHashRef,
 };
-use eventric_core_state::{
-    Read,
-    Write,
-};
 use fjall::{
     Error,
     Guard,
     Keyspace,
     Slice,
+    WriteBatch,
 };
 
 use crate::{
@@ -44,13 +41,18 @@ static PREFIX_LEN: usize = ID_LEN + HASH_LEN;
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, tags: &[TagHashRef<'_>]) {
+pub fn insert(
+    batch: &mut WriteBatch,
+    index: &Keyspace,
+    position: Position,
+    tags: &[TagHashRef<'_>],
+) {
     let mut key = [0u8; KEY_LEN];
 
     for tag in tags {
         write_key(&mut key, position, tag.hash());
 
-        write.batch.insert(&write.keyspaces.index, key, []);
+        batch.insert(index, key, []);
     }
 }
 
@@ -60,7 +62,7 @@ pub fn insert(write: &mut Write<'_>, position: Position, tags: &[TagHashRef<'_>]
 
 #[must_use]
 pub fn iterate(
-    read: &Read<'_>,
+    index: Keyspace,
     position: Option<Position>,
     tag: &TagHash,
 ) -> SequentialPositionIterator {
@@ -75,8 +77,6 @@ pub fn iterate(
 
         Position::new(position)
     };
-
-    let index = read.keyspaces.index.clone();
 
     match position {
         Some(position) => range(index, position, tag, map),

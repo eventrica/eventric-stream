@@ -3,7 +3,10 @@ use eventric_core_model::{
     Position,
     Timestamp,
 };
-use eventric_core_state::Write;
+use fjall::{
+    Keyspace,
+    WriteBatch,
+};
 
 use crate::operation::{
     ID_LEN,
@@ -23,14 +26,14 @@ static KEY_LEN: usize = ID_LEN + TIMESTAMP_LEN;
 
 //  Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, timestamp: Timestamp) {
+pub fn insert(batch: &mut WriteBatch, index: &Keyspace, position: Position, timestamp: Timestamp) {
     let mut key = [0u8; KEY_LEN];
 
     write_key(&mut key, timestamp.nanos());
 
     let value = position.value().to_be_bytes();
 
-    write.batch.insert(&write.keyspaces.index, key, value);
+    batch.insert(index, key, value);
 }
 
 // -------------------------------------------------------------------------------------------------

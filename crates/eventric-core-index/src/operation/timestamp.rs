@@ -4,7 +4,10 @@ use eventric_core_model::{
     Position,
     Timestamp,
 };
-use eventric_core_state::Write;
+use fjall::{
+    Keyspace,
+    WriteBatch,
+};
 
 // =================================================================================================
 // Timestamp
@@ -18,6 +21,6 @@ static TIMESTAMP_LEN: usize = size_of::<u64>();
 
 //  Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, timestamp: Timestamp) {
-    forward::insert(write, position, timestamp);
+pub fn insert(batch: &mut WriteBatch, index: &Keyspace, position: Position, timestamp: Timestamp) {
+    forward::insert(batch, index, position, timestamp);
 }

@@ -1,10 +1,9 @@
 #![allow(clippy::multiple_crate_versions)]
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
-#![feature(trait_alias)]
 
-mod condition;
-mod event;
+mod append;
+mod query;
 mod stream;
 
 // =================================================================================================
@@ -14,9 +13,14 @@ mod stream;
 // Re-Exports
 
 pub use self::{
-    condition::{
+    append::{
         AppendCondition,
+        AppendConditionBuilder,
+    },
+    query::{
+        QueryCache,
         QueryCondition,
+        QueryConditionBuilder,
     },
     stream::{
         Stream,

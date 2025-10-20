@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use fancy_constructor::new;
 
 use crate::{
@@ -20,6 +22,24 @@ pub struct Descriptor(Identifier, Version);
 impl Descriptor {
     #[must_use]
     pub fn identifier(&self) -> &Identifier {
+        &self.0
+    }
+
+    #[must_use]
+    pub fn version(&self) -> &Version {
+        &self.1
+    }
+}
+
+// Arc
+
+#[derive(new, Debug)]
+#[new(const_fn)]
+pub struct DescriptorArc(Arc<Identifier>, Version);
+
+impl DescriptorArc {
+    #[must_use]
+    pub fn identifer(&self) -> &Arc<Identifier> {
         &self.0
     }
 
@@ -66,23 +86,5 @@ impl<'a> From<&'a Descriptor> for DescriptorHashRef<'a> {
         let version = *descriptor.version();
 
         Self::new(identifier, version)
-    }
-}
-
-// Ref
-
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub struct DescriptorRef<'a>(&'a Identifier, Version);
-
-impl DescriptorRef<'_> {
-    #[must_use]
-    pub fn identifer(&self) -> &Identifier {
-        self.0
-    }
-
-    #[must_use]
-    pub fn version(&self) -> &Version {
-        &self.1
     }
 }

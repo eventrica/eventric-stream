@@ -1,11 +1,12 @@
 [dependencies]
+dashmap.workspace                 = true
 derive_more.workspace             = true
 eventric-core-data.workspace      = true
 eventric-core-index.workspace     = true
 eventric-core-model.workspace     = true
 eventric-core-reference.workspace = true
-eventric-core-state.workspace     = true
 fancy_constructor.workspace       = true
+fjall.workspace                   = true
 itertools.workspace               = true
 
 [lints]

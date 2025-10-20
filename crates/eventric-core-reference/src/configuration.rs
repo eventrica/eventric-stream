@@ -1,7 +1,7 @@
 use std::error::Error;
 
-use eventric_core_state::Context;
 use fjall::{
+    Database,
     Keyspace,
     KeyspaceCreateOptions,
 };
@@ -18,8 +18,6 @@ static KEYSPACE_NAME: &str = "reference";
 
 // Keyspace
 
-pub fn keyspace(context: &Context) -> Result<Keyspace, Box<dyn Error>> {
-    Ok(context
-        .database()
-        .keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?)
+pub fn keyspace(database: &Database) -> Result<Keyspace, Box<dyn Error>> {
+    Ok(database.keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?)
 }

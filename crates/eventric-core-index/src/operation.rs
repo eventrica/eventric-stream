@@ -8,11 +8,11 @@ use eventric_core_model::{
     QueryHash,
     QueryItemHash,
 };
-use eventric_core_state::{
-    Read,
-    Write,
-};
 use eventric_core_util::iter;
+use fjall::{
+    Keyspace,
+    WriteBatch,
+};
 
 use crate::iter::SequentialPositionIterator;
 
@@ -29,10 +29,15 @@ static POSITION_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &EventHashRef<'_>) {
-    descriptor::insert(write, position, event.descriptor());
-    tags::insert(write, position, event.tags());
-    timestamp::insert(write, position, *event.timestamp());
+pub fn insert(
+    batch: &mut WriteBatch,
+    index: &Keyspace,
+    event: &EventHashRef<'_>,
+    position: Position,
+) {
+    descriptor::insert(batch, index, position, event.descriptor());
+    tags::insert(batch, index, position, event.tags());
+    timestamp::insert(batch, index, position, *event.timestamp());
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -41,16 +46,16 @@ pub fn insert(write: &mut Write<'_>, position: Position, event: &EventHashRef<'_
 
 #[must_use]
 pub fn query(
-    read: &Read<'_>,
+    index: &Keyspace,
     position: Option<Position>,
     query: &QueryHash,
 ) -> SequentialPositionIterator {
     iter::sequential_or(query.items().iter().map(|item| match item {
-        QueryItemHash::Specifiers(specs) => descriptor::query(read, position, specs.iter()),
+        QueryItemHash::Specifiers(specs) => descriptor::query(index, position, specs.iter()),
         QueryItemHash::SpecifiersAndTags(specs, tags) => iter::sequential_and([
-            descriptor::query(read, position, specs.iter()),
-            tags::query(read, position, tags.iter()),
+            descriptor::query(index, position, specs.iter()),
+            tags::query(index, position, tags.iter()),
         ]),
-        QueryItemHash::Tags(tags) => tags::query(read, position, tags.iter()),
+        QueryItemHash::Tags(tags) => tags::query(index, position, tags.iter()),
     }))
 }

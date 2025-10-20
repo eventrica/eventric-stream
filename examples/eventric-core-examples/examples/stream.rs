@@ -6,6 +6,7 @@ use eventric_core::{
     Event,
     Identifier,
     Query,
+    QueryCache,
     QueryCondition,
     QueryItem,
     Specifier,
@@ -55,7 +56,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         None,
     )?;
 
-    let student_or_course_query = Query::new(Vec::from_iter([QueryItem::SpecifiersAndTags(
+    let cache = QueryCache::default();
+    let query = Query::new(Vec::from_iter([QueryItem::SpecifiersAndTags(
         Vec::from_iter([
             Specifier::new(Identifier::new("StudentSubscribedToCourse".into()), None),
             Specifier::new(Identifier::new("CourseCapacityChanged".into()), None),
@@ -63,11 +65,9 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         Vec::from_iter([Tag::new("course:523".into())]),
     )]));
 
-    for event in stream.query(
-        QueryCondition::builder()
-            .query(&student_or_course_query)
-            .build(),
-    ) {
+    let condition = QueryCondition::builder().query(&query).build();
+
+    for event in stream.query(&cache, condition) {
         println!("student or course id: {event:#?}");
     }
 
