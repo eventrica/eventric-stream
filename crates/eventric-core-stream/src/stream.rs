@@ -1,30 +1,28 @@
-mod append;
-mod properties;
-mod query;
-
 use std::{
     error::Error,
     path::Path,
 };
 
 use derive_more::Debug;
-use eventric_core_model::Position;
-use eventric_core_state::{
-    Context,
-    Keyspaces,
-    Read,
-    Write,
+use eventric_core_model::{
+    Event,
+    Position,
+    SequencedEventRef,
 };
 use fancy_constructor::new;
+use fjall::{
+    Database,
+    Keyspace,
+};
 
 use crate::{
-    condition::{
+    append::{
+        self,
         AppendCondition,
-        QueryCondition,
     },
-    event::{
-        Events,
-        SequencedEvents,
+    query::{
+        self,
+        QueryCondition,
     },
 };
 
@@ -35,46 +33,51 @@ use crate::{
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
 pub struct Stream {
-    context: Context,
-    keyspaces: Keyspaces,
+    #[debug("Database")]
+    database: Database,
+    keyspaces: StreamKeyspaces,
     position: Position,
 }
 
 impl Stream {
-    pub fn append<'a>(
+    pub fn append<'a, E>(
         &mut self,
-        events: impl Events<'a>,
+        events: E,
         condition: Option<AppendCondition<'a>>,
-    ) -> Result<(), Box<dyn Error>> {
-        let mut batch = self.context.database().batch();
-        let mut write = Write::new(&mut batch, &self.keyspaces);
+    ) -> Result<(), Box<dyn Error>>
+    where
+        E: IntoIterator<Item = &'a Event>,
+    {
+        let mut batch = self.database.batch();
 
-        append::append(&mut write, events, condition, &mut self.position);
+        append::append(
+            &mut batch,
+            &self.keyspaces,
+            events,
+            condition,
+            &mut self.position,
+        );
 
         batch.commit()?;
 
         Ok(())
     }
 
-    #[must_use]
-    pub fn query<'a>(&self, condition: QueryCondition<'a>) -> impl SequencedEvents<'a> {
-        let read = Read::new(&self.keyspaces);
-
-        query::query(read, condition)
+    pub fn query<'a>(
+        &self,
+        condition: QueryCondition<'a>,
+    ) -> impl Iterator<Item = SequencedEventRef<'a>> {
+        query::query(&self.keyspaces, condition)
     }
 }
 
 impl Stream {
     pub fn is_empty(&self) -> Result<bool, Box<dyn Error>> {
-        let read = Read::new(&self.keyspaces);
-
-        properties::is_empty(&read)
+        eventric_core_data::is_empty(&self.keyspaces.data)
     }
 
     pub fn len(&self) -> Result<u64, Box<dyn Error>> {
-        let read = Read::new(&self.keyspaces);
-
-        properties::len(&read)
+        eventric_core_data::len(&self.keyspaces.data)
     }
 }
 
@@ -109,18 +112,17 @@ where
     pub fn open(self) -> Result<Stream, Box<dyn Error>> {
         let path = self.path;
         let temporary = self.temporary.unwrap_or_default();
-        let context = Context::new(path, temporary)?;
+        let database = Database::builder(path).temporary(temporary).open()?;
 
-        let keyspaces = Keyspaces::new(
-            eventric_core_data::keyspace(&context)?,
-            eventric_core_index::keyspace(&context)?,
-            eventric_core_reference::keyspace(&context)?,
+        let keyspaces = StreamKeyspaces::new(
+            eventric_core_data::keyspace(&database)?,
+            eventric_core_index::keyspace(&database)?,
+            eventric_core_reference::keyspace(&database)?,
         );
 
-        let read = Read::new(&keyspaces);
-        let position = properties::len(&read).map(Position::new)?;
+        let position = eventric_core_data::len(&keyspaces.data).map(Position::new)?;
 
-        Ok(Stream::new(context, keyspaces, position))
+        Ok(Stream::new(database, keyspaces, position))
     }
 }
 
@@ -133,4 +135,19 @@ where
         self.temporary = Some(temporary);
         self
     }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Keyspaces
+
+#[derive(new, Clone, Debug)]
+#[new(const_fn)]
+pub struct StreamKeyspaces {
+    #[debug("Keyspace(\"{}\")", data.name)]
+    pub data: Keyspace,
+    #[debug("Keyspace(\"{}\")", index.name)]
+    pub index: Keyspace,
+    #[debug("Keyspace(\"{}\")", reference.name)]
+    pub reference: Keyspace,
 }

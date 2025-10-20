@@ -7,15 +7,12 @@ use eventric_core_model::{
     Position,
     SpecifierHash,
 };
-use eventric_core_state::{
-    Read,
-    Write,
-};
 use fjall::{
     Error,
     Guard,
     Keyspace,
     Slice,
+    WriteBatch,
 };
 
 use crate::{
@@ -44,7 +41,12 @@ static PREFIX_LEN: usize = ID_LEN + HASH_LEN;
 
 //  Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &DescriptorHashRef<'_>) {
+pub fn insert(
+    batch: &mut WriteBatch,
+    index: &Keyspace,
+    position: Position,
+    descriptor: &DescriptorHashRef<'_>,
+) {
     let mut key = [0u8; KEY_LEN];
 
     let identifier = descriptor.identifer();
@@ -53,7 +55,7 @@ pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &Descriptor
 
     let value = descriptor.version().value().to_be_bytes();
 
-    write.batch.insert(&write.keyspaces.index, key, value);
+    batch.insert(index, key, value);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -62,7 +64,7 @@ pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &Descriptor
 
 #[must_use]
 pub fn iterate(
-    read: &Read<'_>,
+    index: &Keyspace,
     position: Option<Position>,
     specifier: &SpecifierHash,
 ) -> SequentialPositionIterator {
@@ -98,8 +100,6 @@ pub fn iterate(
         Some(position)
     };
 
-    let index = read.keyspaces.index.clone();
-
     let iterator = match position {
         Some(position) => range(index, position, specifier, filter_map),
         None => prefix(index, specifier, filter_map),
@@ -109,7 +109,7 @@ pub fn iterate(
 }
 
 fn prefix<F>(
-    index: Keyspace,
+    index: &Keyspace,
     specification: &SpecifierHash,
     filter_map: F,
 ) -> OwnedSequentialPositionIterator
@@ -122,7 +122,7 @@ where
 
     write_prefix(&mut prefix, identifier.hash());
 
-    OwnedSequentialPositionIterator::new(index, |keyspace| {
+    OwnedSequentialPositionIterator::new(index.clone(), |keyspace| {
         Box::new(
             keyspace
                 .prefix(prefix)
@@ -133,7 +133,7 @@ where
 }
 
 fn range<F>(
-    index: Keyspace,
+    index: &Keyspace,
     position: Position,
     specifier: &SpecifierHash,
     filter_map: F,
@@ -155,7 +155,7 @@ where
 
     let range = lower..=upper;
 
-    OwnedSequentialPositionIterator::new(index, |keyspace| {
+    OwnedSequentialPositionIterator::new(index.clone(), |keyspace| {
         Box::new(
             keyspace
                 .range(range)

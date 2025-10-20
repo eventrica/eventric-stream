@@ -1,6 +1,9 @@
 use bytes::BufMut as _;
 use eventric_core_model::DescriptorHashRef;
-use eventric_core_state::Write;
+use fjall::{
+    Keyspace,
+    WriteBatch,
+};
 
 use crate::operation::{
     ID_LEN,
@@ -18,14 +21,14 @@ static KEY_LEN: usize = ID_LEN + HASH_LEN;
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, descriptor: &DescriptorHashRef<'_>) {
+pub fn insert(batch: &mut WriteBatch, reference: &Keyspace, descriptor: &DescriptorHashRef<'_>) {
     let mut key = [0u8; KEY_LEN];
 
     write_key(&mut key, descriptor.identifer().hash());
 
     let value = descriptor.identifer().value().as_bytes();
 
-    write.batch.insert(&write.keyspaces.reference, key, value);
+    batch.insert(reference, key, value);
 }
 
 // -------------------------------------------------------------------------------------------------

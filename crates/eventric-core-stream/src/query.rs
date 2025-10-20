@@ -16,34 +16,36 @@ use eventric_core_model::{
     TagHash,
     TagRef,
 };
-use eventric_core_state::Read;
 use fancy_constructor::new;
+use fjall::Keyspace;
 use itertools::Itertools;
 
-use crate::{
-    condition::QueryCondition,
-    event::SequencedEvents,
-};
+use crate::stream::StreamKeyspaces;
 
 // =================================================================================================
 // Query
 // =================================================================================================
 
-pub fn query<'a>(read: Read<'_>, condition: QueryCondition<'a>) -> impl SequencedEvents<'a> {
-    let mut cache = Cache::new();
+pub fn query<'a>(
+    keyspaces: &StreamKeyspaces,
+    condition: QueryCondition<'a>,
+) -> impl Iterator<Item = SequencedEventRef<'a>> {
+    let mut cache = QueryCache::new();
 
     let condition = condition.take();
+    let query = condition.0;
+    let position = condition.1;
 
     // TODO: Don't unwrap here, handle the case where there is no query (All)
 
-    let query = map_query_with_cache_write(&mut cache, condition.0.unwrap());
+    let query = map_query_with_cache_write(&mut cache, query.unwrap());
 
-    eventric_core_index::query(&read, condition.1, &query)
-        .map(move |position| map_position(&read, position))
+    eventric_core_index::query(&keyspaces.index, position, &query)
+        .map(move |position| map_position(&keyspaces.data, position))
         .map(move |event| map_event_with_cache_read(&cache, event))
 }
 
-fn map_query_with_cache_write<'a>(cache: &mut Cache<'a>, query: &'a Query) -> QueryHash {
+fn map_query_with_cache_write<'a>(cache: &mut QueryCache<'a>, query: &'a Query) -> QueryHash {
     QueryHash::new(
         query
             .items()
@@ -54,7 +56,7 @@ fn map_query_with_cache_write<'a>(cache: &mut Cache<'a>, query: &'a Query) -> Qu
 }
 
 fn map_query_item_with_cache_write<'a>(
-    cache: &mut Cache<'a>,
+    cache: &mut QueryCache<'a>,
     item: &'a QueryItem,
 ) -> QueryItemHash {
     match item {
@@ -78,7 +80,7 @@ fn map_query_item_with_cache_write<'a>(
 }
 
 fn map_specifiers_with_cache_write<'a>(
-    cache: &mut Cache<'a>,
+    cache: &mut QueryCache<'a>,
     specifiers: &'a [Specifier],
 ) -> Vec<SpecifierHash> {
     specifiers
@@ -95,7 +97,7 @@ fn map_specifiers_with_cache_write<'a>(
         .collect()
 }
 
-fn map_tags_with_cache_write<'a>(cache: &mut Cache<'a>, tags: &'a [Tag]) -> Vec<TagHash> {
+fn map_tags_with_cache_write<'a>(cache: &mut QueryCache<'a>, tags: &'a [Tag]) -> Vec<TagHash> {
     tags.iter()
         .map(|tag| {
             let tag_hash = TagHash::from(tag);
@@ -108,14 +110,14 @@ fn map_tags_with_cache_write<'a>(cache: &mut Cache<'a>, tags: &'a [Tag]) -> Vec<
         .collect()
 }
 
-fn map_position(read: &Read<'_>, position: Position) -> SequencedEventHash {
-    eventric_core_data::get(read, position)
+fn map_position(data: &Keyspace, position: Position) -> SequencedEventHash {
+    eventric_core_data::get(data, position)
         .expect("data get error")
         .expect("data not found error")
 }
 
 fn map_event_with_cache_read<'a>(
-    cache: &Cache<'a>,
+    cache: &QueryCache<'a>,
     event: SequencedEventHash,
 ) -> SequencedEventRef<'a> {
     let (data, descriptor, position, tags, timestamp) = event.take();
@@ -138,47 +140,111 @@ fn map_event_with_cache_read<'a>(
 // Cache
 
 #[derive(new, Debug)]
-struct Cache<'a> {
+struct QueryCache<'a> {
     #[new(default)]
-    entries: HashMap<u64, CacheEntry<'a>>,
+    entries: HashMap<u64, QueryCacheEntry<'a>>,
 }
 
-impl<'a> Cache<'a> {
-    fn get(&self, key: u64) -> Option<&CacheEntry<'a>> {
+impl<'a> QueryCache<'a> {
+    fn get(&self, key: u64) -> Option<&QueryCacheEntry<'a>> {
         self.entries.get(&key)
     }
 }
 
-impl<'a> Cache<'a> {
-    fn register(&mut self, key: u64, value: CacheEntry<'a>) {
+impl<'a> QueryCache<'a> {
+    fn register(&mut self, key: u64, value: QueryCacheEntry<'a>) {
         self.entries.entry(key).or_insert_with(|| value);
     }
 }
 
 #[derive(Debug)]
-pub enum CacheEntry<'a> {
+pub enum QueryCacheEntry<'a> {
     Identifier(&'a Identifier),
     Tag(&'a Tag),
 }
 
-fn get_identifier<'a>(cache: &Cache<'a>, key: u64) -> Option<&'a Identifier> {
+fn get_identifier<'a>(cache: &QueryCache<'a>, key: u64) -> Option<&'a Identifier> {
     cache.get(key).and_then(|entry| match entry {
-        CacheEntry::Identifier(identifier) => Some(*identifier),
-        CacheEntry::Tag(_) => None,
+        QueryCacheEntry::Identifier(identifier) => Some(*identifier),
+        QueryCacheEntry::Tag(_) => None,
     })
 }
 
-fn get_tag<'a>(cache: &Cache<'a>, key: u64) -> Option<&'a Tag> {
+fn get_tag<'a>(cache: &QueryCache<'a>, key: u64) -> Option<&'a Tag> {
     cache.get(key).and_then(|entry| match entry {
-        CacheEntry::Tag(tag) => Some(*tag),
-        CacheEntry::Identifier(_) => None,
+        QueryCacheEntry::Tag(tag) => Some(*tag),
+        QueryCacheEntry::Identifier(_) => None,
     })
 }
 
-fn set_identifier<'a>(cache: &mut Cache<'a>, hash: u64, identifier: &'a Identifier) {
-    cache.register(hash, CacheEntry::Identifier(identifier));
+fn set_identifier<'a>(cache: &mut QueryCache<'a>, hash: u64, identifier: &'a Identifier) {
+    cache.register(hash, QueryCacheEntry::Identifier(identifier));
 }
 
-fn set_tag<'a>(cache: &mut Cache<'a>, hash: u64, tag: &'a Tag) {
-    cache.register(hash, CacheEntry::Tag(tag));
+fn set_tag<'a>(cache: &mut QueryCache<'a>, hash: u64, tag: &'a Tag) {
+    cache.register(hash, QueryCacheEntry::Tag(tag));
 }
+
+// -------------------------------------------------------------------------------------------------
+
+// Condition
+
+#[derive(new, Debug)]
+#[new(const_fn, vis())]
+pub struct QueryCondition<'a> {
+    query: Option<&'a Query>,
+    position: Option<Position>,
+}
+
+impl<'a> QueryCondition<'a> {
+    #[must_use]
+    pub fn take(self) -> (Option<&'a Query>, Option<Position>) {
+        (self.query, self.position)
+    }
+}
+
+impl<'a> QueryCondition<'a> {
+    #[must_use]
+    pub fn builder() -> QueryConditionBuilder<'a> {
+        QueryConditionBuilder::new()
+    }
+}
+
+#[derive(new, Debug)]
+#[new(vis())]
+pub struct QueryConditionBuilder<'a> {
+    #[new(default)]
+    query: Option<&'a Query>,
+    #[new(default)]
+    position: Option<Position>,
+}
+
+impl<'a> QueryConditionBuilder<'a> {
+    #[must_use]
+    pub fn build(self) -> QueryCondition<'a> {
+        QueryCondition::new(self.query, self.position)
+    }
+}
+
+impl<'a> QueryConditionBuilder<'a> {
+    #[must_use]
+    pub fn after(mut self, position: Position) -> Self {
+        self.position = Some(position);
+        self
+    }
+
+    #[must_use]
+    pub fn query(mut self, query: &'a Query) -> Self {
+        self.query = Some(query);
+        self
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Iterator
+
+// #[derive(new, Debug)]
+// pub struct QueryHashIterator {
+//     iter: SequentialPositionIterator,
+// }

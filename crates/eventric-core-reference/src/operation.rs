@@ -2,7 +2,10 @@ mod descriptor;
 mod tags;
 
 use eventric_core_model::EventHashRef;
-use eventric_core_state::Write;
+use fjall::{
+    Keyspace,
+    WriteBatch,
+};
 
 // =================================================================================================
 // Reference
@@ -16,7 +19,7 @@ static ID_LEN: usize = size_of::<u8>();
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, event: &EventHashRef<'_>) {
-    descriptor::insert(write, event.descriptor());
-    tags::insert(write, event.tags());
+pub fn insert(batch: &mut WriteBatch, reference: &Keyspace, event: &EventHashRef<'_>) {
+    descriptor::insert(batch, reference, event.descriptor());
+    tags::insert(batch, reference, event.tags());
 }

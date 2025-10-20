@@ -1,11 +1,16 @@
 mod lookup;
 
 use eventric_core_model::TagHashRef;
-use eventric_core_state::Write;
+use fjall::{
+    Keyspace,
+    WriteBatch,
+};
 
 // =================================================================================================
 // Tags
 // =================================================================================================
+
+// Configuration
 
 static HASH_LEN: usize = size_of::<u64>();
 
@@ -13,6 +18,6 @@ static HASH_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, tags: &[TagHashRef<'_>]) {
-    lookup::insert(write, tags);
+pub fn insert(batch: &mut WriteBatch, reference: &Keyspace, tags: &[TagHashRef<'_>]) {
+    lookup::insert(batch, reference, tags);
 }

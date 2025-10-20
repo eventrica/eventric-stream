@@ -1,11 +1,16 @@
 mod lookup;
 
 use eventric_core_model::DescriptorHashRef;
-use eventric_core_state::Write;
+use fjall::{
+    Keyspace,
+    WriteBatch,
+};
 
 // =================================================================================================
 // Descriptor
 // =================================================================================================
+
+// Configuration
 
 static HASH_LEN: usize = size_of::<u64>();
 
@@ -13,6 +18,6 @@ static HASH_LEN: usize = size_of::<u64>();
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, descriptor: &DescriptorHashRef<'_>) {
-    lookup::insert(write, descriptor);
+pub fn insert(batch: &mut WriteBatch, reference: &Keyspace, descriptor: &DescriptorHashRef<'_>) {
+    lookup::insert(batch, reference, descriptor);
 }

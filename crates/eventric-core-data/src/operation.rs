@@ -8,9 +8,9 @@ use eventric_core_model::{
     Position,
     SequencedEventHash,
 };
-use eventric_core_state::{
-    Read,
-    Write,
+use fjall::{
+    Keyspace,
+    WriteBatch,
 };
 
 // =================================================================================================
@@ -20,30 +20,35 @@ use eventric_core_state::{
 // Get
 
 pub fn get(
-    read: &Read<'_>,
+    data: &Keyspace,
     position: Position,
 ) -> Result<Option<SequencedEventHash>, Box<dyn Error>> {
-    event::get(read, position)
+    event::get(data, position)
 }
 
 // -------------------------------------------------------------------------------------------------
 
 // Insert
 
-pub fn insert(write: &mut Write<'_>, position: Position, event: &EventHashRef<'_>) {
-    event::insert(write, position, event);
+pub fn insert(
+    batch: &mut WriteBatch,
+    data: &Keyspace,
+    event: &EventHashRef<'_>,
+    position: Position,
+) {
+    event::insert(batch, data, event, position);
 }
 
 // -------------------------------------------------------------------------------------------------
 
 // Properties
 
-pub fn is_empty(read: &Read<'_>) -> Result<bool, Box<dyn Error>> {
-    len(read).map(|len| len == 0)
+pub fn is_empty(data: &Keyspace) -> Result<bool, Box<dyn Error>> {
+    len(data).map(|len| len == 0)
 }
 
-pub fn len(read: &Read<'_>) -> Result<u64, Box<dyn Error>> {
-    let key_value = read.keyspaces.data.last_key_value()?;
+pub fn len(data: &Keyspace) -> Result<u64, Box<dyn Error>> {
+    let key_value = data.last_key_value()?;
 
     if let Some((key, _)) = key_value {
         let key = key.as_ref().get_u64();
