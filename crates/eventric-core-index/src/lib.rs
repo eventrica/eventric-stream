@@ -14,6 +14,7 @@ mod operation;
 
 pub use self::{
     configuration::keyspace,
+    iter::SequentialPositionIterator,
     operation::{
         insert,
         query,

@@ -14,6 +14,8 @@ use eventric_core_state::{
 };
 use eventric_core_util::iter;
 
+use crate::iter::SequentialPositionIterator;
+
 // =================================================================================================
 // Operation
 // =================================================================================================
@@ -37,11 +39,12 @@ pub fn insert(write: &mut Write<'_>, position: Position, event: &EventHashRef<'_
 
 // Query
 
+#[must_use]
 pub fn query(
     read: &Read<'_>,
     position: Option<Position>,
     query: &QueryHash,
-) -> impl Iterator<Item = Position> + use<> {
+) -> SequentialPositionIterator {
     iter::sequential_or(query.items().iter().map(|item| match item {
         QueryItemHash::Specifiers(specs) => descriptor::query(read, position, specs.iter()),
         QueryItemHash::SpecifiersAndTags(specs, tags) => iter::sequential_and([
@@ -50,5 +53,4 @@ pub fn query(
         ]),
         QueryItemHash::Tags(tags) => tags::query(read, position, tags.iter()),
     }))
-    .map(Position::new)
 }

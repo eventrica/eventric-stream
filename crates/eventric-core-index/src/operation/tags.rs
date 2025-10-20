@@ -11,7 +11,7 @@ use eventric_core_state::{
 };
 use eventric_core_util::iter;
 
-use crate::iter::SequentialIterator;
+use crate::iter::SequentialPositionIterator;
 
 // =================================================================================================
 // Tags
@@ -34,7 +34,7 @@ pub fn insert(write: &mut Write<'_>, position: Position, tags: &[TagHashRef<'_>]
 // Query
 
 #[must_use]
-pub fn query<'a, T>(read: &Read<'_>, position: Option<Position>, tags: T) -> SequentialIterator
+pub fn query<'a, T>(read: &Read<'_>, position: Option<Position>, tags: T) -> SequentialPositionIterator
 where
     T: Iterator<Item = &'a TagHash>,
 {

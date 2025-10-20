@@ -11,7 +11,7 @@ use eventric_core_state::{
 };
 use eventric_core_util::iter;
 
-use crate::iter::SequentialIterator;
+use crate::iter::SequentialPositionIterator;
 
 // =================================================================================================
 // Descriptor
@@ -34,7 +34,11 @@ pub fn insert(write: &mut Write<'_>, position: Position, descriptor: &Descriptor
 // Query
 
 #[must_use]
-pub fn query<'a, S>(read: &Read<'_>, position: Option<Position>, specs: S) -> SequentialIterator
+pub fn query<'a, S>(
+    read: &Read<'_>,
+    position: Option<Position>,
+    specs: S,
+) -> SequentialPositionIterator
 where
     S: Iterator<Item = &'a SpecifierHash>,
 {

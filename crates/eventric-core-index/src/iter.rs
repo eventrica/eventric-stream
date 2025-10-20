@@ -1,4 +1,5 @@
 use derive_more::Debug;
+use eventric_core_model::Position;
 use eventric_core_util::iter::{
     SequentialAnd,
     SequentialOr,
@@ -10,17 +11,17 @@ use self_cell::self_cell;
 // Iterator
 // =================================================================================================
 
-// Sequential Iterator
+// Sequential Position Iterator
 
 #[derive(Debug)]
-pub enum SequentialIterator {
-    And(SequentialAnd<SequentialIterator, u64>),
-    Or(SequentialOr<SequentialIterator, u64>),
-    Owned(#[debug("OwnedSequentialIterator")] OwnedSequentialIterator),
+pub enum SequentialPositionIterator {
+    And(SequentialAnd<SequentialPositionIterator, Position>),
+    Or(SequentialOr<SequentialPositionIterator, Position>),
+    Owned(#[debug("OwnedSequentialIterator")] OwnedSequentialPositionIterator),
 }
 
-impl Iterator for SequentialIterator {
-    type Item = u64;
+impl Iterator for SequentialPositionIterator {
+    type Item = Position;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -31,40 +32,40 @@ impl Iterator for SequentialIterator {
     }
 }
 
-impl From<SequentialAnd<SequentialIterator, u64>> for SequentialIterator {
-    fn from(value: SequentialAnd<SequentialIterator, u64>) -> Self {
+impl From<SequentialAnd<SequentialPositionIterator, Position>> for SequentialPositionIterator {
+    fn from(value: SequentialAnd<SequentialPositionIterator, Position>) -> Self {
         Self::And(value)
     }
 }
 
-impl From<SequentialOr<SequentialIterator, u64>> for SequentialIterator {
-    fn from(value: SequentialOr<SequentialIterator, u64>) -> Self {
+impl From<SequentialOr<SequentialPositionIterator, Position>> for SequentialPositionIterator {
+    fn from(value: SequentialOr<SequentialPositionIterator, Position>) -> Self {
         Self::Or(value)
     }
 }
 
-impl From<OwnedSequentialIterator> for SequentialIterator {
-    fn from(value: OwnedSequentialIterator) -> Self {
+impl From<OwnedSequentialPositionIterator> for SequentialPositionIterator {
+    fn from(value: OwnedSequentialPositionIterator) -> Self {
         Self::Owned(value)
     }
 }
 
-// Boxed Sequential Iterator
+// Boxed Sequential Position Iterator
 
-type BoxedSequentialIterator<'a> = Box<dyn Iterator<Item = u64> + 'a>;
+type BoxedSequentialPositionIterator<'a> = Box<dyn Iterator<Item = Position> + 'a>;
 
-// Owned Sequential Iterator
+// Owned Sequential Position Iterator
 
 self_cell!(
-    pub struct OwnedSequentialIterator {
+    pub struct OwnedSequentialPositionIterator {
         owner: Keyspace,
         #[covariant]
-        dependent: BoxedSequentialIterator,
+        dependent: BoxedSequentialPositionIterator,
     }
 );
 
-impl Iterator for OwnedSequentialIterator {
-    type Item = u64;
+impl Iterator for OwnedSequentialPositionIterator {
+    type Item = Position;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.with_dependent_mut(|_, iterator| iterator.next())

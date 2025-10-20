@@ -20,8 +20,8 @@ use fjall::{
 
 use crate::{
     iter::{
-        OwnedSequentialIterator,
-        SequentialIterator,
+        OwnedSequentialPositionIterator,
+        SequentialPositionIterator,
     },
     operation::{
         ID_LEN,
@@ -59,14 +59,21 @@ pub fn insert(write: &mut Write<'_>, position: Position, tags: &[TagHashRef<'_>]
 // Iterate
 
 #[must_use]
-pub fn iterate(read: &Read<'_>, position: Option<Position>, tag: &TagHash) -> SequentialIterator {
+pub fn iterate(
+    read: &Read<'_>,
+    position: Option<Position>,
+    tag: &TagHash,
+) -> SequentialPositionIterator {
     let map = |key: Result<Slice, Error>| {
         let key = key.expect("invalid key/value during iteration");
 
         let mut key = &key[..];
 
         key.advance(ID_LEN + HASH_LEN);
-        key.get_u64()
+
+        let position = key.get_u64();
+
+        Position::new(position)
     };
 
     let index = read.keyspaces.index.clone();
@@ -77,23 +84,28 @@ pub fn iterate(read: &Read<'_>, position: Option<Position>, tag: &TagHash) -> Se
     }
 }
 
-fn prefix<F>(index: Keyspace, tag: &TagHash, map: F) -> SequentialIterator
+fn prefix<F>(index: Keyspace, tag: &TagHash, map: F) -> SequentialPositionIterator
 where
-    F: Fn(Result<Slice, Error>) -> u64 + 'static,
+    F: Fn(Result<Slice, Error>) -> Position + 'static,
 {
     let mut prefix = [0u8; PREFIX_LEN];
 
     write_prefix(&mut prefix, tag.hash());
 
-    OwnedSequentialIterator::new(index, |keyspace| {
+    OwnedSequentialPositionIterator::new(index, |keyspace| {
         Box::new(keyspace.prefix(prefix).map(Guard::key).map(map))
     })
     .into()
 }
 
-fn range<F>(index: Keyspace, position: Position, tag: &TagHash, map: F) -> SequentialIterator
+fn range<F>(
+    index: Keyspace,
+    position: Position,
+    tag: &TagHash,
+    map: F,
+) -> SequentialPositionIterator
 where
-    F: Fn(Result<Slice, Error>) -> u64 + 'static,
+    F: Fn(Result<Slice, Error>) -> Position + 'static,
 {
     let mut lower = [0u8; KEY_LEN];
 
@@ -107,7 +119,7 @@ where
 
     let range = lower..=upper;
 
-    OwnedSequentialIterator::new(index, |keyspace| {
+    OwnedSequentialPositionIterator::new(index, |keyspace| {
         Box::new(keyspace.range(range).map(Guard::key).map(map))
     })
     .into()

@@ -20,8 +20,8 @@ use fjall::{
 
 use crate::{
     iter::{
-        OwnedSequentialIterator,
-        SequentialIterator,
+        OwnedSequentialPositionIterator,
+        SequentialPositionIterator,
     },
     operation::{
         ID_LEN,
@@ -65,7 +65,7 @@ pub fn iterate(
     read: &Read<'_>,
     position: Option<Position>,
     specifier: &SpecifierHash,
-) -> SequentialIterator {
+) -> SequentialPositionIterator {
     let version_bounds = specifier
         .range()
         .as_ref()
@@ -93,6 +93,7 @@ pub fn iterate(
         key.advance(ID_LEN + HASH_LEN);
 
         let position = key.get_u64();
+        let position = Position::new(position);
 
         Some(position)
     };
@@ -111,9 +112,9 @@ fn prefix<F>(
     index: Keyspace,
     specification: &SpecifierHash,
     filter_map: F,
-) -> OwnedSequentialIterator
+) -> OwnedSequentialPositionIterator
 where
-    F: Fn(Result<(Slice, Slice), Error>) -> Option<u64> + 'static,
+    F: Fn(Result<(Slice, Slice), Error>) -> Option<Position> + 'static,
 {
     let mut prefix = [0u8; PREFIX_LEN];
 
@@ -121,7 +122,7 @@ where
 
     write_prefix(&mut prefix, identifier.hash());
 
-    OwnedSequentialIterator::new(index, |keyspace| {
+    OwnedSequentialPositionIterator::new(index, |keyspace| {
         Box::new(
             keyspace
                 .prefix(prefix)
@@ -136,9 +137,9 @@ fn range<F>(
     position: Position,
     specifier: &SpecifierHash,
     filter_map: F,
-) -> OwnedSequentialIterator
+) -> OwnedSequentialPositionIterator
 where
-    F: Fn(Result<(Slice, Slice), Error>) -> Option<u64> + 'static,
+    F: Fn(Result<(Slice, Slice), Error>) -> Option<Position> + 'static,
 {
     let mut lower = [0u8; KEY_LEN];
 
@@ -154,7 +155,7 @@ where
 
     let range = lower..=upper;
 
-    OwnedSequentialIterator::new(index, |keyspace| {
+    OwnedSequentialPositionIterator::new(index, |keyspace| {
         Box::new(
             keyspace
                 .range(range)
