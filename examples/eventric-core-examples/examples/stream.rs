@@ -64,5 +64,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         println!("student or course id: {event:#?}");
     }
 
+    println!("cache: {cache:#?}");
+
     Ok(())
 }

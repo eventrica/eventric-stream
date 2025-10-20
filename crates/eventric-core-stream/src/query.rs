@@ -79,9 +79,9 @@ pub fn query(
 #[new(vis())]
 pub struct QueryCache {
     #[new(default)]
-    identifiers: QueryCacheTyped<Identifier>,
+    identifiers: QueryValueCache<Identifier>,
     #[new(default)]
-    tags: QueryCacheTyped<Tag>,
+    tags: QueryValueCache<Tag>,
 }
 
 impl QueryCache {
@@ -99,19 +99,18 @@ impl Default for QueryCache {
 
 #[derive(new, Debug)]
 #[new(vis())]
-struct QueryCacheTyped<T> {
-    #[debug("CacheMap")]
+struct QueryValueCache<T> {
     #[new(default)]
     entries: DashMap<u64, Arc<T>>,
 }
 
-impl<T> Default for QueryCacheTyped<T> {
+impl<T> Default for QueryValueCache<T> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl QueryCacheTyped<Identifier> {
+impl QueryValueCache<Identifier> {
     #[rustfmt::skip]
     fn populate(&self, query: &QueryHashRef<'_>) {
         for item in query.items() {
@@ -130,7 +129,7 @@ impl QueryCacheTyped<Identifier> {
     }
 }
 
-impl QueryCacheTyped<Tag> {
+impl QueryValueCache<Tag> {
     #[rustfmt::skip]
     fn populate(&self, query: &QueryHashRef<'_>) {
         for item in query.items() {
