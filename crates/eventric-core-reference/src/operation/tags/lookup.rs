@@ -1,5 +1,8 @@
 use bytes::BufMut as _;
-use eventric_core_model::TagHashRef;
+use eventric_core_model::{
+    Tag,
+    TagHashRef,
+};
 use fjall::{
     Keyspace,
     WriteBatch,
@@ -16,6 +19,24 @@ use crate::operation::{
 
 static REFERENCE_ID: u8 = 1;
 static KEY_LEN: usize = ID_LEN + HASH_LEN;
+
+// -------------------------------------------------------------------------------------------------
+
+// Get
+
+pub fn get(reference: &Keyspace, hash: u64) -> Option<Tag> {
+    let mut key = [0u8; KEY_LEN];
+
+    write_key(&mut key, hash);
+
+    // TODO: More efficient?
+
+    reference
+        .get(key)
+        .expect("get error")
+        .map(|bytes| String::from_utf8(bytes.to_vec()).expect("invalid string"))
+        .map(Tag::new)
+}
 
 // -------------------------------------------------------------------------------------------------
 

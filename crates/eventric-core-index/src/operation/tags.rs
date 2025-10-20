@@ -47,5 +47,5 @@ pub fn query<'a, T>(
 where
     T: Iterator<Item = &'a TagHash>,
 {
-    iter::sequential_and(tags.map(|tag| forward::iterate(index, position, tag)))
+    iter::sequential_and(tags.map(|tag| forward::iterate(index.clone(), position, tag)))
 }

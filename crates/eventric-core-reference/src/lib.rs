@@ -13,5 +13,9 @@ mod operation;
 
 pub use self::{
     configuration::keyspace,
-    operation::insert,
+    operation::{
+        get_identifier,
+        get_tag,
+        insert,
+    },
 };

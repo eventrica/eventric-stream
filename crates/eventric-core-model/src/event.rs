@@ -5,16 +5,16 @@ use crate::{
     data::Data,
     descriptor::{
         Descriptor,
+        DescriptorArc,
         DescriptorHash,
         DescriptorHashRef,
-        DescriptorRef,
     },
     position::Position,
     tag::{
         Tag,
+        TagArc,
         TagHash,
         TagHashRef,
-        TagRef,
     },
     timestamp::Timestamp,
 };
@@ -100,6 +100,45 @@ impl<'a> From<&'a Event> for EventHashRef<'a> {
 
 // Sequenced Event
 
+// Arc
+
+#[derive(new, Debug)]
+#[new(const_fn)]
+pub struct SequencedEventArc {
+    data: Data,
+    descriptor: DescriptorArc,
+    position: Position,
+    tags: Vec<TagArc>,
+    timestamp: Timestamp,
+}
+
+impl SequencedEventArc {
+    #[must_use]
+    pub fn data(&self) -> &Data {
+        &self.data
+    }
+
+    #[must_use]
+    pub fn descriptor(&self) -> &DescriptorArc {
+        &self.descriptor
+    }
+
+    #[must_use]
+    pub fn position(&self) -> &Position {
+        &self.position
+    }
+
+    #[must_use]
+    pub fn tags(&self) -> &Vec<TagArc> {
+        &self.tags
+    }
+
+    #[must_use]
+    pub fn timestamp(&self) -> &Timestamp {
+        &self.timestamp
+    }
+}
+
 // Hash
 
 #[derive(new, Debug)]
@@ -122,44 +161,5 @@ impl SequencedEventHash {
             self.tags,
             self.timestamp,
         )
-    }
-}
-
-// Ref
-
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub struct SequencedEventRef<'a> {
-    pub data: Data,
-    pub descriptor: DescriptorRef<'a>,
-    pub position: Position,
-    pub tags: Vec<TagRef<'a>>,
-    pub timestamp: Timestamp,
-}
-
-impl SequencedEventRef<'_> {
-    #[must_use]
-    pub fn data(&self) -> &Data {
-        &self.data
-    }
-
-    #[must_use]
-    pub fn descriptor(&self) -> &DescriptorRef<'_> {
-        &self.descriptor
-    }
-
-    #[must_use]
-    pub fn position(&self) -> &Position {
-        &self.position
-    }
-
-    #[must_use]
-    pub fn tags(&self) -> &Vec<TagRef<'_>> {
-        &self.tags
-    }
-
-    #[must_use]
-    pub fn timestamp(&self) -> &Timestamp {
-        &self.timestamp
     }
 }

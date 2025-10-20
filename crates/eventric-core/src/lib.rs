@@ -27,7 +27,9 @@ pub use eventric_core_model::{
 };
 pub use eventric_core_stream::{
     AppendCondition,
-    QueryCondition, // StreamConfigurator,
+    QueryCache,
+    QueryCondition,
+    // StreamConfigurator,
     // Events,
     // SequencedEvents,
     Stream,

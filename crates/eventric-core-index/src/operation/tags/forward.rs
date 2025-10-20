@@ -62,7 +62,7 @@ pub fn insert(
 
 #[must_use]
 pub fn iterate(
-    index: &Keyspace,
+    index: Keyspace,
     position: Option<Position>,
     tag: &TagHash,
 ) -> SequentialPositionIterator {
@@ -84,7 +84,7 @@ pub fn iterate(
     }
 }
 
-fn prefix<F>(index: &Keyspace, tag: &TagHash, map: F) -> SequentialPositionIterator
+fn prefix<F>(index: Keyspace, tag: &TagHash, map: F) -> SequentialPositionIterator
 where
     F: Fn(Result<Slice, Error>) -> Position + 'static,
 {
@@ -92,14 +92,14 @@ where
 
     write_prefix(&mut prefix, tag.hash());
 
-    OwnedSequentialPositionIterator::new(index.clone(), |keyspace| {
+    OwnedSequentialPositionIterator::new(index, |keyspace| {
         Box::new(keyspace.prefix(prefix).map(Guard::key).map(map))
     })
     .into()
 }
 
 fn range<F>(
-    index: &Keyspace,
+    index: Keyspace,
     position: Position,
     tag: &TagHash,
     map: F,
@@ -119,7 +119,7 @@ where
 
     let range = lower..=upper;
 
-    OwnedSequentialPositionIterator::new(index.clone(), |keyspace| {
+    OwnedSequentialPositionIterator::new(index, |keyspace| {
         Box::new(keyspace.range(range).map(Guard::key).map(map))
     })
     .into()

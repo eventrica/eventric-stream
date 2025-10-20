@@ -13,6 +13,7 @@ eventric-core-stream    = { path = "crates/eventric-core-stream" }
 eventric-core-util      = { path = "crates/eventric-core-util" }
 
 bytes             = { version = "1" }
+dashmap           = { version = "6" }
 derive_more       = { version = "2", features = ["full"] }
 fancy_constructor = { version = "2" }
 fjall             = { version = "=3.0.0-pre.0" }

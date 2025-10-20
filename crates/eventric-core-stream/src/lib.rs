@@ -18,6 +18,7 @@ pub use self::{
         AppendConditionBuilder,
     },
     query::{
+        QueryCache,
         QueryCondition,
         QueryConditionBuilder,
     },

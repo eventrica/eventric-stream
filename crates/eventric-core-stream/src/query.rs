@@ -1,20 +1,19 @@
-use std::collections::HashMap;
+use std::sync::Arc;
 
+use dashmap::DashMap;
+use derive_more::Debug;
+use eventric_core_index::SequentialPositionIterator;
 use eventric_core_model::{
-    DescriptorRef,
+    DescriptorArc,
     Identifier,
     Position,
     Query,
-    QueryHash,
-    QueryItem,
-    QueryItemHash,
+    QueryHashRef,
+    QueryItemHashRef,
+    SequencedEventArc,
     SequencedEventHash,
-    SequencedEventRef,
-    Specifier,
-    SpecifierHash,
     Tag,
-    TagHash,
-    TagRef,
+    TagArc,
 };
 use fancy_constructor::new;
 use fjall::Keyspace;
@@ -26,113 +25,30 @@ use crate::stream::StreamKeyspaces;
 // Query
 // =================================================================================================
 
-pub fn query<'a>(
+pub fn query(
+    cache: &QueryCache,
     keyspaces: &StreamKeyspaces,
-    condition: QueryCondition<'a>,
-) -> impl Iterator<Item = SequencedEventRef<'a>> {
-    let mut cache = QueryCache::new();
+    query: Option<&Query>,
+    position: Option<Position>,
+) -> impl Iterator<Item = SequencedEventArc> {
+    let query = query.map(Into::into);
 
-    let condition = condition.take();
-    let query = condition.0;
-    let position = condition.1;
-
-    // TODO: Don't unwrap here, handle the case where there is no query (All)
-
-    let query = map_query_with_cache_write(&mut cache, query.unwrap());
-
-    eventric_core_index::query(&keyspaces.index, position, &query)
-        .map(move |position| map_position(&keyspaces.data, position))
-        .map(move |event| map_event_with_cache_read(&cache, event))
-}
-
-fn map_query_with_cache_write<'a>(cache: &mut QueryCache<'a>, query: &'a Query) -> QueryHash {
-    QueryHash::new(
-        query
-            .items()
-            .iter()
-            .map(|item| map_query_item_with_cache_write(cache, item))
-            .collect_vec(),
-    )
-}
-
-fn map_query_item_with_cache_write<'a>(
-    cache: &mut QueryCache<'a>,
-    item: &'a QueryItem,
-) -> QueryItemHash {
-    match item {
-        QueryItem::Specifiers(specifiers) => {
-            let specifiers = map_specifiers_with_cache_write(cache, specifiers);
-
-            QueryItemHash::Specifiers(specifiers)
-        }
-        QueryItem::SpecifiersAndTags(specifiers, tags) => {
-            let specifiers = map_specifiers_with_cache_write(cache, specifiers);
-            let tags = map_tags_with_cache_write(cache, tags);
-
-            QueryItemHash::SpecifiersAndTags(specifiers, tags)
-        }
-        QueryItem::Tags(tags) => {
-            let tags = map_tags_with_cache_write(cache, tags);
-
-            QueryItemHash::Tags(tags)
-        }
+    if let Some(query) = &query {
+        cache.populate(query);
     }
-}
 
-fn map_specifiers_with_cache_write<'a>(
-    cache: &mut QueryCache<'a>,
-    specifiers: &'a [Specifier],
-) -> Vec<SpecifierHash> {
-    specifiers
-        .iter()
-        .map(|specifier| {
-            let spec_hash = SpecifierHash::from(specifier);
-            let hash = spec_hash.identifer().hash();
-            let identifier = specifier.identifier();
+    let query = query.as_ref().map(Into::into);
 
-            set_identifier(cache, hash, identifier);
+    // TODO: Handle case with no query!
 
-            spec_hash
-        })
-        .collect()
-}
-
-fn map_tags_with_cache_write<'a>(cache: &mut QueryCache<'a>, tags: &'a [Tag]) -> Vec<TagHash> {
-    tags.iter()
-        .map(|tag| {
-            let tag_hash = TagHash::from(tag);
-            let hash = tag_hash.hash();
-
-            set_tag(cache, hash, tag);
-
-            tag_hash
-        })
-        .collect()
-}
-
-fn map_position(data: &Keyspace, position: Position) -> SequencedEventHash {
-    eventric_core_data::get(data, position)
-        .expect("data get error")
-        .expect("data not found error")
-}
-
-fn map_event_with_cache_read<'a>(
-    cache: &QueryCache<'a>,
-    event: SequencedEventHash,
-) -> SequencedEventRef<'a> {
-    let (data, descriptor, position, tags, timestamp) = event.take();
-    let (identifier, version) = descriptor.take();
-
-    let identifier = get_identifier(cache, identifier.hash());
-    let identifier = identifier.expect("identifier not found");
-    let descriptor = DescriptorRef::new(identifier, version);
-
-    let tags = tags
-        .iter()
-        .filter_map(|tag| get_tag(cache, tag.hash()).map(TagRef::new))
-        .collect();
-
-    SequencedEventRef::new(data, descriptor, position, tags, timestamp)
+    QueryIterator::new(
+        cache,
+        keyspaces.reference.clone(),
+        QueryHashIterator::new(
+            keyspaces.data.clone(),
+            eventric_core_index::query(&keyspaces.index, position, &query.unwrap()),
+        ),
+    )
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -140,49 +56,77 @@ fn map_event_with_cache_read<'a>(
 // Cache
 
 #[derive(new, Debug)]
-struct QueryCache<'a> {
+#[new(vis())]
+pub struct QueryCache {
     #[new(default)]
-    entries: HashMap<u64, QueryCacheEntry<'a>>,
+    identifiers: QueryCacheTyped<Identifier>,
+    #[new(default)]
+    tags: QueryCacheTyped<Tag>,
 }
 
-impl<'a> QueryCache<'a> {
-    fn get(&self, key: u64) -> Option<&QueryCacheEntry<'a>> {
-        self.entries.get(&key)
+impl QueryCache {
+    fn populate(&self, query: &QueryHashRef<'_>) {
+        self.identifiers.populate(query);
+        self.tags.populate(query);
     }
 }
 
-impl<'a> QueryCache<'a> {
-    fn register(&mut self, key: u64, value: QueryCacheEntry<'a>) {
-        self.entries.entry(key).or_insert_with(|| value);
+impl Default for QueryCache {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
-#[derive(Debug)]
-pub enum QueryCacheEntry<'a> {
-    Identifier(&'a Identifier),
-    Tag(&'a Tag),
+#[derive(new, Debug)]
+#[new(vis())]
+struct QueryCacheTyped<T> {
+    #[debug("CacheMap")]
+    #[new(default)]
+    entries: DashMap<u64, Arc<T>>,
 }
 
-fn get_identifier<'a>(cache: &QueryCache<'a>, key: u64) -> Option<&'a Identifier> {
-    cache.get(key).and_then(|entry| match entry {
-        QueryCacheEntry::Identifier(identifier) => Some(*identifier),
-        QueryCacheEntry::Tag(_) => None,
-    })
+impl<T> Default for QueryCacheTyped<T> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
-fn get_tag<'a>(cache: &QueryCache<'a>, key: u64) -> Option<&'a Tag> {
-    cache.get(key).and_then(|entry| match entry {
-        QueryCacheEntry::Tag(tag) => Some(*tag),
-        QueryCacheEntry::Identifier(_) => None,
-    })
+impl QueryCacheTyped<Identifier> {
+    #[rustfmt::skip]
+    fn populate(&self, query: &QueryHashRef<'_>) {
+        for item in query.items() {
+            match item {
+                QueryItemHashRef::Specifiers(specifiers)
+              | QueryItemHashRef::SpecifiersAndTags(specifiers, _) => {
+                    for specifier in specifiers {
+                        self.entries
+                            .entry(specifier.identifier().hash())
+                            .or_insert_with(|| Arc::new((*specifier.identifier()).clone()));
+                    }
+                }
+                QueryItemHashRef::Tags(_) => {}
+            }
+        }
+    }
 }
 
-fn set_identifier<'a>(cache: &mut QueryCache<'a>, hash: u64, identifier: &'a Identifier) {
-    cache.register(hash, QueryCacheEntry::Identifier(identifier));
-}
-
-fn set_tag<'a>(cache: &mut QueryCache<'a>, hash: u64, tag: &'a Tag) {
-    cache.register(hash, QueryCacheEntry::Tag(tag));
+impl QueryCacheTyped<Tag> {
+    #[rustfmt::skip]
+    fn populate(&self, query: &QueryHashRef<'_>) {
+        for item in query.items() {
+            match item {
+                QueryItemHashRef::SpecifiersAndTags(_, tags)
+              | QueryItemHashRef::Tags(tags) => {
+                    for tag in tags {
+                        self.entries
+                            .entry(tag.hash())
+                            .or_insert_with(|| Arc::new((*tag).clone()));
+                    }
+                }
+                QueryItemHashRef::Specifiers(_) => {}
+            }
+        }
+    }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -244,7 +188,73 @@ impl<'a> QueryConditionBuilder<'a> {
 
 // Iterator
 
-// #[derive(new, Debug)]
-// pub struct QueryHashIterator {
-//     iter: SequentialPositionIterator,
-// }
+#[derive(new, Debug)]
+#[new(const_fn, vis())]
+pub struct QueryHashIterator {
+    #[debug("Keyspace(\"{}\")", data.name)]
+    data: Keyspace,
+    iter: SequentialPositionIterator,
+}
+
+impl Iterator for QueryHashIterator {
+    type Item = SequencedEventHash;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|position| {
+            eventric_core_data::get(&self.data, position)
+                .expect("hash iterator error")
+                .expect("event not found")
+        })
+    }
+}
+
+#[derive(new, Debug)]
+#[new(const_fn, vis())]
+struct QueryIterator<'a> {
+    cache: &'a QueryCache,
+    #[debug("Keyspace(\"{}\")", reference.name)]
+    reference: Keyspace,
+    iter: QueryHashIterator,
+}
+
+impl<'a> Iterator for QueryIterator<'a> {
+    type Item = SequencedEventArc;
+
+    #[rustfmt::skip]
+    fn next(self: &mut QueryIterator<'a>) -> Option<SequencedEventArc> {
+        self.iter.next().map(move |event| {
+            let (data, descriptor, position, tags, timestamp) = event.take();
+            let (identifier, version) = descriptor.take();
+
+            let identifier = self.cache.identifiers.entries
+                .entry(identifier.hash())
+                .or_insert_with(|| {
+                    Arc::new(
+                        eventric_core_reference::get_identifier(&self.reference, identifier.hash())
+                            .expect("identifier not found error"),
+                    )
+                })
+                .clone();
+
+            let descriptor = DescriptorArc::new(identifier, version);
+
+            let tags = tags
+                .iter()
+                .map(|tag| {
+                    self.cache.tags.entries
+                        .entry(tag.hash())
+                        .or_insert_with(|| {
+                            Arc::new(
+                                eventric_core_reference::get_tag(&self.reference, tag.hash())
+                                    .expect("tag not found error"),
+                            )
+                        })
+                        .clone()
+                })
+                .map(TagArc::new)
+                .collect_vec();
+
+            SequencedEventArc::new(data, descriptor, position, tags, timestamp)
+        })
+    }
+}

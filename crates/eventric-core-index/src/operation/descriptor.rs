@@ -47,5 +47,5 @@ pub fn query<'a, S>(
 where
     S: Iterator<Item = &'a SpecifierHash>,
 {
-    iter::sequential_or(specs.map(|spec| forward::iterate(index, position, spec)))
+    iter::sequential_or(specs.map(|spec| forward::iterate(index.clone(), position, spec)))
 }

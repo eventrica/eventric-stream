@@ -12,15 +12,13 @@ use crate::stream::StreamKeyspaces;
 // Append
 // =================================================================================================
 
-pub fn append<'a, E>(
+pub fn append<'a>(
     batch: &mut WriteBatch,
     keyspaces: &StreamKeyspaces,
-    events: E,
+    events: impl IntoIterator<Item = &'a Event>,
     _condition: Option<AppendCondition<'a>>,
     position: &mut Position,
-) where
-    E: IntoIterator<Item = &'a Event>,
-{
+) {
     // Check condition here!
 
     for event in events {

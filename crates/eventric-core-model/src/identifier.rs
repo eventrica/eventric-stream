@@ -46,6 +46,14 @@ impl From<&Identifier> for IdentifierHash {
     }
 }
 
+impl From<&IdentifierHashRef<'_>> for IdentifierHash {
+    fn from(identifier: &IdentifierHashRef<'_>) -> Self {
+        let hash = identifier.hash();
+
+        Self::new(hash)
+    }
+}
+
 // Hash Ref
 
 #[derive(new, Debug)]

@@ -7,7 +7,7 @@ use derive_more::Debug;
 use eventric_core_model::{
     Event,
     Position,
-    SequencedEventRef,
+    SequencedEventArc,
 };
 use fancy_constructor::new;
 use fjall::{
@@ -22,6 +22,7 @@ use crate::{
     },
     query::{
         self,
+        QueryCache,
         QueryCondition,
     },
 };
@@ -40,34 +41,29 @@ pub struct Stream {
 }
 
 impl Stream {
-    pub fn append<'a, E>(
+    #[rustfmt::skip]
+    pub fn append<'a>(
         &mut self,
-        events: E,
+        events: impl IntoIterator<Item = &'a Event>,
         condition: Option<AppendCondition<'a>>,
-    ) -> Result<(), Box<dyn Error>>
-    where
-        E: IntoIterator<Item = &'a Event>,
-    {
+    ) -> Result<(), Box<dyn Error>> {
         let mut batch = self.database.batch();
 
-        append::append(
-            &mut batch,
-            &self.keyspaces,
-            events,
-            condition,
-            &mut self.position,
-        );
+        append::append(&mut batch, &self.keyspaces, events, condition, &mut self.position);
 
         batch.commit()?;
 
         Ok(())
     }
 
-    pub fn query<'a>(
+    pub fn query(
         &self,
-        condition: QueryCondition<'a>,
-    ) -> impl Iterator<Item = SequencedEventRef<'a>> {
-        query::query(&self.keyspaces, condition)
+        cache: &QueryCache,
+        condition: QueryCondition<'_>,
+    ) -> impl Iterator<Item = SequencedEventArc> {
+        let (query, position) = condition.take();
+
+        query::query(cache, &self.keyspaces, query, position)
     }
 }
 

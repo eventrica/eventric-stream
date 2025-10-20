@@ -1,8 +1,8 @@
 mod lookup;
 
 use eventric_core_model::{
-    Tag,
-    TagHashRef,
+    Identifier,
+    IdentifierHashRef,
 };
 use fjall::{
     Keyspace,
@@ -10,7 +10,7 @@ use fjall::{
 };
 
 // =================================================================================================
-// Tags
+// Identifier
 // =================================================================================================
 
 // Configuration
@@ -21,7 +21,7 @@ static HASH_LEN: usize = size_of::<u64>();
 
 // Get
 
-pub fn get(reference: &Keyspace, hash: u64) -> Option<Tag> {
+pub fn get(reference: &Keyspace, hash: u64) -> Option<Identifier> {
     lookup::get(reference, hash)
 }
 
@@ -29,6 +29,6 @@ pub fn get(reference: &Keyspace, hash: u64) -> Option<Tag> {
 
 // Insert
 
-pub fn insert(batch: &mut WriteBatch, reference: &Keyspace, tags: &[TagHashRef<'_>]) {
-    lookup::insert(batch, reference, tags);
+pub fn insert(batch: &mut WriteBatch, reference: &Keyspace, identifier: &IdentifierHashRef<'_>) {
+    lookup::insert(batch, reference, identifier);
 }

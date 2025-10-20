@@ -1,4 +1,7 @@
-use std::ops::Deref;
+use std::{
+    ops::Deref,
+    sync::Arc,
+};
 
 use fancy_constructor::new;
 use rapidhash::v3;
@@ -25,6 +28,20 @@ impl Tag {
     }
 }
 
+// Arc
+
+#[derive(new, Debug)]
+#[new(const_fn)]
+pub struct TagArc(Arc<Tag>);
+
+impl Deref for TagArc {
+    type Target = Tag;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 // Hash
 
 #[derive(new, Debug)]
@@ -40,6 +57,14 @@ impl TagHash {
 
 impl From<&Tag> for TagHash {
     fn from(tag: &Tag) -> Self {
+        let hash = tag.hash();
+
+        Self::new(hash)
+    }
+}
+
+impl From<&TagHashRef<'_>> for TagHash {
+    fn from(tag: &TagHashRef<'_>) -> Self {
         let hash = tag.hash();
 
         Self::new(hash)
@@ -72,19 +97,5 @@ impl<'a> From<&'a Tag> for TagHashRef<'a> {
         let hash = tag.hash();
 
         Self::new(hash, tag)
-    }
-}
-
-// Ref
-
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub struct TagRef<'a>(&'a Tag);
-
-impl Deref for TagRef<'_> {
-    type Target = Tag;
-
-    fn deref(&self) -> &Self::Target {
-        self.0
     }
 }
