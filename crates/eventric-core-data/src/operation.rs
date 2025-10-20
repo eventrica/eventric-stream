@@ -7,6 +7,7 @@ use eventric_core_model::{
     EventHashRef,
     Position,
     SequencedEventHash,
+    Timestamp,
 };
 use fjall::{
     Keyspace,
@@ -35,8 +36,9 @@ pub fn insert(
     data: &Keyspace,
     event: &EventHashRef<'_>,
     position: Position,
+    timestamp: Timestamp,
 ) {
-    event::insert(batch, data, event, position);
+    event::insert(batch, data, event, position, timestamp);
 }
 
 // -------------------------------------------------------------------------------------------------

@@ -7,6 +7,7 @@ use eventric_core_model::{
     Position,
     QueryHash,
     QueryItemHash,
+    Timestamp,
 };
 use eventric_core_util::iter;
 use fjall::{
@@ -34,10 +35,11 @@ pub fn insert(
     index: &Keyspace,
     event: &EventHashRef<'_>,
     position: Position,
+    timestamp: Timestamp,
 ) {
     identifier::insert(batch, index, position, event.identifier(), *event.version());
     tags::insert(batch, index, position, event.tags());
-    timestamp::insert(batch, index, position, *event.timestamp());
+    timestamp::insert(batch, index, position, timestamp);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -47,8 +49,8 @@ pub fn insert(
 #[must_use]
 pub fn query(
     index: &Keyspace,
-    position: Option<Position>,
     query: &QueryHash,
+    position: Option<Position>,
 ) -> SequentialPositionIterator {
     iter::sequential_or(query.items().iter().map(|item| match item {
         QueryItemHash::Specifiers(specs) => identifier::query(index, position, specs.iter()),

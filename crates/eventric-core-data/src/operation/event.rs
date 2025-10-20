@@ -45,12 +45,13 @@ pub fn insert(
     data: &Keyspace,
     event: &EventHashRef<'_>,
     position: Position,
+    timestamp: Timestamp,
 ) {
     let key = position.value().to_be_bytes();
 
     let mut value = Vec::new();
 
-    write_value(&mut value, event);
+    write_value(&mut value, event, timestamp);
 
     batch.insert(data, key, value);
 }
@@ -85,7 +86,7 @@ fn read_value(mut value: &[u8], position: Position) -> SequencedEventHash {
     SequencedEventHash::new(data, identifier, position, tags, timestamp, version)
 }
 
-fn write_value(value: &mut Vec<u8>, event: &EventHashRef<'_>) {
+fn write_value(value: &mut Vec<u8>, event: &EventHashRef<'_>, timestamp: Timestamp) {
     let identifier = event.identifier().hash();
     let version = event.version().value();
 
@@ -102,7 +103,7 @@ fn write_value(value: &mut Vec<u8>, event: &EventHashRef<'_>) {
         value.put_u64(tag);
     }
 
-    let timestamp = event.timestamp().nanos();
+    let timestamp = timestamp.nanos();
 
     value.put_u64(timestamp);
 

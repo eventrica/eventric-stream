@@ -65,7 +65,6 @@ pub struct EventHashRef<'a> {
     data: &'a Data,
     identifier: IdentifierHashRef<'a>,
     tags: Vec<TagHashRef<'a>>,
-    timestamp: Timestamp,
     version: Version,
 }
 
@@ -86,11 +85,6 @@ impl EventHashRef<'_> {
     }
 
     #[must_use]
-    pub fn timestamp(&self) -> &Timestamp {
-        &self.timestamp
-    }
-
-    #[must_use]
     pub fn version(&self) -> &Version {
         &self.version
     }
@@ -98,13 +92,10 @@ impl EventHashRef<'_> {
 
 impl<'a> From<&'a Event> for EventHashRef<'a> {
     fn from(event: &'a Event) -> Self {
-        let timestamp = Timestamp::now();
-
         Self::new(
             event.data(),
             event.identifier().into(),
             event.tags().iter().map_into().collect_vec(),
-            timestamp,
             *event.version(),
         )
     }

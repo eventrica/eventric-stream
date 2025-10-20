@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use dashmap::DashMap;
 use derive_more::Debug;
-use eventric_core_index::SequentialPositionIterator;
 use eventric_core_model::{
     Identifier,
     Position,
@@ -10,11 +9,9 @@ use eventric_core_model::{
     QueryHashRef,
     QueryItemHashRef,
     SequencedEvent,
-    SequencedEventHash,
     Tag,
 };
 use fancy_constructor::new;
-use fjall::Keyspace;
 use itertools::Itertools;
 
 use crate::stream::StreamKeyspaces;
@@ -23,6 +20,7 @@ use crate::stream::StreamKeyspaces;
 // Query
 // =================================================================================================
 
+#[rustfmt::skip]
 pub fn query(
     cache: &QueryCache,
     keyspaces: &StreamKeyspaces,
@@ -39,14 +37,38 @@ pub fn query(
 
     // TODO: Handle case with no query!
 
-    QueryIterator::new(
-        cache,
-        keyspaces.reference.clone(),
-        QueryHashIterator::new(
-            keyspaces.data.clone(),
-            eventric_core_index::query(&keyspaces.index, position, &query.unwrap()),
-        ),
-    )
+    eventric_core_index::query(&keyspaces.index, &query.unwrap(), position)
+        .map(|position| {
+            eventric_core_data::get(&keyspaces.data, position)
+                .expect("hash iterator error")
+                .expect("event not found")
+        })
+        .map(|event| {
+            let (data, identifier, position, tags, timestamp, version) = event.take();
+
+            let identifier_entries = &cache.identifiers.entries;
+            let identifier = identifier_entries
+                .entry(identifier.hash())
+                .or_insert_with(|| Arc::new(
+                    eventric_core_reference::get_identifier(&keyspaces.reference, identifier.hash())
+                        .expect("identifier not found error"),
+                )).clone();
+
+            let tags_entries = &cache.tags.entries;
+            let tags = tags
+                .iter()
+                .map(|tag| {
+                    tags_entries
+                        .entry(tag.hash())
+                        .or_insert_with(|| Arc::new(
+                            eventric_core_reference::get_tag(&keyspaces.reference, tag.hash())
+                                .expect("tag not found error"),
+                        )).clone()
+                })
+                .collect_vec();
+
+            SequencedEvent::new(data, identifier, position, tags, timestamp, version)
+        })
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -179,77 +201,5 @@ impl<'a> QueryConditionBuilder<'a> {
     pub fn query(mut self, query: &'a Query) -> Self {
         self.query = Some(query);
         self
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Iterator
-
-#[derive(new, Debug)]
-#[new(const_fn, vis())]
-pub struct QueryHashIterator {
-    #[debug("Keyspace(\"{}\")", data.name)]
-    data: Keyspace,
-    iter: SequentialPositionIterator,
-}
-
-impl Iterator for QueryHashIterator {
-    type Item = SequencedEventHash;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|position| {
-            eventric_core_data::get(&self.data, position)
-                .expect("hash iterator error")
-                .expect("event not found")
-        })
-    }
-}
-
-#[derive(new, Debug)]
-#[new(const_fn, vis())]
-struct QueryIterator<'a> {
-    cache: &'a QueryCache,
-    #[debug("Keyspace(\"{}\")", reference.name)]
-    reference: Keyspace,
-    iter: QueryHashIterator,
-}
-
-impl<'a> Iterator for QueryIterator<'a> {
-    type Item = SequencedEvent;
-
-    #[rustfmt::skip]
-    fn next(self: &mut QueryIterator<'a>) -> Option<SequencedEvent> {
-        self.iter.next().map(move |event| {
-            let (data, identifier, position, tags, timestamp, version) = event.take();
-
-            let identifier = self.cache.identifiers.entries
-                .entry(identifier.hash())
-                .or_insert_with(|| {
-                    Arc::new(
-                        eventric_core_reference::get_identifier(&self.reference, identifier.hash())
-                            .expect("identifier not found error"),
-                    )
-                })
-                .clone();
-
-
-            let tags = tags
-                .iter()
-                .map(|tag| {
-                    self.cache.tags.entries
-                        .entry(tag.hash())
-                        .or_insert_with(|| {
-                            Arc::new(
-                                eventric_core_reference::get_tag(&self.reference, tag.hash())
-                                    .expect("tag not found error"),
-                            )
-                        })
-                        .clone()
-                })
-                .collect_vec();
-
-            SequencedEvent::new(data, identifier, position, tags, timestamp, version)
-        })
     }
 }

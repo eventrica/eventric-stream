@@ -2,6 +2,7 @@ use eventric_core_model::{
     Event,
     Position,
     Query,
+    Timestamp,
 };
 use fancy_constructor::new;
 use fjall::WriteBatch;
@@ -23,9 +24,10 @@ pub fn append<'a>(
 
     for event in events {
         let event = event.into();
+        let timestamp = Timestamp::now();
 
-        eventric_core_data::insert(batch, &keyspaces.data, &event, *position);
-        eventric_core_index::insert(batch, &keyspaces.index, &event, *position);
+        eventric_core_data::insert(batch, &keyspaces.data, &event, *position, timestamp);
+        eventric_core_index::insert(batch, &keyspaces.index, &event, *position, timestamp);
         eventric_core_reference::insert(batch, &keyspaces.reference, &event);
 
         position.increment();
