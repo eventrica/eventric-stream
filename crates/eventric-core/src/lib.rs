@@ -9,28 +9,20 @@
 // Re-Exports
 
 pub use eventric_core_model::{
-    // Condition,
-    // ConditionBuilder,
     Data,
-    Descriptor,
-    // DescriptorRef,
     Event,
     Identifier,
     Position,
     Query,
     QueryItem,
-    // SequencedEventRef,
+    SequencedEvent,
     Specifier,
     Tag,
-    // TagRef,
     Version,
 };
 pub use eventric_core_stream::{
     AppendCondition,
     QueryCache,
     QueryCondition,
-    // StreamConfigurator,
-    // Events,
-    // SequencedEvents,
     Stream,
 };

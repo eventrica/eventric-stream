@@ -1,9 +1,10 @@
 pub mod forward;
 
 use eventric_core_model::{
-    DescriptorHashRef,
+    IdentifierHashRef,
     Position,
     SpecifierHash,
+    Version,
 };
 use eventric_core_util::iter;
 use fjall::{
@@ -29,9 +30,10 @@ pub fn insert(
     batch: &mut WriteBatch,
     index: &Keyspace,
     position: Position,
-    descriptor: &DescriptorHashRef<'_>,
+    identifier: &IdentifierHashRef<'_>,
+    version: Version,
 ) {
-    forward::insert(batch, index, position, descriptor);
+    forward::insert(batch, index, position, identifier, version);
 }
 
 // -------------------------------------------------------------------------------------------------

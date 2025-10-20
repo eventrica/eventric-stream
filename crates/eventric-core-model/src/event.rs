@@ -1,22 +1,23 @@
+use std::sync::Arc;
+
 use fancy_constructor::new;
 use itertools::Itertools;
 
 use crate::{
     data::Data,
-    descriptor::{
-        Descriptor,
-        DescriptorArc,
-        DescriptorHash,
-        DescriptorHashRef,
+    identifier::{
+        Identifier,
+        IdentifierHash,
+        IdentifierHashRef,
     },
     position::Position,
     tag::{
         Tag,
-        TagArc,
         TagHash,
         TagHashRef,
     },
     timestamp::Timestamp,
+    version::Version,
 };
 
 // =================================================================================================
@@ -29,8 +30,9 @@ use crate::{
 #[new(const_fn)]
 pub struct Event {
     data: Data,
-    descriptor: Descriptor,
+    identifier: Identifier,
     tags: Vec<Tag>,
+    version: Version,
 }
 
 impl Event {
@@ -40,13 +42,18 @@ impl Event {
     }
 
     #[must_use]
-    pub fn descriptor(&self) -> &Descriptor {
-        &self.descriptor
+    pub fn identifier(&self) -> &Identifier {
+        &self.identifier
     }
 
     #[must_use]
     pub fn tags(&self) -> &Vec<Tag> {
         &self.tags
+    }
+
+    #[must_use]
+    pub fn version(&self) -> &Version {
+        &self.version
     }
 }
 
@@ -56,9 +63,10 @@ impl Event {
 #[new(const_fn)]
 pub struct EventHashRef<'a> {
     data: &'a Data,
-    descriptor: DescriptorHashRef<'a>,
+    identifier: IdentifierHashRef<'a>,
     tags: Vec<TagHashRef<'a>>,
     timestamp: Timestamp,
+    version: Version,
 }
 
 impl EventHashRef<'_> {
@@ -68,8 +76,8 @@ impl EventHashRef<'_> {
     }
 
     #[must_use]
-    pub fn descriptor(&self) -> &DescriptorHashRef<'_> {
-        &self.descriptor
+    pub fn identifier(&self) -> &IdentifierHashRef<'_> {
+        &self.identifier
     }
 
     #[must_use]
@@ -81,6 +89,11 @@ impl EventHashRef<'_> {
     pub fn timestamp(&self) -> &Timestamp {
         &self.timestamp
     }
+
+    #[must_use]
+    pub fn version(&self) -> &Version {
+        &self.version
+    }
 }
 
 impl<'a> From<&'a Event> for EventHashRef<'a> {
@@ -89,9 +102,10 @@ impl<'a> From<&'a Event> for EventHashRef<'a> {
 
         Self::new(
             event.data(),
-            event.descriptor().into(),
+            event.identifier().into(),
             event.tags().iter().map_into().collect_vec(),
             timestamp,
+            *event.version(),
         )
     }
 }
@@ -100,27 +114,26 @@ impl<'a> From<&'a Event> for EventHashRef<'a> {
 
 // Sequenced Event
 
-// Arc
-
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub struct SequencedEventArc {
+pub struct SequencedEvent {
     data: Data,
-    descriptor: DescriptorArc,
+    identifier: Arc<Identifier>,
     position: Position,
-    tags: Vec<TagArc>,
+    tags: Vec<Arc<Tag>>,
     timestamp: Timestamp,
+    version: Version,
 }
 
-impl SequencedEventArc {
+impl SequencedEvent {
     #[must_use]
     pub fn data(&self) -> &Data {
         &self.data
     }
 
     #[must_use]
-    pub fn descriptor(&self) -> &DescriptorArc {
-        &self.descriptor
+    pub fn identifier(&self) -> &Arc<Identifier> {
+        &self.identifier
     }
 
     #[must_use]
@@ -129,13 +142,18 @@ impl SequencedEventArc {
     }
 
     #[must_use]
-    pub fn tags(&self) -> &Vec<TagArc> {
+    pub fn tags(&self) -> &Vec<Arc<Tag>> {
         &self.tags
     }
 
     #[must_use]
     pub fn timestamp(&self) -> &Timestamp {
         &self.timestamp
+    }
+
+    #[must_use]
+    pub fn version(&self) -> &Version {
+        &self.version
     }
 }
 
@@ -145,21 +163,24 @@ impl SequencedEventArc {
 #[new(const_fn)]
 pub struct SequencedEventHash {
     data: Data,
-    descriptor: DescriptorHash,
+    identifier: IdentifierHash,
     position: Position,
     tags: Vec<TagHash>,
     timestamp: Timestamp,
+    version: Version,
 }
 
 impl SequencedEventHash {
     #[must_use]
-    pub fn take(self) -> (Data, DescriptorHash, Position, Vec<TagHash>, Timestamp) {
+    #[rustfmt::skip]
+    pub fn take(self) -> (Data, IdentifierHash, Position, Vec<TagHash>, Timestamp, Version) {
         (
             self.data,
-            self.descriptor,
+            self.identifier,
             self.position,
             self.tags,
             self.timestamp,
+            self.version,
         )
     }
 }

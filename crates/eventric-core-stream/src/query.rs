@@ -4,16 +4,14 @@ use dashmap::DashMap;
 use derive_more::Debug;
 use eventric_core_index::SequentialPositionIterator;
 use eventric_core_model::{
-    DescriptorArc,
     Identifier,
     Position,
     Query,
     QueryHashRef,
     QueryItemHashRef,
-    SequencedEventArc,
+    SequencedEvent,
     SequencedEventHash,
     Tag,
-    TagArc,
 };
 use fancy_constructor::new;
 use fjall::Keyspace;
@@ -30,7 +28,7 @@ pub fn query(
     keyspaces: &StreamKeyspaces,
     query: Option<&Query>,
     position: Option<Position>,
-) -> impl Iterator<Item = SequencedEventArc> {
+) -> impl Iterator<Item = SequencedEvent> {
     let query = query.map(Into::into);
 
     if let Some(query) = &query {
@@ -218,13 +216,12 @@ struct QueryIterator<'a> {
 }
 
 impl<'a> Iterator for QueryIterator<'a> {
-    type Item = SequencedEventArc;
+    type Item = SequencedEvent;
 
     #[rustfmt::skip]
-    fn next(self: &mut QueryIterator<'a>) -> Option<SequencedEventArc> {
+    fn next(self: &mut QueryIterator<'a>) -> Option<SequencedEvent> {
         self.iter.next().map(move |event| {
-            let (data, descriptor, position, tags, timestamp) = event.take();
-            let (identifier, version) = descriptor.take();
+            let (data, identifier, position, tags, timestamp, version) = event.take();
 
             let identifier = self.cache.identifiers.entries
                 .entry(identifier.hash())
@@ -236,7 +233,6 @@ impl<'a> Iterator for QueryIterator<'a> {
                 })
                 .clone();
 
-            let descriptor = DescriptorArc::new(identifier, version);
 
             let tags = tags
                 .iter()
@@ -251,10 +247,9 @@ impl<'a> Iterator for QueryIterator<'a> {
                         })
                         .clone()
                 })
-                .map(TagArc::new)
                 .collect_vec();
 
-            SequencedEventArc::new(data, descriptor, position, tags, timestamp)
+            SequencedEvent::new(data, identifier, position, tags, timestamp, version)
         })
     }
 }

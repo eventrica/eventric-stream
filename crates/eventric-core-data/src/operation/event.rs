@@ -6,7 +6,6 @@ use bytes::{
 };
 use eventric_core_model::{
     Data,
-    DescriptorHash,
     EventHashRef,
     IdentifierHash,
     Position,
@@ -67,8 +66,6 @@ fn read_value(mut value: &[u8], position: Position) -> SequencedEventHash {
     let version = value.get_u8();
     let version = Version::new(version);
 
-    let descriptor = DescriptorHash::new(identifier, version);
-
     let tags_len = value.get_u8();
 
     let mut tags = Vec::with_capacity(tags_len as usize);
@@ -85,13 +82,12 @@ fn read_value(mut value: &[u8], position: Position) -> SequencedEventHash {
 
     let data = Data::new(value.iter().map(ToOwned::to_owned).collect::<Vec<_>>());
 
-    SequencedEventHash::new(data, descriptor, position, tags, timestamp)
+    SequencedEventHash::new(data, identifier, position, tags, timestamp, version)
 }
 
 fn write_value(value: &mut Vec<u8>, event: &EventHashRef<'_>) {
-    let descriptor = event.descriptor();
-    let identifier = descriptor.identifer().hash();
-    let version = descriptor.version().value();
+    let identifier = event.identifier().hash();
+    let version = event.version().value();
 
     value.put_u64(identifier);
     value.put_u8(version);

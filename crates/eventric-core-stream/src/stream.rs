@@ -7,7 +7,7 @@ use derive_more::Debug;
 use eventric_core_model::{
     Event,
     Position,
-    SequencedEventArc,
+    SequencedEvent,
 };
 use fancy_constructor::new;
 use fjall::{
@@ -60,7 +60,7 @@ impl Stream {
         &self,
         cache: &QueryCache,
         condition: QueryCondition<'_>,
-    ) -> impl Iterator<Item = SequencedEventArc> {
+    ) -> impl Iterator<Item = SequencedEvent> {
         let (query, position) = condition.take();
 
         query::query(cache, &self.keyspaces, query, position)

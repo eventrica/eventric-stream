@@ -1,4 +1,4 @@
-pub mod descriptor;
+pub mod identifier;
 pub mod tags;
 pub mod timestamp;
 
@@ -35,7 +35,7 @@ pub fn insert(
     event: &EventHashRef<'_>,
     position: Position,
 ) {
-    descriptor::insert(batch, index, position, event.descriptor());
+    identifier::insert(batch, index, position, event.identifier(), *event.version());
     tags::insert(batch, index, position, event.tags());
     timestamp::insert(batch, index, position, *event.timestamp());
 }
@@ -51,9 +51,9 @@ pub fn query(
     query: &QueryHash,
 ) -> SequentialPositionIterator {
     iter::sequential_or(query.items().iter().map(|item| match item {
-        QueryItemHash::Specifiers(specs) => descriptor::query(index, position, specs.iter()),
+        QueryItemHash::Specifiers(specs) => identifier::query(index, position, specs.iter()),
         QueryItemHash::SpecifiersAndTags(specs, tags) => iter::sequential_and([
-            descriptor::query(index, position, specs.iter()),
+            identifier::query(index, position, specs.iter()),
             tags::query(index, position, tags.iter()),
         ]),
         QueryItemHash::Tags(tags) => tags::query(index, position, tags.iter()),

@@ -38,7 +38,7 @@ pub fn get_tag(reference: &Keyspace, hash: u64) -> Option<Tag> {
 // Insert
 
 pub fn insert(batch: &mut WriteBatch, reference: &Keyspace, event: &EventHashRef<'_>) {
-    identifier::insert(batch, reference, event.descriptor().identifer());
+    identifier::insert(batch, reference, event.identifier());
     tags::insert(batch, reference, event.tags());
 }
 

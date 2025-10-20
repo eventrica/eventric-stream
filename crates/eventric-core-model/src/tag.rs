@@ -1,7 +1,4 @@
-use std::{
-    ops::Deref,
-    sync::Arc,
-};
+use std::ops::Deref;
 
 use fancy_constructor::new;
 use rapidhash::v3;
@@ -24,20 +21,6 @@ impl Tag {
 
     #[must_use]
     pub fn value(&self) -> &str {
-        &self.0
-    }
-}
-
-// Arc
-
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub struct TagArc(Arc<Tag>);
-
-impl Deref for TagArc {
-    type Target = Tag;
-
-    fn deref(&self) -> &Self::Target {
         &self.0
     }
 }

@@ -3,9 +3,10 @@ use bytes::{
     BufMut as _,
 };
 use eventric_core_model::{
-    DescriptorHashRef,
+    IdentifierHashRef,
     Position,
     SpecifierHash,
+    Version,
 };
 use fjall::{
     Error,
@@ -23,7 +24,7 @@ use crate::{
     operation::{
         ID_LEN,
         POSITION_LEN,
-        descriptor::HASH_LEN,
+        identifier::HASH_LEN,
     },
 };
 
@@ -45,15 +46,14 @@ pub fn insert(
     batch: &mut WriteBatch,
     index: &Keyspace,
     position: Position,
-    descriptor: &DescriptorHashRef<'_>,
+    identifier: &IdentifierHashRef<'_>,
+    version: Version,
 ) {
     let mut key = [0u8; KEY_LEN];
 
-    let identifier = descriptor.identifer();
-
     write_key(&mut key, position, identifier.hash());
 
-    let value = descriptor.version().value().to_be_bytes();
+    let value = version.value().to_be_bytes();
 
     batch.insert(index, key, value);
 }

@@ -2,7 +2,6 @@ use std::error::Error;
 
 use eventric_core::{
     Data,
-    Descriptor,
     Event,
     Identifier,
     Query,
@@ -24,33 +23,27 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         Vec::from_iter([
             &Event::new(
                 Data::new("hello world!".bytes().collect()),
-                Descriptor::new(
-                    Identifier::new("StudentSubscribedToCourse".into()),
-                    Version::new(0),
-                ),
+                Identifier::new("StudentSubscribedToCourse".into()),
                 Vec::from_iter([
                     Tag::new("student:3242".into()),
                     Tag::new("course:523".into()),
                 ]),
+                Version::new(0),
             ),
             &Event::new(
                 Data::new("oh, no!".bytes().collect()),
-                Descriptor::new(
-                    Identifier::new("CourseCapacityChanged".into()),
-                    Version::new(0),
-                ),
+                Identifier::new("CourseCapacityChanged".into()),
                 Vec::from_iter([Tag::new("course:523".into())]),
+                Version::new(0),
             ),
             &Event::new(
                 Data::new("goodbye world...".bytes().collect()),
-                Descriptor::new(
-                    Identifier::new("StudentSubscribedToCourse".into()),
-                    Version::new(1),
-                ),
+                Identifier::new("StudentSubscribedToCourse".into()),
                 Vec::from_iter([
                     Tag::new("student:7642".into()),
                     Tag::new("course:63".into()),
                 ]),
+                Version::new(1),
             ),
         ]),
         None,

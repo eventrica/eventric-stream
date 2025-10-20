@@ -3,7 +3,6 @@
 #![allow(clippy::missing_panics_doc)]
 
 mod data;
-mod descriptor;
 mod event;
 mod identifier;
 mod position;
@@ -29,16 +28,10 @@ static SEED: RapidSecrets = RapidSecrets::seed(0x2811_2017);
 
 pub use self::{
     data::Data,
-    descriptor::{
-        Descriptor,
-        DescriptorArc,
-        DescriptorHash,
-        DescriptorHashRef,
-    },
     event::{
         Event,
         EventHashRef,
-        SequencedEventArc,
+        SequencedEvent,
         SequencedEventHash,
     },
     identifier::{
@@ -62,7 +55,6 @@ pub use self::{
     },
     tag::{
         Tag,
-        TagArc,
         TagHash,
         TagHashRef,
     },
