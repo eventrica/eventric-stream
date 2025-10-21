@@ -2,16 +2,20 @@ use std::sync::Arc;
 
 use dashmap::DashMap;
 use derive_more::Debug;
+use eventric_core_index::SequentialPositionIterator;
 use eventric_core_model::{
     Identifier,
     Position,
     Query,
+    QueryHash,
     QueryHashRef,
     QueryItemHashRef,
     SequencedEvent,
+    SequencedEventHash,
     Tag,
 };
 use fancy_constructor::new;
+use fjall::Keyspace;
 use itertools::Itertools;
 
 use crate::stream::StreamKeyspaces;
@@ -33,35 +37,39 @@ pub fn query(
         cache.populate(query);
     }
 
-    let query = query.as_ref().map(Into::into);
+    let query: Option<QueryHash> = query.as_ref().map(Into::into);
 
-    // TODO: Handle case with no query!
+    //let iter = query.map_or_else(||, f)
 
-    eventric_core_index::query(&keyspaces.index, &query.unwrap(), position)
+
+
+    // Change this to create new iterators...
+
+    eventric_core_index::query(keyspaces.index(), &query.unwrap(), position)
         .map(|position| {
-            eventric_core_data::get(&keyspaces.data, position)
+            eventric_core_data::get(keyspaces.data(), position)
                 .expect("hash iterator error")
                 .expect("event not found")
         })
         .map(|event| {
             let (data, identifier, position, tags, timestamp, version) = event.take();
 
-            let identifier_entries = &cache.identifiers.entries;
-            let identifier = identifier_entries
+            let entries = &cache.identifiers.entries;
+            let identifier = entries
                 .entry(identifier.hash())
                 .or_insert_with(|| Arc::new(
-                    eventric_core_reference::get_identifier(&keyspaces.reference, identifier.hash())
+                    eventric_core_reference::get_identifier(keyspaces.reference(), identifier.hash())
                         .expect("identifier not found error"),
                 )).clone();
 
-            let tags_entries = &cache.tags.entries;
+            let entries = &cache.tags.entries;
             let tags = tags
                 .iter()
                 .map(|tag| {
-                    tags_entries
+                    entries
                         .entry(tag.hash())
                         .or_insert_with(|| Arc::new(
-                            eventric_core_reference::get_tag(&keyspaces.reference, tag.hash())
+                            eventric_core_reference::get_tag(keyspaces.reference(), tag.hash())
                                 .expect("tag not found error"),
                         )).clone()
                 })
@@ -201,4 +209,39 @@ impl<'a> QueryConditionBuilder<'a> {
         self.query = Some(query);
         self
     }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Iterator
+
+pub struct QueryDataSequencedEventHashIterator {}
+
+#[derive(new, Debug)]
+#[new(args(keyspaces: &StreamKeyspaces, query: &QueryHash, position: Option<Position>), vis())]
+pub struct QueryIndexSequencedEventHashIterator {
+    #[debug("Keyspace(\"{}\")", data.name)]
+    #[new(val(keyspaces.data().clone()))]
+    data: Keyspace,
+    #[new(val(eventric_core_index::query(keyspaces.index(), query, position)))]
+    iter: SequentialPositionIterator,
+}
+
+impl Iterator for QueryIndexSequencedEventHashIterator {
+    type Item = SequencedEventHash;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|position| {
+            eventric_core_data::get(&self.data, position)
+                .expect("data get error")
+                .expect("data not found error")
+        })
+    }
+}
+
+pub struct QuerySequencedEventIterator {}
+
+enum QuerySequencedEventInnerIterator {
+    Data(QueryDataSequencedEventHashIterator),
+    Index(QueryIndexSequencedEventHashIterator),
 }

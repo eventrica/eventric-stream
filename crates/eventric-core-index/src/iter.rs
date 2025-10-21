@@ -16,6 +16,7 @@ use self_cell::self_cell;
 #[derive(Debug)]
 pub enum SequentialPositionIterator {
     And(SequentialAnd<SequentialPositionIterator, Position>),
+    Boxed(#[debug("BoxedIterator")] Box<dyn Iterator<Item = Position>>),
     Or(SequentialOr<SequentialPositionIterator, Position>),
     Owned(#[debug("OwnedSequentialIterator")] OwnedSequentialPositionIterator),
 }
@@ -26,6 +27,7 @@ impl Iterator for SequentialPositionIterator {
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             Self::And(iterator) => iterator.next(),
+            Self::Boxed(iterator) => iterator.next(),
             Self::Or(iterator) => iterator.next(),
             Self::Owned(iterator) => iterator.next(),
         }

@@ -141,9 +141,23 @@ where
 #[new(const_fn)]
 pub struct StreamKeyspaces {
     #[debug("Keyspace(\"{}\")", data.name)]
-    pub data: Keyspace,
+    data: Keyspace,
     #[debug("Keyspace(\"{}\")", index.name)]
-    pub index: Keyspace,
+    index: Keyspace,
     #[debug("Keyspace(\"{}\")", reference.name)]
-    pub reference: Keyspace,
+    reference: Keyspace,
+}
+
+impl StreamKeyspaces {
+    pub fn data(&self) -> &Keyspace {
+        &self.data
+    }
+
+    pub fn index(&self) -> &Keyspace {
+        &self.index
+    }
+
+    pub fn reference(&self) -> &Keyspace {
+        &self.reference
+    }
 }

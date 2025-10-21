@@ -26,9 +26,9 @@ pub fn append<'a>(
         let event = event.into();
         let timestamp = Timestamp::now();
 
-        eventric_core_data::insert(batch, &keyspaces.data, &event, *position, timestamp);
-        eventric_core_index::insert(batch, &keyspaces.index, &event, *position, timestamp);
-        eventric_core_reference::insert(batch, &keyspaces.reference, &event);
+        eventric_core_data::insert(batch, keyspaces.data(), &event, *position, timestamp);
+        eventric_core_index::insert(batch, keyspaces.index(), &event, *position, timestamp);
+        eventric_core_reference::insert(batch, keyspaces.reference(), &event);
 
         position.increment();
     }
