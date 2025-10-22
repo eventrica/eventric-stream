@@ -1,15 +1,11 @@
 //! Utilities for set-like union combinations of streams (given sequential input
 //! streams).
 
+use derive_more::with_trait::Debug;
+use fancy_constructor::new;
 use std::cmp::Ordering;
 
-use derive_more::Debug;
-use fancy_constructor::new;
-
-use crate::iter::{
-    CachingIterators,
-    Item,
-};
+use crate::iter::CachingIterators;
 
 // =================================================================================================
 // And
@@ -31,12 +27,12 @@ use crate::iter::{
 pub struct SequentialAnd<I, T>(CachingIterators<I, T>)
 where
     I: Iterator<Item = T>,
-    T: Item;
+    T: Copy + Debug + Ord + PartialOrd;
 
 impl<I, T> Iterator for SequentialAnd<I, T>
 where
     I: Iterator<Item = T>,
-    T: Item,
+    T: Copy + Debug + Ord + PartialOrd,
 {
     type Item = T;
 
@@ -56,7 +52,7 @@ pub fn sequential_and<IS, I, T>(iterators: IS) -> I
 where
     IS: IntoIterator<Item = I>,
     I: Iterator<Item = T> + From<SequentialAnd<I, T>>,
-    T: Item,
+    T: Copy + Debug + Ord + PartialOrd,
 {
     let iterators = iterators.into();
     let iterator = SequentialAnd::new(iterators);
@@ -70,7 +66,7 @@ where
 fn iterate<I, T>(iterators: &mut CachingIterators<I, T>) -> Option<T>
 where
     I: Iterator<Item = T>,
-    T: Item,
+    T: Copy + Debug + Ord + PartialOrd,
 {
     match &mut iterators.iterators[..] {
         [] => None,
@@ -131,10 +127,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::iter::{
-        and::sequential_and,
-        test::TestIterator,
-    };
+    use crate::iter::{and::sequential_and, test::TestIterator};
 
     #[test]
     fn empty_iterators_combine_as_empty() {

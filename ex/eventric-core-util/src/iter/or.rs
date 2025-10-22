@@ -3,13 +3,10 @@
 
 use std::cmp::Ordering;
 
-use derive_more::Debug;
+use derive_more::with_trait::Debug;
 use fancy_constructor::new;
 
-use crate::iter::{
-    CachingIterators,
-    Item,
-};
+use crate::iter::CachingIterators;
 
 // =================================================================================================
 // Or
@@ -30,12 +27,12 @@ use crate::iter::{
 pub struct SequentialOr<I, T>(CachingIterators<I, T>)
 where
     I: Iterator<Item = T>,
-    T: Item;
+    T: Copy + Debug + Ord + PartialOrd;
 
 impl<I, T> Iterator for SequentialOr<I, T>
 where
     I: Iterator<Item = T>,
-    T: Item,
+    T: Copy + Debug + Ord + PartialOrd,
 {
     type Item = T;
 
@@ -55,7 +52,7 @@ pub fn sequential_or<S, I, T>(iterators: S) -> I
 where
     S: IntoIterator<Item = I>,
     I: Iterator<Item = T> + From<SequentialOr<I, T>>,
-    T: Item,
+    T: Copy + Debug + Ord + PartialOrd,
 {
     let iterators = iterators.into();
     let iterator = SequentialOr::new(iterators);
@@ -69,7 +66,7 @@ where
 fn iterate<I, T>(iterators: &mut CachingIterators<I, T>) -> Option<T>
 where
     I: Iterator<Item = T>,
-    T: Item,
+    T: Copy + Debug + Ord + PartialOrd,
 {
     match &mut iterators.iterators[..] {
         [] => None,
@@ -115,10 +112,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::iter::{
-        or::sequential_or,
-        test::TestIterator,
-    };
+    use crate::iter::{or::sequential_or, test::TestIterator};
 
     #[test]
     fn empty_iterators_combine_as_empty() {

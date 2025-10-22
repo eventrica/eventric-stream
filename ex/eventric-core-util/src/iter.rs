@@ -8,14 +8,6 @@ use fancy_constructor::new;
 // Iter
 // =================================================================================================
 
-/// A convenience trait alias for items compatible with the various iterator
-/// utilities, which expect items to be comparable, and copy-friendly.
-pub trait Item = Copy + Debug + Ord + PartialOrd;
-
-// -------------------------------------------------------------------------------------------------
-
-// Iterators
-
 /// The [`CachingIterators`] type implements a collection of [`CachingIterator`]
 /// instances, and an optional value of the iterator item type. This is used as
 /// common internal state for various iteration utility structures/functions.
@@ -24,7 +16,7 @@ pub trait Item = Copy + Debug + Ord + PartialOrd;
 struct CachingIterators<I, T>
 where
     I: Iterator<Item = T>,
-    T: Item,
+    T: Copy + Debug + Ord + PartialOrd,
 {
     iterators: Vec<CachingIterator<I, T>>,
     #[new(default)]
@@ -34,7 +26,7 @@ where
 impl<I, T> CachingIterators<I, T>
 where
     I: Iterator<Item = T>,
-    T: Item,
+    T: Copy + Debug + Ord + PartialOrd,
 {
     pub fn new<S>(iterators: S) -> Self
     where
@@ -48,7 +40,7 @@ impl<S, I, T> From<S> for CachingIterators<I, T>
 where
     S: IntoIterator<Item = I>,
     I: Iterator<Item = T>,
-    T: Item,
+    T: Copy + Debug + Ord + PartialOrd,
 {
     fn from(value: S) -> Self {
         CachingIterators::new(value)
@@ -64,7 +56,7 @@ where
 struct CachingIterator<I, T>
 where
     I: Iterator<Item = T>,
-    T: Item,
+    T: Copy + Debug + Ord + PartialOrd,
 {
     iterator: I,
     #[new(default)]
@@ -74,7 +66,7 @@ where
 impl<I, T> CachingIterator<I, T>
 where
     I: Iterator<Item = T>,
-    T: Item,
+    T: Copy + Debug + Ord + PartialOrd,
 {
     /// Returns the cached item value if it's not [`None`], otherwise returns
     /// (and caches) the value of [`Self::next`]. Note that if the underlying
@@ -90,7 +82,7 @@ where
 impl<I, T> Iterator for CachingIterator<I, T>
 where
     I: Iterator<Item = T>,
-    T: Item,
+    T: Copy + Debug + Ord + PartialOrd,
 {
     type Item = T;
 
@@ -105,14 +97,8 @@ where
 // Re-Exports
 
 pub use self::{
-    and::{
-        SequentialAnd,
-        sequential_and,
-    },
-    or::{
-        SequentialOr,
-        sequential_or,
-    },
+    and::{SequentialAnd, sequential_and},
+    or::{SequentialOr, sequential_or},
 };
 
 // -------------------------------------------------------------------------------------------------
@@ -124,10 +110,7 @@ mod test {
     use derive_more::Debug;
     use fancy_constructor::new;
 
-    use crate::iter::{
-        and::SequentialAnd,
-        or::SequentialOr,
-    };
+    use crate::iter::{and::SequentialAnd, or::SequentialOr};
 
     // Test Iterator
 
