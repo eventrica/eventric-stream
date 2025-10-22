@@ -146,8 +146,16 @@ dependencies = [
 name = "eventric-core"
 version = "0.1.0"
 dependencies = [
+ "bytes",
+ "derive_more",
  "eventric-core-model",
  "eventric-core-stream",
+ "fancy_constructor",
+ "fjall",
+ "itertools",
+ "jiff",
+ "rapidhash",
+ "self_cell",
 ]
 
 [[package]]
@@ -159,7 +167,9 @@ name = "eventric-core-data"
 version = "0.1.0"
 dependencies = [
  "bytes",
+ "derive_more",
  "eventric-core-model",
+ "fancy_constructor",
  "fjall",
 ]
 

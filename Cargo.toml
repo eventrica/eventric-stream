@@ -1,16 +1,16 @@
 [workspace]
-members  = ["benches/*", "crates/*", "examples/*"]
+members  = ["benches/*", "crates/*", "ex/*", "examples/*"]
 resolver = "2"
 
 [workspace.dependencies]
 
 eventric-core           = { path = "crates/eventric-core" }
-eventric-core-data      = { path = "crates/eventric-core-data" }
-eventric-core-index     = { path = "crates/eventric-core-index" }
-eventric-core-model     = { path = "crates/eventric-core-model" }
-eventric-core-reference = { path = "crates/eventric-core-reference" }
+eventric-core-data      = { path = "ex/eventric-core-data" }
+eventric-core-index     = { path = "ex/eventric-core-index" }
+eventric-core-model     = { path = "ex/eventric-core-model" }
+eventric-core-reference = { path = "ex/eventric-core-reference" }
 eventric-core-stream    = { path = "crates/eventric-core-stream" }
-eventric-core-util      = { path = "crates/eventric-core-util" }
+eventric-core-util      = { path = "ex/eventric-core-util" }
 
 bytes             = { version = "1" }
 dashmap           = { version = "6" }

@@ -2,6 +2,10 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 
+mod data;
+mod model;
+mod util;
+
 // =================================================================================================
 // Eventric Core
 // =================================================================================================
@@ -25,4 +29,10 @@ pub use eventric_core_stream::{
     QueryCache,
     QueryCondition,
     Stream,
+};
+
+pub use self::data::{
+    events::Events,
+    indices::Indices,
+    references::References,
 };

@@ -4,6 +4,7 @@ use std::{
 };
 
 use derive_more::Debug;
+use eventric_core_data::Data;
 use eventric_core_model::{
     Event,
     Position,
@@ -36,6 +37,7 @@ use crate::{
 pub struct Stream {
     #[debug("Database")]
     database: Database,
+    data: Data,
     keyspaces: StreamKeyspaces,
     position: Position,
 }
@@ -69,11 +71,11 @@ impl Stream {
 
 impl Stream {
     pub fn is_empty(&self) -> Result<bool, Box<dyn Error>> {
-        eventric_core_data::is_empty(&self.keyspaces.data)
+        self.data.is_empty()
     }
 
     pub fn len(&self) -> Result<u64, Box<dyn Error>> {
-        eventric_core_data::len(&self.keyspaces.data)
+        self.data.len()
     }
 }
 
@@ -109,6 +111,7 @@ where
         let path = self.path;
         let temporary = self.temporary.unwrap_or_default();
         let database = Database::builder(path).temporary(temporary).open()?;
+        let data = Data::open(&database)?;
 
         let keyspaces = StreamKeyspaces::new(
             eventric_core_data::keyspace(&database)?,
@@ -118,7 +121,7 @@ where
 
         let position = eventric_core_data::len(&keyspaces.data).map(Position::new)?;
 
-        Ok(Stream::new(database, keyspaces, position))
+        Ok(Stream::new(database, data, keyspaces, position))
     }
 }
 

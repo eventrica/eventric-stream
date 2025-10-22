@@ -1,6 +1,8 @@
 [dependencies]
 bytes.workspace               = true
+derive_more.workspace         = true
 eventric-core-model.workspace = true
+fancy_constructor.workspace   = true
 fjall.workspace               = true
 
 [lints]

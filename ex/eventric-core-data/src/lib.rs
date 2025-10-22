@@ -3,6 +3,7 @@
 #![allow(clippy::missing_panics_doc)]
 
 mod configuration;
+mod data;
 mod operation;
 
 // =================================================================================================
@@ -13,6 +14,7 @@ mod operation;
 
 pub use self::{
     configuration::keyspace,
+    data::Data,
     operation::{
         get,
         insert,
