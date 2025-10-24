@@ -3,12 +3,11 @@ members  = ["benches/*", "crates/*", "examples/*"]
 resolver = "2"
 
 [workspace.dependencies]
-
-eventric-core = { path = "crates/eventric-core" }
-
 bytes             = { version = "1" }
+criterion         = { version = "0.7" }
 dashmap           = { version = "6" }
 derive_more       = { version = "2", features = ["full"] }
+eventric-core     = { path = "crates/eventric-core" }
 fancy_constructor = { version = "2" }
 fjall             = { version = "=3.0.0-pre.0" }
 rapidhash         = { version = "4" }

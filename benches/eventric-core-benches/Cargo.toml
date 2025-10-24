@@ -1,4 +1,15 @@
+[[bench]]
+harness = false
+name    = "append"
+
 [dependencies]
+
+[dev-dependencies]
+criterion.workspace     = true
+eventric-core.workspace = true
+
+[lib]
+bench = false
 
 [lints]
 workspace = true
