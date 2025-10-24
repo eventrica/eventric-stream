@@ -60,7 +60,7 @@ impl Stream {
 // Append Condition
 
 #[derive(new, Debug)]
-#[new(vis())]
+#[new(name(inner), vis())]
 pub struct AppendCondition<'a> {
     pub(crate) query: &'a Query,
     #[new(default)]
@@ -69,8 +69,8 @@ pub struct AppendCondition<'a> {
 
 impl<'a> AppendCondition<'a> {
     #[must_use]
-    pub fn build(query: &'a Query) -> Self {
-        Self::new(query)
+    pub fn new(query: &'a Query) -> Self {
+        Self::inner(query)
     }
 }
 

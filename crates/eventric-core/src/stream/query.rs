@@ -47,10 +47,12 @@ impl Stream {
     #[must_use]
     pub fn query<'a>(
         &'a self,
-        cache: &'a QueryCache,
         condition: &QueryCondition<'_>,
+        cache: &'a QueryCache,
+        options: Option<QueryOptions>,
     ) -> QueryIterator<'a> {
         let position = condition.position;
+
         let iter = match condition.query {
             Some(query) => {
                 let query_hash_ref: &QueryHashRef<'_> = &query.into();
@@ -63,7 +65,7 @@ impl Stream {
             None => self.query_events(position),
         };
 
-        QueryIterator::new(cache, iter, &self.data.references)
+        QueryIterator::new(cache, iter, options, &self.data.references)
     }
 
     fn query_events(&self, position: Option<Position>) -> QuerySequencedEventHashIterator<'_> {
@@ -79,40 +81,6 @@ impl Stream {
             &self.data.events,
             self.data.indices.query(query, position),
         ))
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Query Condition
-
-#[derive(new, Debug)]
-#[new(vis())]
-pub struct QueryCondition<'a> {
-    #[new(default)]
-    pub(crate) query: Option<&'a Query>,
-    #[new(default)]
-    pub(crate) position: Option<Position>,
-}
-
-impl QueryCondition<'_> {
-    #[must_use]
-    pub fn build() -> Self {
-        Self::new()
-    }
-}
-
-impl<'a> QueryCondition<'a> {
-    #[must_use]
-    pub fn query(mut self, query: &'a Query) -> Self {
-        self.query = Some(query);
-        self
-    }
-
-    #[must_use]
-    pub fn position(mut self, position: Position) -> Self {
-        self.position = Some(position);
-        self
     }
 }
 
@@ -159,6 +127,39 @@ impl QueryCache {
 
 // -------------------------------------------------------------------------------------------------
 
+// Query Condition
+
+#[derive(new, Debug)]
+#[new(vis())]
+pub struct QueryCondition<'a> {
+    #[new(default)]
+    pub(crate) query: Option<&'a Query>,
+    #[new(default)]
+    pub(crate) position: Option<Position>,
+}
+
+impl<'a> QueryCondition<'a> {
+    #[must_use]
+    pub fn query(mut self, query: &'a Query) -> Self {
+        self.query = Some(query);
+        self
+    }
+
+    #[must_use]
+    pub fn position(mut self, position: Position) -> Self {
+        self.position = Some(position);
+        self
+    }
+}
+
+impl Default for QueryCondition<'_> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
 // Query Iterator
 
 #[derive(new, Debug)]
@@ -166,6 +167,7 @@ impl QueryCache {
 pub struct QueryIterator<'a> {
     cache: &'a QueryCache,
     iter: QuerySequencedEventHashIterator<'a>,
+    options: Option<QueryOptions>,
     references: &'a References,
 }
 
@@ -186,22 +188,31 @@ impl QueryIterator<'_> {
     }
 
     fn get_tags(&self, tags: &[TagHash]) -> Vec<Arc<Tag>> {
-        tags.iter().map(|tag| self.get_tag(tag)).collect()
+        tags.iter().filter_map(|tag| self.get_tag(tag)).collect()
     }
 
-    fn get_tag(&self, tag: &TagHash) -> Arc<Tag> {
-        self.cache
-            .tags
-            .entry(tag.hash())
-            .or_insert_with(|| {
-                Arc::new(
-                    self.references
-                        .get_tag(tag.hash())
-                        .expect("tag get error")
-                        .expect("tag not found error"),
-                )
-            })
-            .clone()
+    fn get_tag(&self, tag: &TagHash) -> Option<Arc<Tag>> {
+        match &self.options {
+            Some(options) if options.retrieve_tags => Some(
+                self.cache
+                    .tags
+                    .entry(tag.hash())
+                    .or_insert_with(|| {
+                        Arc::new(
+                            self.references
+                                .get_tag(tag.hash())
+                                .expect("tag get error")
+                                .expect("tag not found error"),
+                        )
+                    })
+                    .clone(),
+            ),
+            _ => self
+                .cache
+                .tags
+                .get(&tag.hash())
+                .map(|key_value| key_value.value().clone()),
+        }
     }
 }
 
@@ -258,5 +269,30 @@ impl Iterator for QueryMappedSequencedEventHashIterator<'_> {
                 .expect("event get error")
                 .expect("event not found error")
         })
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Query Options
+
+#[derive(new, Debug)]
+#[new(name(inner), vis())]
+pub struct QueryOptions {
+    #[new(default)]
+    retrieve_tags: bool,
+}
+
+impl QueryOptions {
+    #[must_use]
+    pub fn retrieve_tags(mut self, retrieve_tags: bool) -> Self {
+        self.retrieve_tags = retrieve_tags;
+        self
+    }
+}
+
+impl Default for QueryOptions {
+    fn default() -> Self {
+        Self::inner()
     }
 }

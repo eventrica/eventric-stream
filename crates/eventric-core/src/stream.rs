@@ -31,11 +31,11 @@ pub struct Stream {
 // Configuration
 
 impl Stream {
-    pub fn configure<P>(path: P) -> StreamConfigurator<P>
+    pub fn builder<P>(path: P) -> StreamBuilder<P>
     where
         P: AsRef<Path>,
     {
-        StreamConfigurator::new(path)
+        StreamBuilder::new(path)
     }
 }
 
@@ -53,11 +53,11 @@ impl Stream {
 
 // -------------------------------------------------------------------------------------------------
 
-// Stream Configurator
+// Stream Builder
 
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct StreamConfigurator<P>
+pub struct StreamBuilder<P>
 where
     P: AsRef<Path>,
 {
@@ -66,7 +66,7 @@ where
     temporary: Option<bool>,
 }
 
-impl<P> StreamConfigurator<P>
+impl<P> StreamBuilder<P>
 where
     P: AsRef<Path>,
 {
@@ -82,7 +82,7 @@ where
     }
 }
 
-impl<P> StreamConfigurator<P>
+impl<P> StreamBuilder<P>
 where
     P: AsRef<Path>,
 {

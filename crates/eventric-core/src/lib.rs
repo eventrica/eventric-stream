@@ -33,12 +33,13 @@ pub use self::{
     },
     stream::{
         Stream,
-        StreamConfigurator,
+        StreamBuilder,
         append::AppendCondition,
         query::{
             QueryCache,
             QueryCondition,
             QueryIterator,
+            QueryOptions,
         },
     },
 };

@@ -9,6 +9,7 @@ use eventric_core::{
     QueryCache,
     QueryCondition,
     QueryItem,
+    QueryOptions,
     Specifier,
     Stream,
     Tag,
@@ -18,7 +19,7 @@ use eventric_core::{
 static PATH: &str = "./temp";
 
 pub fn main() -> Result<(), Box<dyn Error>> {
-    let mut stream = Stream::configure(PATH).temporary(true).open()?;
+    let mut stream = Stream::builder(PATH).temporary(true).open()?;
 
     stream.append(
         [
@@ -50,8 +51,6 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         None,
     )?;
 
-    let cache = QueryCache::default();
-
     let query = Query::new(Vec::from_iter([QueryItem::SpecifiersAndTags(
         Vec::from_iter([
             Specifier::new(Identifier::new("StudentSubscribedToCourse".into()), None),
@@ -60,11 +59,14 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         Vec::from_iter([Tag::new("course:523".into())]),
     )]));
 
-    let condition = QueryCondition::build()
+    let condition = QueryCondition::default()
         .query(&query)
         .position(Position::new(0));
 
-    for event in stream.query(&cache, &condition) {
+    let cache = QueryCache::default();
+    let options = QueryOptions::default().retrieve_tags(true);
+
+    for event in stream.query(&condition, &cache, Some(options)) {
         println!("event: {event:#?}");
     }
 
