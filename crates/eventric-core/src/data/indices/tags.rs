@@ -74,10 +74,10 @@ impl Tags {
     where
         T: Iterator<Item = &'a TagHash>,
     {
-        SequentialAndIterator::combine(tags.map(|tag| self.iterate(tag, position)))
+        SequentialAndIterator::combine(tags.map(|tag| self.query_tag(tag, position)))
     }
 
-    fn iterate(&self, tag: &TagHash, position: Option<Position>) -> SequentialIterator {
+    fn query_tag(&self, tag: &TagHash, position: Option<Position>) -> SequentialIterator {
         let map = |key: Result<Slice, Error>| {
             let key = key.expect("iteration key error");
 
@@ -89,14 +89,14 @@ impl Tags {
         };
 
         let iter = match position {
-            Some(position) => self.iterate_range(tag, position, map),
-            None => self.iterate_prefix(tag, map),
+            Some(position) => self.query_tag_range(tag, position, map),
+            None => self.query_tag_prefix(tag, map),
         };
 
         iter.into()
     }
 
-    fn iterate_prefix<M>(&self, tag: &TagHash, map: M) -> OwnedSequentialIterator
+    fn query_tag_prefix<M>(&self, tag: &TagHash, map: M) -> OwnedSequentialIterator
     where
         M: Fn(Result<Slice, Error>) -> Position + 'static,
     {
@@ -108,7 +108,12 @@ impl Tags {
         })
     }
 
-    fn iterate_range<M>(&self, tag: &TagHash, position: Position, map: M) -> OwnedSequentialIterator
+    fn query_tag_range<M>(
+        &self,
+        tag: &TagHash,
+        position: Position,
+        map: M,
+    ) -> OwnedSequentialIterator
     where
         M: Fn(Result<Slice, Error>) -> Position + 'static,
     {

@@ -79,10 +79,16 @@ impl Identifiers {
     where
         S: Iterator<Item = &'a SpecifierHash>,
     {
-        SequentialOrIterator::combine(specifiers.map(|specifier| self.iterate(specifier, position)))
+        SequentialOrIterator::combine(
+            specifiers.map(|specifier| self.query_specifier(specifier, position)),
+        )
     }
 
-    fn iterate(&self, specifier: &SpecifierHash, position: Option<Position>) -> SequentialIterator {
+    fn query_specifier(
+        &self,
+        specifier: &SpecifierHash,
+        position: Option<Position>,
+    ) -> SequentialIterator {
         let version_range = specifier
             .range()
             .as_ref()
@@ -103,14 +109,18 @@ impl Identifiers {
         };
 
         let iterator = match position {
-            Some(position) => self.iterate_range(specifier, position, predicate),
-            None => self.iterate_prefix(specifier, predicate),
+            Some(position) => self.query_specifier_range(specifier, position, predicate),
+            None => self.query_specifier_prefix(specifier, predicate),
         };
 
         iterator.into()
     }
 
-    fn iterate_prefix<P>(&self, specifier: &SpecifierHash, predicate: P) -> OwnedSequentialIterator
+    fn query_specifier_prefix<P>(
+        &self,
+        specifier: &SpecifierHash,
+        predicate: P,
+    ) -> OwnedSequentialIterator
     where
         P: Fn(Result<(Slice, Slice), Error>) -> Option<Position> + 'static,
     {
@@ -127,7 +137,7 @@ impl Identifiers {
         })
     }
 
-    fn iterate_range<P>(
+    fn query_specifier_range<P>(
         &self,
         specifier: &SpecifierHash,
         position: Position,
