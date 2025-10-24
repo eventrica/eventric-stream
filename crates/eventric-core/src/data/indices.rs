@@ -67,6 +67,14 @@ impl Indices {
     }
 }
 
+// Contains
+
+impl Indices {
+    pub fn contains(&self, query: &QueryHash, position: Option<Position>) -> bool {
+        self.query(query, position).any(|_| true)
+    }
+}
+
 // Put
 
 impl Indices {

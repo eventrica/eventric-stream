@@ -6,7 +6,6 @@ use criterion::{
     criterion_main,
 };
 use eventric_core::{
-    Condition,
     Data,
     Event,
     Identifier,
@@ -42,7 +41,7 @@ pub fn single_append(c: &mut Criterion) {
 
         b.iter_with_large_drop(|| {
             for _ in 0..1_000 {
-                stream.append(&events, Condition::default()).unwrap();
+                stream.append(&events, None).unwrap();
             }
         });
 
@@ -76,7 +75,7 @@ pub fn multiple_append(c: &mut Criterion) {
 
             b.iter_with_large_drop(|| {
                 for _ in 0..1_000 {
-                    stream.append(&events, Condition::default()).unwrap();
+                    stream.append(&events, None).unwrap();
                 }
             });
 

@@ -5,6 +5,7 @@ derive_more.workspace       = true
 fancy_constructor.workspace = true
 fjall.workspace             = true
 rapidhash.workspace         = true
+thiserror.workspace         = true
 
 [lints]
 workspace = true

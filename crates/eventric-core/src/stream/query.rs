@@ -28,6 +28,7 @@ use crate::{
             },
         },
         query::{
+            Query,
             QueryHash,
             QueryHashRef,
             QueryItemHashRef,
@@ -35,10 +36,7 @@ use crate::{
         },
         stream::position::Position,
     },
-    stream::{
-        Stream,
-        condition::Condition,
-    },
+    stream::Stream,
 };
 
 // =================================================================================================
@@ -46,21 +44,23 @@ use crate::{
 // =================================================================================================
 
 impl Stream {
+    #[must_use]
     pub fn query<'a>(
         &'a self,
         cache: &'a QueryCache,
-        condition: &Condition<'_>,
+        condition: &QueryCondition<'_>,
     ) -> QueryIterator<'a> {
-        let query = condition.query.map(Into::into);
+        let position = condition.position;
+        let iter = match condition.query {
+            Some(query) => {
+                let query_hash_ref: &QueryHashRef<'_> = &query.into();
+                let query_hash: &QueryHash = &query_hash_ref.into();
 
-        if let Some(query) = &query {
-            cache.populate(query);
-        }
+                cache.populate(query_hash_ref);
 
-        let query = query.as_ref().map(Into::into);
-        let iter = match query.as_ref() {
-            Some(query) => self.query_indices(query, condition.position),
-            None => self.query_events(condition.position),
+                self.query_indices(query_hash, position)
+            }
+            None => self.query_events(position),
         };
 
         QueryIterator::new(cache, iter, &self.data.references)
@@ -79,6 +79,40 @@ impl Stream {
             &self.data.events,
             self.data.indices.query(query, position),
         ))
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Query Condition
+
+#[derive(new, Debug)]
+#[new(vis())]
+pub struct QueryCondition<'a> {
+    #[new(default)]
+    pub(crate) query: Option<&'a Query>,
+    #[new(default)]
+    pub(crate) position: Option<Position>,
+}
+
+impl QueryCondition<'_> {
+    #[must_use]
+    pub fn build() -> Self {
+        Self::new()
+    }
+}
+
+impl<'a> QueryCondition<'a> {
+    #[must_use]
+    pub fn query(mut self, query: &'a Query) -> Self {
+        self.query = Some(query);
+        self
+    }
+
+    #[must_use]
+    pub fn position(mut self, position: Position) -> Self {
+        self.position = Some(position);
+        self
     }
 }
 

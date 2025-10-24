@@ -34,9 +34,10 @@ pub use self::{
     stream::{
         Stream,
         StreamConfigurator,
-        condition::Condition,
+        append::AppendCondition,
         query::{
             QueryCache,
+            QueryCondition,
             QueryIterator,
         },
     },

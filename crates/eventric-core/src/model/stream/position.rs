@@ -14,8 +14,9 @@ impl Position {
 }
 
 impl Position {
-    pub fn increment(&mut self) {
-        self.0 += 1;
+    #[must_use]
+    pub fn increment(self) -> Self {
+        Self::new(self.0 + 1)
     }
 
     #[must_use]

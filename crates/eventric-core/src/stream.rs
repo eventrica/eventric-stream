@@ -1,5 +1,4 @@
 pub mod append;
-pub mod condition;
 pub mod query;
 
 use std::{
