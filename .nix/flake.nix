@@ -44,6 +44,7 @@
           devShells.default = mkShell {
             buildInputs = [
               cloc
+              gnuplot
               rust
             ];
 
