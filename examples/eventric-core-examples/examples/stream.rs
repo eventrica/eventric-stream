@@ -62,7 +62,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     let condition = Condition::default().query(&query);
 
     for event in stream.query(&cache, &condition) {
-        println!("student or course id: {event:#?}");
+        println!("event: {event:#?}");
     }
 
     println!("cache: {cache:#?}");
