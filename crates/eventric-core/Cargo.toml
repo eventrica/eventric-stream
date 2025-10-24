@@ -4,10 +4,8 @@ dashmap.workspace           = true
 derive_more.workspace       = true
 fancy_constructor.workspace = true
 fjall.workspace             = true
-# itertools.workspace         = true
-jiff.workspace      = true
-rapidhash.workspace = true
-self_cell.workspace = true
+rapidhash.workspace         = true
+self_cell.workspace         = true
 
 [lints]
 workspace = true

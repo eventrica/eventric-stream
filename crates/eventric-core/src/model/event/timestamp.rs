@@ -1,3 +1,8 @@
+use std::time::{
+    SystemTime,
+    UNIX_EPOCH,
+};
+
 use derive_more::Debug;
 use fancy_constructor::new;
 
@@ -15,11 +20,23 @@ impl Timestamp {
         self.0
     }
 
+    /// NOTE: Important - this uses [`SystemTime`] which is not guaranteed to be
+    /// monotonic. In practice it's unlikely to be an issue, but this is
+    /// worth monitoring/noting when using the generated timestamp values as
+    /// part of event sequencing - there is a non-zero chance that timestamp
+    /// order may not match positional order (although this isn't likely).
+    ///
+    /// This should probably be replaced at some point with something like TAI
+    /// time.
     #[must_use]
     pub fn now() -> Self {
-        let ns = jiff::Timestamp::now().as_nanosecond();
-        let ts = u64::try_from(ns).expect("invalid timestamp");
+        let ns = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("unix time error")
+            .as_nanos();
 
-        Self(ts)
+        let ns = u64::try_from(ns).expect("unix time excession error");
+
+        Self(ns)
     }
 }
