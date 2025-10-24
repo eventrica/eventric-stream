@@ -43,6 +43,8 @@
         with pkgs; {
           devShells.default = mkShell {
             buildInputs = [
+              apple-sdk_15
+              curl
               cloc
               gnuplot
               rust

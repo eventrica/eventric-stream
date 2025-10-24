@@ -25,3 +25,9 @@ name                 = "eventric-core-benches"
 readme.workspace     = true
 repository.workspace = true
 version.workspace    = true
+
+[profile.bench]
+debug = true
+
+[profile.release]
+debug = true
