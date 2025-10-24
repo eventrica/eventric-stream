@@ -211,7 +211,7 @@ impl Iterator for QuerySequencedEventHashIterator<'_> {
 #[new(const_fn)]
 struct QueryMappedSequencedEventHashIterator<'a> {
     events: &'a Events,
-    iter: SequentialIterator,
+    iter: SequentialIterator<'a>,
 }
 
 impl Iterator for QueryMappedSequencedEventHashIterator<'_> {

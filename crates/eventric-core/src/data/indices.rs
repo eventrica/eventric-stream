@@ -8,11 +8,9 @@ use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::{
     Database,
-    Keyspace,
     KeyspaceCreateOptions,
     WriteBatch,
 };
-use self_cell::self_cell;
 
 use crate::{
     data::indices::{
@@ -90,7 +88,7 @@ impl Indices {
 
 impl Indices {
     #[must_use]
-    pub fn query(&self, query: &QueryHash, position: Option<Position>) -> SequentialIterator {
+    pub fn query(&self, query: &QueryHash, position: Option<Position>) -> SequentialIterator<'_> {
         SequentialOrIterator::combine(query.items().iter().map(|item| match item {
             QueryItemHash::Specifiers(specifiers) => {
                 self.identifiers.query(specifiers.iter(), position)
@@ -111,13 +109,13 @@ impl Indices {
 // Sequential Iterator
 
 #[derive(Debug)]
-pub enum SequentialIterator {
-    And(SequentialAndIterator<SequentialIterator, Position>),
-    Or(SequentialOrIterator<SequentialIterator, Position>),
-    Owned(#[debug("OwnedSequentialIterator")] OwnedSequentialIterator),
+pub enum SequentialIterator<'a> {
+    And(SequentialAndIterator<SequentialIterator<'a>, Position>),
+    Or(SequentialOrIterator<SequentialIterator<'a>, Position>),
+    Owned(#[debug("OwnedSequentialIterator")] Box<dyn Iterator<Item = Position> + 'a>),
 }
 
-impl Iterator for SequentialIterator {
+impl Iterator for SequentialIterator<'_> {
     type Item = Position;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -129,42 +127,20 @@ impl Iterator for SequentialIterator {
     }
 }
 
-impl From<SequentialAndIterator<SequentialIterator, Position>> for SequentialIterator {
-    fn from(value: SequentialAndIterator<SequentialIterator, Position>) -> Self {
+impl<'a> From<SequentialAndIterator<SequentialIterator<'a>, Position>> for SequentialIterator<'a> {
+    fn from(value: SequentialAndIterator<SequentialIterator<'a>, Position>) -> Self {
         Self::And(value)
     }
 }
 
-impl From<SequentialOrIterator<SequentialIterator, Position>> for SequentialIterator {
-    fn from(value: SequentialOrIterator<SequentialIterator, Position>) -> Self {
+impl<'a> From<SequentialOrIterator<SequentialIterator<'a>, Position>> for SequentialIterator<'a> {
+    fn from(value: SequentialOrIterator<SequentialIterator<'a>, Position>) -> Self {
         Self::Or(value)
     }
 }
 
-impl From<OwnedSequentialIterator> for SequentialIterator {
-    fn from(value: OwnedSequentialIterator) -> Self {
+impl<'a> From<Box<dyn Iterator<Item = Position> + 'a>> for SequentialIterator<'a> {
+    fn from(value: Box<dyn Iterator<Item = Position> + 'a>) -> Self {
         Self::Owned(value)
-    }
-}
-
-// Boxed Sequential Iterator
-
-type BoxedSequentialIterator<'a> = Box<dyn Iterator<Item = Position> + 'a>;
-
-// Owned Sequential Position Iterator
-
-self_cell!(
-    pub struct OwnedSequentialIterator {
-        owner: Keyspace,
-        #[covariant]
-        dependent: BoxedSequentialIterator,
-    }
-);
-
-impl Iterator for OwnedSequentialIterator {
-    type Item = Position;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.with_dependent_mut(|_, iterator| iterator.next())
     }
 }

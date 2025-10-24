@@ -17,10 +17,7 @@ use crate::{
         HASH_LEN,
         ID_LEN,
         POSITION_LEN,
-        indices::{
-            OwnedSequentialIterator,
-            SequentialIterator,
-        },
+        indices::SequentialIterator,
     },
     model::{
         event::tag::{
@@ -70,14 +67,14 @@ impl Tags {
 // Query
 
 impl Tags {
-    pub fn query<'a, T>(&self, tags: T, position: Option<Position>) -> SequentialIterator
+    pub fn query<'a, T>(&self, tags: T, position: Option<Position>) -> SequentialIterator<'_>
     where
         T: Iterator<Item = &'a TagHash>,
     {
         SequentialAndIterator::combine(tags.map(|tag| self.query_tag(tag, position)))
     }
 
-    fn query_tag(&self, tag: &TagHash, position: Option<Position>) -> SequentialIterator {
+    fn query_tag(&self, tag: &TagHash, position: Option<Position>) -> SequentialIterator<'_> {
         let map = |key: Result<Slice, Error>| {
             let key = key.expect("iteration key error");
 
@@ -88,24 +85,22 @@ impl Tags {
             Position::new(key.get_u64())
         };
 
-        let iter = match position {
+        match position {
             Some(position) => self.query_tag_range(tag, position, map),
             None => self.query_tag_prefix(tag, map),
-        };
-
-        iter.into()
+        }
     }
 
-    fn query_tag_prefix<M>(&self, tag: &TagHash, map: M) -> OwnedSequentialIterator
+    fn query_tag_prefix<M>(&self, tag: &TagHash, map: M) -> SequentialIterator<'_>
     where
         M: Fn(Result<Slice, Error>) -> Position + 'static,
     {
         let hash = tag.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
-        OwnedSequentialIterator::new(self.keyspace.clone(), |keyspace| {
-            Box::new(keyspace.prefix(prefix).map(Guard::key).map(map))
-        })
+        SequentialIterator::Owned(Box::new(
+            self.keyspace.prefix(prefix).map(Guard::key).map(map),
+        ))
     }
 
     fn query_tag_range<M>(
@@ -113,7 +108,7 @@ impl Tags {
         tag: &TagHash,
         position: Position,
         map: M,
-    ) -> OwnedSequentialIterator
+    ) -> SequentialIterator<'_>
     where
         M: Fn(Result<Slice, Error>) -> Position + 'static,
     {
@@ -121,9 +116,9 @@ impl Tags {
         let lower: [u8; KEY_LEN] = PositionAndHash(position, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::new(u64::MAX), hash).into();
 
-        OwnedSequentialIterator::new(self.keyspace.clone(), |keyspace| {
-            Box::new(keyspace.range(lower..upper).map(Guard::key).map(map))
-        })
+        SequentialIterator::Owned(Box::new(
+            self.keyspace.range(lower..upper).map(Guard::key).map(map),
+        ))
     }
 }
 

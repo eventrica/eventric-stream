@@ -12,7 +12,6 @@ derive_more       = { version = "2", features = ["full"] }
 fancy_constructor = { version = "2" }
 fjall             = { version = "=3.0.0-pre.0" }
 rapidhash         = { version = "4" }
-self_cell         = { version = "1" }
 
 [workspace.lints.clippy]
 cargo       = "warn"
