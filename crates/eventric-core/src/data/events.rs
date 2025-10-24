@@ -13,8 +13,6 @@ use fjall::{
     Slice,
     WriteBatch,
 };
-use itertools::Itertools;
-use self_cell::self_cell;
 
 use crate::model::{
     event::{
@@ -84,33 +82,33 @@ impl Events {
 // Iterate
 
 impl Events {
-    pub fn iterate(&self, position: Option<Position>) -> SequencedEventHashIterator {
-        SequencedEventHashIterator::new(match position {
+    pub fn iterate(&self, position: Option<Position>) -> SequencedEventHashIterator<'_> {
+        match position {
             Some(position) => self.iterate_from(position),
             None => self.iterate_all(),
-        })
+        }
     }
 
-    fn iterate_all(&self) -> OwnedSequencedEventHashIterator {
-        OwnedSequencedEventHashIterator::new(self.keyspace.clone(), |keyspace| {
-            Box::new(
-                keyspace
+    fn iterate_all(&self) -> SequencedEventHashIterator<'_> {
+        SequencedEventHashIterator {
+            iter: Box::new(
+                self.keyspace
                     .iter()
                     .map(|guard| guard.into_inner().expect("iteration error"))
                     .map(|event| SliceAndPosition(event.1, event.0.into()).into()),
-            )
-        })
+            ),
+        }
     }
 
-    fn iterate_from(&self, position: Position) -> OwnedSequencedEventHashIterator {
-        OwnedSequencedEventHashIterator::new(self.keyspace.clone(), |keyspace| {
-            Box::new(
-                keyspace
+    fn iterate_from(&self, position: Position) -> SequencedEventHashIterator<'_> {
+        SequencedEventHashIterator {
+            iter: Box::new(
+                self.keyspace
                     .range(position.value().to_be_bytes()..)
                     .map(|guard| guard.into_inner().expect("iteration error"))
                     .map(|event| SliceAndPosition(event.1, event.0.into()).into()),
-            )
-        })
+            ),
+        }
     }
 }
 
@@ -149,7 +147,7 @@ impl From<SliceAndPosition> for SequencedEventHash {
         let version = Version::new(value.get_u8());
         let tags = (0..value.get_u8())
             .map(|_| TagHash::new(value.get_u64()))
-            .collect_vec();
+            .collect();
 
         let timestamp = Timestamp::new(value.get_u64());
         let data = Data::new(value.iter().map(ToOwned::to_owned).collect::<Vec<_>>());
@@ -183,38 +181,16 @@ impl From<EventAndTimestamp<'_>> for Vec<u8> {
 
 // Iterator
 
-// Sequenced Event Hash Iterator
-
 #[derive(new, Debug)]
-#[new(const_fn, vis())]
-pub struct SequencedEventHashIterator(#[debug("Iterator")] OwnedSequencedEventHashIterator);
-
-impl Iterator for SequencedEventHashIterator {
-    type Item = SequencedEventHash;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.0.next()
-    }
+pub struct SequencedEventHashIterator<'a> {
+    #[debug("Iterator")]
+    iter: Box<dyn Iterator<Item = SequencedEventHash> + 'a>,
 }
 
-// Boxed Sequenced Event Hash Iterator
-
-type BoxedSequencedEventHashIterator<'a> = Box<dyn Iterator<Item = SequencedEventHash> + 'a>;
-
-// Owned Sequenced Event Hash Iterator
-
-self_cell!(
-    struct OwnedSequencedEventHashIterator {
-        owner: Keyspace,
-        #[covariant]
-        dependent: BoxedSequencedEventHashIterator,
-    }
-);
-
-impl Iterator for OwnedSequencedEventHashIterator {
+impl Iterator for SequencedEventHashIterator<'_> {
     type Item = SequencedEventHash;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.with_dependent_mut(|_, iterator| iterator.next())
+        self.iter.next()
     }
 }

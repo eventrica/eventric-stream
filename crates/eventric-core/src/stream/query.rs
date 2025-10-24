@@ -3,7 +3,6 @@ use std::sync::Arc;
 use dashmap::DashMap;
 use derive_more::Debug;
 use fancy_constructor::new;
-use itertools::Itertools as _;
 
 use crate::{
     data::{
@@ -153,7 +152,7 @@ impl QueryIterator<'_> {
     }
 
     fn get_tags(&self, tags: &[TagHash]) -> Vec<Arc<Tag>> {
-        tags.iter().map(|tag| self.get_tag(tag)).collect_vec()
+        tags.iter().map(|tag| self.get_tag(tag)).collect()
     }
 
     fn get_tag(&self, tag: &TagHash) -> Arc<Tag> {
@@ -191,7 +190,7 @@ impl Iterator for QueryIterator<'_> {
 
 #[derive(Debug)]
 enum QuerySequencedEventHashIterator<'a> {
-    Direct(SequencedEventHashIterator),
+    Direct(SequencedEventHashIterator<'a>),
     Mapped(QueryMappedSequencedEventHashIterator<'a>),
 }
 

@@ -11,7 +11,6 @@ dashmap           = { version = "6" }
 derive_more       = { version = "2", features = ["full"] }
 fancy_constructor = { version = "2" }
 fjall             = { version = "=3.0.0-pre.0" }
-itertools         = { version = "0.14" }
 jiff              = { version = "0.2" }
 rapidhash         = { version = "4" }
 self_cell         = { version = "1" }

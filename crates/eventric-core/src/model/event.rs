@@ -7,7 +7,6 @@ pub mod version;
 use std::sync::Arc;
 
 use fancy_constructor::new;
-use itertools::Itertools;
 
 use crate::model::{
     event::{
@@ -103,7 +102,7 @@ impl<'a> From<&'a Event> for EventHashRef<'a> {
         Self::new(
             event.data(),
             event.identifier().into(),
-            event.tags().iter().map_into().collect_vec(),
+            event.tags().iter().map(Into::into).collect(),
             *event.version(),
         )
     }
