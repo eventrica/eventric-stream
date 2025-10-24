@@ -114,7 +114,7 @@ impl Tags {
     {
         let hash = tag.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(position, hash).into();
-        let upper: [u8; KEY_LEN] = PositionAndHash(Position::new(u64::MAX), hash).into();
+        let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
         SequentialIterator::Owned(Box::new(
             self.keyspace.range(lower..upper).map(Guard::key).map(map),

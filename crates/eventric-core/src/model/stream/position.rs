@@ -9,6 +9,11 @@ use fancy_constructor::new;
 pub struct Position(u64);
 
 impl Position {
+    pub const MAX: Position = Position::new(u64::MAX);
+    pub const MIN: Position = Position::new(u64::MIN);
+}
+
+impl Position {
     pub fn increment(&mut self) {
         self.0 += 1;
     }
