@@ -4,6 +4,7 @@
 
 mod data;
 mod model;
+mod stream;
 mod util;
 
 // =================================================================================================
@@ -12,27 +13,31 @@ mod util;
 
 // Re-Exports
 
-pub use eventric_core_model::{
-    Data,
-    Event,
-    Identifier,
-    Position,
-    Query,
-    QueryItem,
-    SequencedEvent,
-    Specifier,
-    Tag,
-    Version,
-};
-pub use eventric_core_stream::{
-    AppendCondition,
-    QueryCache,
-    QueryCondition,
-    Stream,
-};
-
-pub use self::data::{
-    events::Events,
-    indices::Indices,
-    references::References,
+pub use self::{
+    model::{
+        event::{
+            Event,
+            SequencedEvent,
+            data::Data,
+            identifier::Identifier,
+            tag::Tag,
+            timestamp::Timestamp,
+            version::Version,
+        },
+        query::{
+            Query,
+            QueryItem,
+            specifier::Specifier,
+        },
+        stream::position::Position,
+    },
+    stream::{
+        Stream,
+        StreamConfigurator,
+        condition::Condition,
+        query::{
+            QueryCache,
+            QueryIterator,
+        },
+    },
 };

@@ -1,12 +1,12 @@
 use std::error::Error;
 
 use eventric_core::{
+    Condition,
     Data,
     Event,
     Identifier,
     Query,
     QueryCache,
-    QueryCondition,
     QueryItem,
     Specifier,
     Stream,
@@ -46,10 +46,11 @@ pub fn main() -> Result<(), Box<dyn Error>> {
                 Version::new(1),
             ),
         ]),
-        None,
+        Condition::default(),
     )?;
 
     let cache = QueryCache::default();
+
     let query = Query::new(Vec::from_iter([QueryItem::SpecifiersAndTags(
         Vec::from_iter([
             Specifier::new(Identifier::new("StudentSubscribedToCourse".into()), None),
@@ -58,9 +59,9 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         Vec::from_iter([Tag::new("course:523".into())]),
     )]));
 
-    let condition = QueryCondition::builder().query(&query).build();
+    let condition = Condition::default().query(&query);
 
-    for event in stream.query(&cache, condition) {
+    for event in stream.query(&cache, &condition) {
         println!("student or course id: {event:#?}");
     }
 

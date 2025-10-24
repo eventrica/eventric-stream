@@ -48,7 +48,7 @@ static PREFIX_LEN: usize = ID_LEN + HASH_LEN;
 
 // Identifiers
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 #[new(const_fn)]
 pub struct Identifiers {
     #[debug("Keyspace(\"{}\")", keyspace.name)]

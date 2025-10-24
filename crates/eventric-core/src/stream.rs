@@ -1,0 +1,95 @@
+pub mod append;
+pub mod condition;
+pub mod query;
+
+use std::{
+    error::Error,
+    path::Path,
+};
+
+use derive_more::Debug;
+use fancy_constructor::new;
+use fjall::Database;
+
+use crate::{
+    data::Data,
+    model::stream::position::Position,
+};
+
+// =================================================================================================
+// Stream
+// =================================================================================================
+
+#[derive(new, Debug)]
+#[new(const_fn, vis())]
+pub struct Stream {
+    #[debug("Database")]
+    database: Database,
+    data: Data,
+    position: Position,
+}
+
+// Configuration
+
+impl Stream {
+    pub fn configure<P>(path: P) -> StreamConfigurator<P>
+    where
+        P: AsRef<Path>,
+    {
+        StreamConfigurator::new(path)
+    }
+}
+
+// Properties
+
+impl Stream {
+    pub fn is_empty(&self) -> Result<bool, Box<dyn Error>> {
+        self.data.events.is_empty()
+    }
+
+    pub fn len(&self) -> Result<u64, Box<dyn Error>> {
+        self.data.events.len()
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Stream Configurator
+
+#[derive(new, Debug)]
+#[new(vis())]
+pub struct StreamConfigurator<P>
+where
+    P: AsRef<Path>,
+{
+    path: P,
+    #[new(default)]
+    temporary: Option<bool>,
+}
+
+impl<P> StreamConfigurator<P>
+where
+    P: AsRef<Path>,
+{
+    pub fn open(self) -> Result<Stream, Box<dyn Error>> {
+        let database = Database::builder(self.path)
+            .temporary(self.temporary.unwrap_or_default())
+            .open()?;
+
+        let data = Data::open(&database)?;
+        let position = Position::new(data.events.len()?);
+
+        Ok(Stream::new(database, data, position))
+    }
+}
+
+impl<P> StreamConfigurator<P>
+where
+    P: AsRef<Path>,
+{
+    #[must_use]
+    pub fn temporary(mut self, temporary: bool) -> Self {
+        self.temporary = Some(temporary);
+        self
+    }
+}

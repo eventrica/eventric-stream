@@ -147,9 +147,8 @@ name = "eventric-core"
 version = "0.1.0"
 dependencies = [
  "bytes",
+ "dashmap",
  "derive_more",
- "eventric-core-model",
- "eventric-core-stream",
  "fancy_constructor",
  "fjall",
  "itertools",
@@ -163,80 +162,10 @@ name = "eventric-core-benches"
 version = "0.1.0"
 
 [[package]]
-name = "eventric-core-data"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "derive_more",
- "eventric-core-model",
- "fancy_constructor",
- "fjall",
-]
-
-[[package]]
 name = "eventric-core-examples"
 version = "0.1.0"
 dependencies = [
  "eventric-core",
- "eventric-core-data",
- "eventric-core-index",
- "eventric-core-reference",
- "eventric-core-util",
-]
-
-[[package]]
-name = "eventric-core-index"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "derive_more",
- "eventric-core-model",
- "eventric-core-util",
- "fjall",
- "self_cell",
-]
-
-[[package]]
-name = "eventric-core-model"
-version = "0.1.0"
-dependencies = [
- "derive_more",
- "fancy_constructor",
- "itertools",
- "jiff",
- "rapidhash",
-]
-
-[[package]]
-name = "eventric-core-reference"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "eventric-core-model",
- "fjall",
-]
-
-[[package]]
-name = "eventric-core-stream"
-version = "0.1.0"
-dependencies = [
- "dashmap",
- "derive_more",
- "eventric-core-data",
- "eventric-core-index",
- "eventric-core-model",
- "eventric-core-reference",
- "fancy_constructor",
- "fjall",
- "itertools",
-]
-
-[[package]]
-name = "eventric-core-util"
-version = "0.1.0"
-dependencies = [
- "derive_more",
- "fancy_constructor",
 ]
 
 [[package]]

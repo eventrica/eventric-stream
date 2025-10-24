@@ -29,7 +29,7 @@ static TIMESTAMP_LEN: usize = size_of::<u64>();
 
 //  Timestamps
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 #[new(const_fn)]
 pub struct Timestamps {
     #[debug("Keyspace(\"{}\")", keyspace.name)]

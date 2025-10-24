@@ -35,7 +35,7 @@ static KEYSPACE_NAME: &str = "references";
 
 // Data
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 #[new(const_fn, vis())]
 pub struct References {
     identifiers: Identifiers,

@@ -14,6 +14,7 @@ use fjall::{
     WriteBatch,
 };
 use itertools::Itertools;
+use self_cell::self_cell;
 
 use crate::model::{
     event::{
@@ -40,7 +41,7 @@ static KEYSPACE_NAME: &str = "events";
 
 // Data
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 #[new(const_fn, vis())]
 pub struct Events {
     #[debug("Keyspace(\"{}\")", keyspace.name)]
@@ -70,13 +71,46 @@ impl Events {
         &self,
         batch: &mut WriteBatch,
         event: &EventHashRef<'_>,
-        position: Position,
         timestamp: Timestamp,
+        position: Position,
     ) {
         let key = position.value().to_be_bytes();
         let value: Vec<u8> = EventAndTimestamp(event, timestamp).into();
 
         batch.insert(&self.keyspace, key, value);
+    }
+}
+
+// Iterate
+
+impl Events {
+    pub fn iterate(&self, position: Option<Position>) -> SequencedEventHashIterator {
+        SequencedEventHashIterator::new(match position {
+            Some(position) => self.iterate_from(position),
+            None => self.iterate_all(),
+        })
+    }
+
+    fn iterate_all(&self) -> OwnedSequencedEventHashIterator {
+        OwnedSequencedEventHashIterator::new(self.keyspace.clone(), |keyspace| {
+            Box::new(
+                keyspace
+                    .iter()
+                    .map(|guard| guard.into_inner().expect("iteration error"))
+                    .map(|event| SliceAndPosition(event.1, event.0.into()).into()),
+            )
+        })
+    }
+
+    fn iterate_from(&self, position: Position) -> OwnedSequencedEventHashIterator {
+        OwnedSequencedEventHashIterator::new(self.keyspace.clone(), |keyspace| {
+            Box::new(
+                keyspace
+                    .range(position.value().to_be_bytes()..)
+                    .map(|guard| guard.into_inner().expect("iteration error"))
+                    .map(|event| SliceAndPosition(event.1, event.0.into()).into()),
+            )
+        })
     }
 }
 
@@ -99,6 +133,12 @@ impl Events {
 
 // Conversions
 
+impl From<Slice> for Position {
+    fn from(value: Slice) -> Self {
+        Self::new(value.as_ref().get_u64())
+    }
+}
+
 struct SliceAndPosition(Slice, Position);
 
 impl From<SliceAndPosition> for SequencedEventHash {
@@ -114,7 +154,7 @@ impl From<SliceAndPosition> for SequencedEventHash {
         let timestamp = Timestamp::new(value.get_u64());
         let data = Data::new(value.iter().map(ToOwned::to_owned).collect::<Vec<_>>());
 
-        SequencedEventHash::new(data, identifier, position, tags, timestamp, version)
+        Self::new(data, identifier, position, tags, timestamp, version)
     }
 }
 
@@ -136,5 +176,45 @@ impl From<EventAndTimestamp<'_>> for Vec<u8> {
         value.put_slice(event.data().as_ref());
 
         value
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Iterator
+
+// Sequenced Event Hash Iterator
+
+#[derive(new, Debug)]
+#[new(const_fn, vis())]
+pub struct SequencedEventHashIterator(#[debug("Iterator")] OwnedSequencedEventHashIterator);
+
+impl Iterator for SequencedEventHashIterator {
+    type Item = SequencedEventHash;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+}
+
+// Boxed Sequenced Event Hash Iterator
+
+type BoxedSequencedEventHashIterator<'a> = Box<dyn Iterator<Item = SequencedEventHash> + 'a>;
+
+// Owned Sequenced Event Hash Iterator
+
+self_cell!(
+    struct OwnedSequencedEventHashIterator {
+        owner: Keyspace,
+        #[covariant]
+        dependent: BoxedSequencedEventHashIterator,
+    }
+);
+
+impl Iterator for OwnedSequencedEventHashIterator {
+    type Item = SequencedEventHash;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.with_dependent_mut(|_, iterator| iterator.next())
     }
 }

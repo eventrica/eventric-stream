@@ -49,7 +49,7 @@ static KEYSPACE_NAME: &str = "indices";
 
 // Indices
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 #[new(const_fn, vis())]
 pub struct Indices {
     identifiers: Identifiers,
@@ -76,9 +76,9 @@ impl Indices {
     pub fn put(
         &self,
         batch: &mut WriteBatch,
-        position: Position,
         event: &EventHashRef<'_>,
         timestamp: Timestamp,
+        position: Position,
     ) {
         self.identifiers.put(batch, position, event.identifier(), *event.version());
         self.tags.put(batch, position, event.tags());
