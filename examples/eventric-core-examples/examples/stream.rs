@@ -20,7 +20,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     let mut stream = Stream::configure(PATH).temporary(true).open()?;
 
     stream.append(
-        Vec::from_iter([
+        [
             &Event::new(
                 Data::new("hello world!".bytes().collect()),
                 Identifier::new("StudentSubscribedToCourse".into()),
@@ -45,7 +45,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
                 ]),
                 Version::new(1),
             ),
-        ]),
+        ],
         Condition::default(),
     )?;
 

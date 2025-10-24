@@ -40,11 +40,13 @@ pub fn single_append(c: &mut Criterion) {
             Version::new(0),
         )];
 
-        b.iter(|| {
+        b.iter_with_large_drop(|| {
             for _ in 0..1_000 {
                 stream.append(&events, Condition::default()).unwrap();
             }
         });
+
+        drop(stream);
     });
 
     group.finish();
@@ -72,11 +74,13 @@ pub fn multiple_append(c: &mut Criterion) {
                 })
                 .collect::<Vec<_>>();
 
-            b.iter(|| {
+            b.iter_with_large_drop(|| {
                 for _ in 0..1_000 {
                     stream.append(&events, Condition::default()).unwrap();
                 }
             });
+
+            drop(stream);
         });
 
     group.finish();
