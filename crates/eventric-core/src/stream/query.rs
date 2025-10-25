@@ -13,7 +13,10 @@ use crate::{
         indices::SequentialIterator,
         references::References,
     },
-    error::Error,
+    error::{
+        Error,
+        Result,
+    },
     model::{
         event::{
             SequencedEvent,
@@ -221,17 +224,23 @@ impl QueryIterator<'_> {
 }
 
 impl Iterator for QueryIterator<'_> {
-    type Item = SequencedEvent;
+    type Item = Result<SequencedEvent>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|event| {
-            let (data, identifier, position, tags, timestamp, version) = event.take();
+        match self.iter.next() {
+            Some(Ok(event)) => {
+                let (data, identifier, position, tags, timestamp, version) = event.take();
 
-            let identifier = self.get_identifier(&identifier);
-            let tags = self.get_tags(&tags);
+                let identifier = self.get_identifier(&identifier);
+                let tags = self.get_tags(&tags);
 
-            SequencedEvent::new(data, identifier, position, tags, timestamp, version)
-        })
+                Some(Ok(SequencedEvent::new(
+                    data, identifier, position, tags, timestamp, version,
+                )))
+            }
+            Some(Err(err)) => Some(Err(err)),
+            None => None,
+        }
     }
 }
 
@@ -244,7 +253,7 @@ enum QuerySequencedEventHashIterator<'a> {
 }
 
 impl Iterator for QuerySequencedEventHashIterator<'_> {
-    type Item = SequencedEventHash;
+    type Item = Result<SequencedEventHash>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -264,12 +273,18 @@ struct QueryMappedSequencedEventHashIterator<'a> {
 }
 
 impl Iterator for QueryMappedSequencedEventHashIterator<'_> {
-    type Item = SequencedEventHash;
+    type Item = Result<SequencedEventHash>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter
-            .next()
-            .map(|position| self.events.get(position).expect("event not found error"))
+        match self.iter.next() {
+            Some(Ok(position)) => match self.events.get(position) {
+                Ok(Some(event)) => Some(Ok(event)),
+                Ok(None) => None,
+                Err(err) => Some(Err(err)),
+            },
+            Some(Err(err)) => Some(Err(err)),
+            None => None,
+        }
     }
 }
 

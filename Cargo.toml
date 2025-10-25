@@ -1,3 +1,9 @@
+[profile.bench]
+debug = true
+
+[profile.release]
+debug = false
+
 [workspace]
 members  = ["benches/*", "crates/*", "examples/*"]
 resolver = "2"

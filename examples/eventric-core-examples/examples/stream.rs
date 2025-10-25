@@ -19,7 +19,7 @@ use eventric_core::{
 static PATH: &str = "./temp";
 
 pub fn main() -> Result<(), Box<dyn Error>> {
-    let mut stream = Stream::builder(PATH).temporary(true).open();
+    let mut stream = Stream::builder(PATH).temporary(true).open()?;
 
     stream.append(
         [
@@ -64,7 +64,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         .position(Position::new(0));
 
     let cache = QueryCache::default();
-    let options = QueryOptions::default().retrieve_tags(true);
+    let options = QueryOptions::default().retrieve_tags(false);
 
     for event in stream.query(&condition, &cache, Some(options)) {
         println!("event: {event:#?}");

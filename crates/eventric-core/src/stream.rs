@@ -9,7 +9,10 @@ use fjall::Database;
 
 use crate::{
     data::Data,
-    error::Error,
+    error::{
+        Error,
+        Result,
+    },
     model::stream::position::Position,
 };
 
@@ -70,17 +73,17 @@ impl<P> StreamBuilder<P>
 where
     P: AsRef<Path>,
 {
-    pub fn open(self) -> Stream {
+    pub fn open(self) -> Result<Stream> {
         let database = Database::builder(self.path)
             .temporary(self.temporary.unwrap_or_default())
             .open()
             .map_err(Error::from)
             .expect("database open: database error");
 
-        let data = Data::open(&database);
+        let data = Data::open(&database)?;
         let position = Position::new(data.events.len());
 
-        Stream::new(database, data, position)
+        Ok(Stream::new(database, data, position))
     }
 }
 

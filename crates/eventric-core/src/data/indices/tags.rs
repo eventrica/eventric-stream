@@ -5,6 +5,7 @@ use bytes::{
 use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::{
+    Guard,
     Keyspace,
     Slice,
     WriteBatch,
@@ -74,12 +75,15 @@ impl Tags {
     }
 
     fn query_tag(&self, tag: &TagHash, position: Option<Position>) -> SequentialIterator<'_> {
-        let map = |key: Slice| {
-            let mut key = &key[..];
+        let map = |key: Result<Slice, fjall::Error>| match key {
+            Ok(key) => {
+                let mut key = &key[..];
 
-            key.advance(ID_LEN + HASH_LEN);
+                key.advance(ID_LEN + HASH_LEN);
 
-            Position::new(key.get_u64())
+                Ok(Position::new(key.get_u64()))
+            }
+            Err(err) => Err(Error::from(err)),
         };
 
         match position {
@@ -90,42 +94,26 @@ impl Tags {
 
     fn query_tag_prefix<F>(&self, tag: &TagHash, f: F) -> SequentialIterator<'_>
     where
-        F: Fn(Slice) -> Position + 'static,
+        F: Fn(Result<Slice, fjall::Error>) -> Result<Position, Error> + 'static,
     {
         let hash = tag.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
         SequentialIterator::Owned(Box::new(
-            self.keyspace
-                .prefix(prefix)
-                .map(|guard| {
-                    guard
-                        .key()
-                        .map_err(Error::from)
-                        .expect("query tag prefix: iteration error")
-                })
-                .map(f),
+            self.keyspace.prefix(prefix).map(Guard::key).map(f),
         ))
     }
 
     fn query_tag_range<F>(&self, tag: &TagHash, position: Position, f: F) -> SequentialIterator<'_>
     where
-        F: Fn(Slice) -> Position + 'static,
+        F: Fn(Result<Slice, fjall::Error>) -> Result<Position, Error> + 'static,
     {
         let hash = tag.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(position, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
         SequentialIterator::Owned(Box::new(
-            self.keyspace
-                .range(lower..upper)
-                .map(|guard| {
-                    guard
-                        .key()
-                        .map_err(Error::from)
-                        .expect("query tag range: iteration error")
-                })
-                .map(f),
+            self.keyspace.range(lower..upper).map(Guard::key).map(f),
         ))
     }
 }

@@ -16,7 +16,10 @@ use crate::{
         tags::Tags,
         timestamps::Timestamps,
     },
-    error::Error,
+    error::{
+        Error,
+        Result,
+    },
     model::{
         event::{
             EventHashRef,
@@ -122,11 +125,11 @@ impl Indices {
 pub enum SequentialIterator<'a> {
     And(SequentialAndIterator<SequentialIterator<'a>, Position>),
     Or(SequentialOrIterator<SequentialIterator<'a>, Position>),
-    Owned(#[debug("OwnedSequentialIterator")] Box<dyn Iterator<Item = Position> + 'a>),
+    Owned(#[debug("OwnedSequentialIterator")] Box<dyn Iterator<Item = Result<Position>> + 'a>),
 }
 
 impl Iterator for SequentialIterator<'_> {
-    type Item = Position;
+    type Item = Result<Position>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -149,8 +152,8 @@ impl<'a> From<SequentialOrIterator<SequentialIterator<'a>, Position>> for Sequen
     }
 }
 
-impl<'a> From<Box<dyn Iterator<Item = Position> + 'a>> for SequentialIterator<'a> {
-    fn from(value: Box<dyn Iterator<Item = Position> + 'a>) -> Self {
+impl<'a> From<Box<dyn Iterator<Item = Result<Position>> + 'a>> for SequentialIterator<'a> {
+    fn from(value: Box<dyn Iterator<Item = Result<Position>> + 'a>) -> Self {
         Self::Owned(value)
     }
 }

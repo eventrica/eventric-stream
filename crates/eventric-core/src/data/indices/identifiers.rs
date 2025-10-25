@@ -93,7 +93,7 @@ impl Identifiers {
             .as_ref()
             .map_or(u8::MIN..u8::MAX, |r| r.start.value()..r.end.value());
 
-        let f = move |(key, value): (Slice, Slice)| {
+        let f = move |key: Slice, value: Slice| {
             if !version_range.contains(&value.as_ref().get_u8()) {
                 return None;
             }
@@ -113,22 +113,17 @@ impl Identifiers {
 
     fn query_specifier_prefix<F>(&self, identifier: &IdentifierHash, f: F) -> SequentialIterator<'_>
     where
-        F: Fn((Slice, Slice)) -> Option<Position> + 'static,
+        F: Fn(Slice, Slice) -> Option<Position> + 'static,
     {
         let hash = identifier.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
-        SequentialIterator::Owned(Box::new(
-            self.keyspace
-                .prefix(prefix)
-                .map(|guard| {
-                    guard
-                        .into_inner()
-                        .map_err(Error::from)
-                        .expect("query identifier prefix: iteration error")
-                })
-                .filter_map(f),
-        ))
+        SequentialIterator::Owned(Box::new(self.keyspace.prefix(prefix).filter_map(
+            move |guard| match guard.into_inner() {
+                Ok((key, value)) => f(key, value).map(Ok),
+                Err(err) => Some(Err(Error::from(err))),
+            },
+        )))
     }
 
     fn query_specifier_range<F>(
@@ -138,23 +133,18 @@ impl Identifiers {
         f: F,
     ) -> SequentialIterator<'_>
     where
-        F: Fn((Slice, Slice)) -> Option<Position> + 'static,
+        F: Fn(Slice, Slice) -> Option<Position> + 'static,
     {
         let hash = identifier.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(position, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
-        SequentialIterator::Owned(Box::new(
-            self.keyspace
-                .range(lower..upper)
-                .map(|guard| {
-                    guard
-                        .into_inner()
-                        .map_err(Error::from)
-                        .expect("query identifier range: iteration error")
-                })
-                .filter_map(f),
-        ))
+        SequentialIterator::Owned(Box::new(self.keyspace.range(lower..upper).filter_map(
+            move |guard| match guard.into_inner() {
+                Ok((key, value)) => f(key, value).map(Ok),
+                Err(err) => Some(Err(Error::from(err))),
+            },
+        )))
     }
 }
 

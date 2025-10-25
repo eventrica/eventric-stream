@@ -13,7 +13,10 @@ use fjall::{
 };
 
 use crate::{
-    error::Error,
+    error::{
+        Error,
+        Result,
+    },
     model::{
         event::{
             EventHashRef,
@@ -48,28 +51,21 @@ pub struct Events {
 }
 
 impl Events {
-    pub fn open(database: &Database) -> Self {
-        let keyspace = database
-            .keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())
-            .map_err(Error::from)
-            .expect("events keyspace open: database error");
+    pub fn open(database: &Database) -> Result<Self> {
+        let keyspace = database.keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?;
 
-        Self::new(keyspace)
+        Ok(Self::new(keyspace))
     }
 }
 
 // Get/Put
 
 impl Events {
-    pub fn get(&self, position: Position) -> Option<SequencedEventHash> {
+    pub fn get(&self, position: Position) -> Result<Option<SequencedEventHash>> {
         let key = position.value().to_be_bytes();
-        let value = self
-            .keyspace
-            .get(key)
-            .map_err(Error::from)
-            .expect("event get: database error");
+        let value = self.keyspace.get(key)?;
 
-        value.map(|value| SliceAndPosition(value, position).into())
+        Ok(value.map(|value| SliceAndPosition(value, position).into()))
     }
 
     pub fn put(
@@ -98,12 +94,10 @@ impl Events {
 
     fn iterate_all(&self) -> SequencedEventHashIterator<'_> {
         SequencedEventHashIterator {
-            iter: Box::new(
-                self.keyspace
-                    .iter()
-                    .map(|guard| guard.into_inner().expect("iteration error"))
-                    .map(|event| SliceAndPosition(event.1, event.0.into()).into()),
-            ),
+            iter: Box::new(self.keyspace.iter().map(|guard| match guard.into_inner() {
+                Ok((key, value)) => Ok(SliceAndPosition(value, key.into()).into()),
+                Err(err) => Err(Error::from(err)),
+            })),
         }
     }
 
@@ -112,8 +106,10 @@ impl Events {
             iter: Box::new(
                 self.keyspace
                     .range(position.value().to_be_bytes()..)
-                    .map(|guard| guard.into_inner().expect("iteration error"))
-                    .map(|event| SliceAndPosition(event.1, event.0.into()).into()),
+                    .map(|guard| match guard.into_inner() {
+                        Ok((key, value)) => Ok(SliceAndPosition(value, key.into()).into()),
+                        Err(err) => Err(Error::from(err)),
+                    }),
             ),
         }
     }
@@ -196,11 +192,11 @@ impl From<EventAndTimestamp<'_>> for Vec<u8> {
 #[derive(new, Debug)]
 pub struct SequencedEventHashIterator<'a> {
     #[debug("Iterator")]
-    iter: Box<dyn Iterator<Item = SequencedEventHash> + 'a>,
+    iter: Box<dyn Iterator<Item = Result<SequencedEventHash>> + 'a>,
 }
 
 impl Iterator for SequencedEventHashIterator<'_> {
-    type Item = SequencedEventHash;
+    type Item = Result<SequencedEventHash>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()

@@ -6,10 +6,13 @@ use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::Database;
 
-use crate::data::{
-    events::Events,
-    indices::Indices,
-    references::References,
+use crate::{
+    data::{
+        events::Events,
+        indices::Indices,
+        references::References,
+    },
+    error::Result,
 };
 
 // =================================================================================================
@@ -35,11 +38,11 @@ pub struct Data {
 }
 
 impl Data {
-    pub fn open(database: &Database) -> Self {
-        let events = Events::open(database);
+    pub fn open(database: &Database) -> Result<Self> {
+        let events = Events::open(database)?;
         let indices = Indices::open(database);
         let references = References::open(database);
 
-        Self::new(events, indices, references)
+        Ok(Self::new(events, indices, references))
     }
 }
