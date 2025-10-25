@@ -3,6 +3,7 @@
 #![allow(clippy::missing_panics_doc)]
 
 mod data;
+mod error;
 mod model;
 mod stream;
 mod util;

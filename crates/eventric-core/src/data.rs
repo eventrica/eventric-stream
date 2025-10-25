@@ -2,8 +2,6 @@ pub mod events;
 pub mod indices;
 pub mod references;
 
-use std::error::Error;
-
 use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::Database;
@@ -37,11 +35,11 @@ pub struct Data {
 }
 
 impl Data {
-    pub fn open(database: &Database) -> Result<Self, Box<dyn Error>> {
-        let events = Events::open(database)?;
-        let indices = Indices::open(database)?;
-        let references = References::open(database)?;
+    pub fn open(database: &Database) -> Self {
+        let events = Events::open(database);
+        let indices = Indices::open(database);
+        let references = References::open(database);
 
-        Ok(Self::new(events, indices, references))
+        Self::new(events, indices, references)
     }
 }

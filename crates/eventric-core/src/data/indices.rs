@@ -2,8 +2,6 @@ mod identifiers;
 mod tags;
 mod timestamps;
 
-use std::error::Error;
-
 use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::{
@@ -18,6 +16,7 @@ use crate::{
         tags::Tags,
         timestamps::Timestamps,
     },
+    error::Error,
     model::{
         event::{
             EventHashRef,
@@ -56,14 +55,17 @@ pub struct Indices {
 }
 
 impl Indices {
-    pub fn open(database: &Database) -> Result<Self, Box<dyn Error>> {
-        let keyspace = database.keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?;
+    pub fn open(database: &Database) -> Self {
+        let keyspace = database
+            .keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())
+            .map_err(Error::from)
+            .expect("indices keyspace open: database error");
 
         let identifiers = Identifiers::new(keyspace.clone());
         let tags = Tags::new(keyspace.clone());
         let timestamps = Timestamps::new(keyspace);
 
-        Ok(Self::new(identifiers, tags, timestamps))
+        Self::new(identifiers, tags, timestamps)
     }
 }
 

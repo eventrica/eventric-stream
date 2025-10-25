@@ -2,6 +2,7 @@ use fancy_constructor::new;
 use thiserror::Error;
 
 use crate::{
+    error::Error,
     model::{
         event::{
             Event,
@@ -49,7 +50,7 @@ impl Stream {
             self.position = self.position.increment();
         }
 
-        batch.commit()?;
+        batch.commit().map_err(Error::from)?;
 
         Ok(())
     }
@@ -90,6 +91,6 @@ impl AppendCondition<'_> {
 pub enum AppendError {
     #[error("Concurrency Error")]
     Concurrency,
-    #[error("Database IO Error")]
-    Database(#[from] fjall::Error),
+    #[error("Internal Error: {0}")]
+    Internal(#[from] Error),
 }

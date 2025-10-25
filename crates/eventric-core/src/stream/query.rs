@@ -13,6 +13,7 @@ use crate::{
         indices::SequentialIterator,
         references::References,
     },
+    error::Error,
     model::{
         event::{
             SequencedEvent,
@@ -52,7 +53,6 @@ impl Stream {
         options: Option<QueryOptions>,
     ) -> QueryIterator<'a> {
         let position = condition.position;
-
         let iter = match condition.query {
             Some(query) => {
                 let query_hash_ref: &QueryHashRef<'_> = &query.into();
@@ -77,10 +77,10 @@ impl Stream {
         query: &QueryHash,
         position: Option<Position>,
     ) -> QuerySequencedEventHashIterator<'_> {
-        QuerySequencedEventHashIterator::Mapped(QueryMappedSequencedEventHashIterator::new(
-            &self.data.events,
-            self.data.indices.query(query, position),
-        ))
+        let iter = self.data.indices.query(query, position);
+        let iter = QueryMappedSequencedEventHashIterator::new(&self.data.events, iter);
+
+        QuerySequencedEventHashIterator::Mapped(iter)
     }
 }
 
@@ -180,8 +180,10 @@ impl QueryIterator<'_> {
                 Arc::new(
                     self.references
                         .get_identifier(identifier.hash())
-                        .expect("identifier get error")
-                        .expect("identifier not found error"),
+                        .ok_or_else(|| {
+                            Error::Data(format!("identifier not found ({})", identifier.hash()))
+                        })
+                        .expect("get identifier: data error"),
                 )
             })
             .clone()
@@ -201,8 +203,10 @@ impl QueryIterator<'_> {
                         Arc::new(
                             self.references
                                 .get_tag(tag.hash())
-                                .expect("tag get error")
-                                .expect("tag not found error"),
+                                .ok_or_else(|| {
+                                    Error::Data(format!("tag not found ({})", tag.hash()))
+                                })
+                                .expect("get tag: data error"),
                         )
                     })
                     .clone(),
@@ -263,12 +267,9 @@ impl Iterator for QueryMappedSequencedEventHashIterator<'_> {
     type Item = SequencedEventHash;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|position| {
-            self.events
-                .get(position)
-                .expect("event get error")
-                .expect("event not found error")
-        })
+        self.iter
+            .next()
+            .map(|position| self.events.get(position).expect("event not found error"))
     }
 }
 

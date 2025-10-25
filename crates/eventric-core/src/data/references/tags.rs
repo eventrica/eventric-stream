@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use bytes::BufMut as _;
 use derive_more::Debug;
 use fancy_constructor::new;
@@ -13,6 +11,7 @@ use crate::{
         HASH_LEN,
         ID_LEN,
     },
+    error::Error,
     model::event::tag::{
         Tag,
         TagHashRef,
@@ -43,14 +42,20 @@ pub struct Tags {
 // Get/Put
 
 impl Tags {
-    pub fn get(&self, hash: u64) -> Result<Option<Tag>, Box<dyn Error>> {
+    pub fn get(&self, hash: u64) -> Option<Tag> {
         let key: [u8; KEY_LEN] = Hash(hash).into();
-        let value = self.keyspace.get(key)?;
-        let tag = value.map(|value| {
-            Tag::new(String::from_utf8(value.to_vec()).expect("invalid utf8 bytes error"))
-        });
+        let value = self
+            .keyspace
+            .get(key)
+            .map_err(Error::from)
+            .expect("tag get: database error");
 
-        Ok(tag)
+        value.map(|value| {
+            let bytes = value.to_vec();
+            let string = String::from_utf8(bytes).expect("tag string: utf8 error");
+
+            Tag::new(string)
+        })
     }
 
     pub fn put(&self, batch: &mut WriteBatch, tags: &[TagHashRef<'_>]) {

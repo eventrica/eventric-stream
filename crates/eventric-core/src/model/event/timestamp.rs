@@ -32,10 +32,10 @@ impl Timestamp {
     pub fn now() -> Self {
         let ns = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .expect("unix time error")
+            .expect("timestamp conversion: duration error")
             .as_nanos();
 
-        let ns = u64::try_from(ns).expect("unix time excession error");
+        let ns = u64::try_from(ns).expect("timestamp creation: duration range error");
 
         Self(ns)
     }

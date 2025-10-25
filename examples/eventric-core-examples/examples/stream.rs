@@ -19,7 +19,7 @@ use eventric_core::{
 static PATH: &str = "./temp";
 
 pub fn main() -> Result<(), Box<dyn Error>> {
-    let mut stream = Stream::builder(PATH).temporary(true).open()?;
+    let mut stream = Stream::builder(PATH).temporary(true).open();
 
     stream.append(
         [

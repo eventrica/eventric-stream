@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use bytes::{
     Buf as _,
     BufMut as _,
@@ -14,17 +12,20 @@ use fjall::{
     WriteBatch,
 };
 
-use crate::model::{
-    event::{
-        EventHashRef,
-        SequencedEventHash,
-        data::Data,
-        identifier::IdentifierHash,
-        tag::TagHash,
-        timestamp::Timestamp,
-        version::Version,
+use crate::{
+    error::Error,
+    model::{
+        event::{
+            EventHashRef,
+            SequencedEventHash,
+            data::Data,
+            identifier::IdentifierHash,
+            tag::TagHash,
+            timestamp::Timestamp,
+            version::Version,
+        },
+        stream::position::Position,
     },
-    stream::position::Position,
 };
 
 // =================================================================================================
@@ -47,22 +48,28 @@ pub struct Events {
 }
 
 impl Events {
-    pub fn open(database: &Database) -> Result<Self, Box<dyn Error>> {
-        let keyspace = database.keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?;
+    pub fn open(database: &Database) -> Self {
+        let keyspace = database
+            .keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())
+            .map_err(Error::from)
+            .expect("events keyspace open: database error");
 
-        Ok(Self::new(keyspace))
+        Self::new(keyspace)
     }
 }
 
 // Get/Put
 
 impl Events {
-    pub fn get(&self, position: Position) -> Result<Option<SequencedEventHash>, Box<dyn Error>> {
+    pub fn get(&self, position: Position) -> Option<SequencedEventHash> {
         let key = position.value().to_be_bytes();
-        let value = self.keyspace.get(key)?;
-        let event = value.map(|value| SliceAndPosition(value, position).into());
+        let value = self
+            .keyspace
+            .get(key)
+            .map_err(Error::from)
+            .expect("event get: database error");
 
-        Ok(event)
+        value.map(|value| SliceAndPosition(value, position).into())
     }
 
     pub fn put(
@@ -115,14 +122,19 @@ impl Events {
 // Properties
 
 impl Events {
-    pub fn is_empty(&self) -> Result<bool, Box<dyn Error>> {
-        self.len().map(|len| len == 0)
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
-    pub fn len(&self) -> Result<u64, Box<dyn Error>> {
-        match self.keyspace.last_key_value()? {
-            Some((key, _)) => Ok(key.as_ref().get_u64() + 1),
-            _ => Ok(0),
+    pub fn len(&self) -> u64 {
+        match self
+            .keyspace
+            .last_key_value()
+            .map_err(Error::from)
+            .expect("last key value: database error")
+        {
+            Some((key, _)) => key.as_ref().get_u64() + 1,
+            _ => 0,
         }
     }
 }

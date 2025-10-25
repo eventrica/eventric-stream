@@ -5,8 +5,6 @@ use bytes::{
 use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::{
-    Error,
-    Guard,
     Keyspace,
     Slice,
     WriteBatch,
@@ -19,6 +17,7 @@ use crate::{
         POSITION_LEN,
         indices::SequentialIterator,
     },
+    error::Error,
     model::{
         event::tag::{
             TagHash,
@@ -75,9 +74,7 @@ impl Tags {
     }
 
     fn query_tag(&self, tag: &TagHash, position: Option<Position>) -> SequentialIterator<'_> {
-        let map = |key: Result<Slice, Error>| {
-            let key = key.expect("iteration key error");
-
+        let map = |key: Slice| {
             let mut key = &key[..];
 
             key.advance(ID_LEN + HASH_LEN);
@@ -91,33 +88,44 @@ impl Tags {
         }
     }
 
-    fn query_tag_prefix<M>(&self, tag: &TagHash, map: M) -> SequentialIterator<'_>
+    fn query_tag_prefix<F>(&self, tag: &TagHash, f: F) -> SequentialIterator<'_>
     where
-        M: Fn(Result<Slice, Error>) -> Position + 'static,
+        F: Fn(Slice) -> Position + 'static,
     {
         let hash = tag.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
         SequentialIterator::Owned(Box::new(
-            self.keyspace.prefix(prefix).map(Guard::key).map(map),
+            self.keyspace
+                .prefix(prefix)
+                .map(|guard| {
+                    guard
+                        .key()
+                        .map_err(Error::from)
+                        .expect("query tag prefix: iteration error")
+                })
+                .map(f),
         ))
     }
 
-    fn query_tag_range<M>(
-        &self,
-        tag: &TagHash,
-        position: Position,
-        map: M,
-    ) -> SequentialIterator<'_>
+    fn query_tag_range<F>(&self, tag: &TagHash, position: Position, f: F) -> SequentialIterator<'_>
     where
-        M: Fn(Result<Slice, Error>) -> Position + 'static,
+        F: Fn(Slice) -> Position + 'static,
     {
         let hash = tag.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(position, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
         SequentialIterator::Owned(Box::new(
-            self.keyspace.range(lower..upper).map(Guard::key).map(map),
+            self.keyspace
+                .range(lower..upper)
+                .map(|guard| {
+                    guard
+                        .key()
+                        .map_err(Error::from)
+                        .expect("query tag range: iteration error")
+                })
+                .map(f),
         ))
     }
 }
