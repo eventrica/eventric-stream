@@ -26,7 +26,7 @@ use crate::{
         },
         stream::position::Position,
     },
-    util::iter::SequentialAndIterator,
+    util::iter::and::SequentialAndIterator,
 };
 
 // =================================================================================================
@@ -99,7 +99,7 @@ impl Tags {
         let hash = tag.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
-        SequentialIterator::Owned(Box::new(
+        SequentialIterator::Boxed(Box::new(
             self.keyspace.prefix(prefix).map(Guard::key).map(f),
         ))
     }
@@ -112,7 +112,7 @@ impl Tags {
         let lower: [u8; KEY_LEN] = PositionAndHash(position, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
-        SequentialIterator::Owned(Box::new(
+        SequentialIterator::Boxed(Box::new(
             self.keyspace.range(lower..upper).map(Guard::key).map(f),
         ))
     }

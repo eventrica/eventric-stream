@@ -1,5 +1,3 @@
-use std::result;
-
 use thiserror::Error;
 
 // =================================================================================================
@@ -33,7 +31,3 @@ impl PartialEq for Error {
         false
     }
 }
-
-// Result
-
-pub type Result<T> = result::Result<T, Error>;

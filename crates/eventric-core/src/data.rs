@@ -12,7 +12,7 @@ use crate::{
         indices::Indices,
         references::References,
     },
-    error::Result,
+    error::Error,
 };
 
 // =================================================================================================
@@ -38,7 +38,7 @@ pub struct Data {
 }
 
 impl Data {
-    pub fn open(database: &Database) -> Result<Self> {
+    pub fn open(database: &Database) -> Result<Self, Error> {
         let events = Events::open(database)?;
         let indices = Indices::open(database)?;
         let references = References::open(database)?;

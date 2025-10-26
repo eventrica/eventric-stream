@@ -16,7 +16,7 @@ use crate::{
         tags::Tags,
         timestamps::Timestamps,
     },
-    error::Result,
+    error::Error,
     model::{
         event::{
             EventHashRef,
@@ -29,8 +29,8 @@ use crate::{
         stream::position::Position,
     },
     util::iter::{
-        SequentialAndIterator,
-        SequentialOrIterator,
+        and::SequentialAndIterator,
+        or::SequentialOrIterator,
     },
 };
 
@@ -55,7 +55,7 @@ pub struct Indices {
 }
 
 impl Indices {
-    pub fn open(database: &Database) -> Result<Self> {
+    pub fn open(database: &Database) -> Result<Self, Error> {
         let keyspace = database.keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?;
 
         let identifiers = Identifiers::new(keyspace.clone());
@@ -116,20 +116,21 @@ impl Indices {
 // Sequential Iterator
 
 #[derive(Debug)]
+#[rustfmt::skip]
 pub enum SequentialIterator<'a> {
     And(SequentialAndIterator<SequentialIterator<'a>, Position>),
     Or(SequentialOrIterator<SequentialIterator<'a>, Position>),
-    Owned(#[debug("OwnedSequentialIterator")] Box<dyn Iterator<Item = Result<Position>> + 'a>),
+    Boxed(#[debug("BoxedIterator")] Box<dyn Iterator<Item = Result<Position, Error>> + 'a>),
 }
 
 impl Iterator for SequentialIterator<'_> {
-    type Item = Result<Position>;
+    type Item = Result<Position, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
             Self::And(iterator) => iterator.next(),
             Self::Or(iterator) => iterator.next(),
-            Self::Owned(iterator) => iterator.next(),
+            Self::Boxed(iterator) => iterator.next(),
         }
     }
 }
@@ -146,8 +147,8 @@ impl<'a> From<SequentialOrIterator<SequentialIterator<'a>, Position>> for Sequen
     }
 }
 
-impl<'a> From<Box<dyn Iterator<Item = Result<Position>> + 'a>> for SequentialIterator<'a> {
-    fn from(iter: Box<dyn Iterator<Item = Result<Position>> + 'a>) -> Self {
-        Self::Owned(iter)
+impl<'a> From<Box<dyn Iterator<Item = Result<Position, Error>> + 'a>> for SequentialIterator<'a> {
+    fn from(iter: Box<dyn Iterator<Item = Result<Position, Error>> + 'a>) -> Self {
+        Self::Boxed(iter)
     }
 }

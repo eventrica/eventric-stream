@@ -13,10 +13,7 @@ use fjall::{
 };
 
 use crate::{
-    error::{
-        Error,
-        Result,
-    },
+    error::Error,
     model::{
         event::{
             EventHashRef,
@@ -51,7 +48,7 @@ pub struct Events {
 }
 
 impl Events {
-    pub fn open(database: &Database) -> Result<Self> {
+    pub fn open(database: &Database) -> Result<Self, Error> {
         let keyspace = database.keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?;
 
         Ok(Self::new(keyspace))
@@ -61,7 +58,7 @@ impl Events {
 // Get/Put
 
 impl Events {
-    pub fn get(&self, position: Position) -> Result<Option<SequencedEventHash>> {
+    pub fn get(&self, position: Position) -> Result<Option<SequencedEventHash>, Error> {
         let key = position.value().to_be_bytes();
         let value = self.keyspace.get(key)?;
 
@@ -118,11 +115,11 @@ impl Events {
 // Properties
 
 impl Events {
-    pub fn is_empty(&self) -> Result<bool> {
+    pub fn is_empty(&self) -> Result<bool, Error> {
         self.len().map(|len| len == 0)
     }
 
-    pub fn len(&self) -> Result<u64> {
+    pub fn len(&self) -> Result<u64, Error> {
         match self.keyspace.last_key_value()? {
             Some((key, _)) => Ok(key.as_ref().get_u64() + 1),
             _ => Ok(0),
@@ -187,11 +184,11 @@ impl From<EventAndTimestamp<'_>> for Vec<u8> {
 #[derive(new, Debug)]
 pub struct SequencedEventHashIterator<'a> {
     #[debug("Iterator")]
-    iter: Box<dyn Iterator<Item = Result<SequencedEventHash>> + 'a>,
+    iter: Box<dyn Iterator<Item = Result<SequencedEventHash, Error>> + 'a>,
 }
 
 impl Iterator for SequencedEventHashIterator<'_> {
-    type Item = Result<SequencedEventHash>;
+    type Item = Result<SequencedEventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()

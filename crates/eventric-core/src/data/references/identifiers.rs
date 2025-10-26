@@ -11,10 +11,7 @@ use crate::{
         HASH_LEN,
         ID_LEN,
     },
-    error::{
-        Error,
-        Result,
-    },
+    error::Error,
     model::event::identifier::{
         Identifier,
         IdentifierHashRef,
@@ -46,7 +43,7 @@ pub struct Identifiers {
 
 impl Identifiers {
     #[rustfmt::skip]
-    pub fn get(&self, hash: u64) -> Result<Option<Identifier>> {
+    pub fn get(&self, hash: u64) -> Result<Option<Identifier>, Error> {
         let key: [u8; KEY_LEN] = Hash(hash).into();
 
         match self.keyspace.get(key)? {

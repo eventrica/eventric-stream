@@ -15,10 +15,7 @@ mod util;
 // Re-Exports
 
 pub use self::{
-    error::{
-        Error,
-        Result,
-    },
+    error::Error,
     model::{
         event::{
             Event,

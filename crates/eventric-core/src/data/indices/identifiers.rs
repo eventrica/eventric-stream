@@ -29,7 +29,7 @@ use crate::{
         query::specifier::SpecifierHash,
         stream::position::Position,
     },
-    util::iter::SequentialOrIterator,
+    util::iter::or::SequentialOrIterator,
 };
 
 // =================================================================================================
@@ -118,7 +118,7 @@ impl Identifiers {
         let hash = identifier.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
-        SequentialIterator::Owned(Box::new(self.keyspace.prefix(prefix).filter_map(
+        SequentialIterator::Boxed(Box::new(self.keyspace.prefix(prefix).filter_map(
             move |guard| match guard.into_inner() {
                 Ok((key, value)) => f(key, value).map(Ok),
                 Err(err) => Some(Err(Error::from(err))),
@@ -139,7 +139,7 @@ impl Identifiers {
         let lower: [u8; KEY_LEN] = PositionAndHash(position, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
-        SequentialIterator::Owned(Box::new(self.keyspace.range(lower..upper).filter_map(
+        SequentialIterator::Boxed(Box::new(self.keyspace.range(lower..upper).filter_map(
             move |guard| match guard.into_inner() {
                 Ok((key, value)) => f(key, value).map(Ok),
                 Err(err) => Some(Err(Error::from(err))),

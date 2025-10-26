@@ -13,10 +13,7 @@ use crate::{
         indices::SequentialIterator,
         references::References,
     },
-    error::{
-        Error,
-        Result,
-    },
+    error::Error,
     model::{
         event::{
             SequencedEvent,
@@ -176,7 +173,7 @@ pub struct QueryIterator<'a> {
 }
 
 impl QueryIterator<'_> {
-    fn get_identifier(&self, identifier: &IdentifierHash) -> Result<Arc<Identifier>> {
+    fn get_identifier(&self, identifier: &IdentifierHash) -> Result<Arc<Identifier>, Error> {
         self.cache
             .identifiers
             .entry(identifier.hash())
@@ -184,7 +181,7 @@ impl QueryIterator<'_> {
             .map(|entry| entry.value().clone())
     }
 
-    fn get_identifier_from_references(&self, hash: u64) -> Result<Arc<Identifier>> {
+    fn get_identifier_from_references(&self, hash: u64) -> Result<Arc<Identifier>, Error> {
         self.references.get_identifier(hash).and_then(|identifier| {
             identifier
                 .ok_or_else(|| Error::data(format!("identifier not found: {hash}")))
@@ -192,11 +189,11 @@ impl QueryIterator<'_> {
         })
     }
 
-    fn get_tags(&self, tags: &[TagHash]) -> Result<Vec<Arc<Tag>>> {
+    fn get_tags(&self, tags: &[TagHash]) -> Result<Vec<Arc<Tag>>, Error> {
         tags.iter().filter_map(|tag| self.get_tag(tag)).collect()
     }
 
-    fn get_tag(&self, tag: &TagHash) -> Option<Result<Arc<Tag>>> {
+    fn get_tag(&self, tag: &TagHash) -> Option<Result<Arc<Tag>, Error>> {
         match &self.options {
             Some(options) if options.retrieve_tags => Some(
                 self.cache
@@ -213,7 +210,7 @@ impl QueryIterator<'_> {
         }
     }
 
-    fn get_tag_from_references(&self, hash: u64) -> Result<Arc<Tag>> {
+    fn get_tag_from_references(&self, hash: u64) -> Result<Arc<Tag>, Error> {
         self.references.get_tag(hash).and_then(|tag| {
             tag.ok_or_else(|| Error::data(format!("tag not found: {hash}")))
                 .map(Arc::new)
@@ -222,7 +219,7 @@ impl QueryIterator<'_> {
 }
 
 impl Iterator for QueryIterator<'_> {
-    type Item = Result<SequencedEvent>;
+    type Item = Result<SequencedEvent, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
@@ -254,7 +251,7 @@ enum QuerySequencedEventHashIterator<'a> {
 }
 
 impl Iterator for QuerySequencedEventHashIterator<'_> {
-    type Item = Result<SequencedEventHash>;
+    type Item = Result<SequencedEventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -274,7 +271,7 @@ struct QueryMappedSequencedEventHashIterator<'a> {
 }
 
 impl Iterator for QueryMappedSequencedEventHashIterator<'_> {
-    type Item = Result<SequencedEventHash>;
+    type Item = Result<SequencedEventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
