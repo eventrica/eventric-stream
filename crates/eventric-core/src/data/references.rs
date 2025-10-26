@@ -14,7 +14,7 @@ use crate::{
         identifiers::Identifiers,
         tags::Tags,
     },
-    error::Error,
+    error::Result,
     model::event::{
         EventHashRef,
         identifier::Identifier,
@@ -42,27 +42,24 @@ pub struct References {
 }
 
 impl References {
-    pub fn open(database: &Database) -> Self {
-        let keyspace = database
-            .keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())
-            .map_err(Error::from)
-            .expect("references keyspace open: database error");
+    pub fn open(database: &Database) -> Result<Self> {
+        let keyspace = database.keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?;
 
         let identifiers = Identifiers::new(keyspace.clone());
         let tags = Tags::new(keyspace);
 
-        Self::new(identifiers, tags)
+        Ok(Self::new(identifiers, tags))
     }
 }
 
 // Get/Put
 
 impl References {
-    pub fn get_identifier(&self, hash: u64) -> Option<Identifier> {
+    pub fn get_identifier(&self, hash: u64) -> Result<Option<Identifier>> {
         self.identifiers.get(hash)
     }
 
-    pub fn get_tag(&self, hash: u64) -> Option<Tag> {
+    pub fn get_tag(&self, hash: u64) -> Result<Option<Tag>> {
         self.tags.get(hash)
     }
 

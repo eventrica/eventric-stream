@@ -16,10 +16,7 @@ use crate::{
         tags::Tags,
         timestamps::Timestamps,
     },
-    error::{
-        Error,
-        Result,
-    },
+    error::Result,
     model::{
         event::{
             EventHashRef,
@@ -58,17 +55,14 @@ pub struct Indices {
 }
 
 impl Indices {
-    pub fn open(database: &Database) -> Self {
-        let keyspace = database
-            .keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())
-            .map_err(Error::from)
-            .expect("indices keyspace open: database error");
+    pub fn open(database: &Database) -> Result<Self> {
+        let keyspace = database.keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?;
 
         let identifiers = Identifiers::new(keyspace.clone());
         let tags = Tags::new(keyspace.clone());
         let timestamps = Timestamps::new(keyspace);
 
-        Self::new(identifiers, tags, timestamps)
+        Ok(Self::new(identifiers, tags, timestamps))
     }
 }
 

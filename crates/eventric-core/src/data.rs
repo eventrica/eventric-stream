@@ -40,8 +40,8 @@ pub struct Data {
 impl Data {
     pub fn open(database: &Database) -> Result<Self> {
         let events = Events::open(database)?;
-        let indices = Indices::open(database);
-        let references = References::open(database);
+        let indices = Indices::open(database)?;
+        let references = References::open(database)?;
 
         Ok(Self::new(events, indices, references))
     }

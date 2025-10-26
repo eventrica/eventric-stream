@@ -175,51 +175,48 @@ pub struct QueryIterator<'a> {
 }
 
 impl QueryIterator<'_> {
-    fn get_identifier(&self, identifier: &IdentifierHash) -> Arc<Identifier> {
+    fn get_identifier(&self, identifier: &IdentifierHash) -> Result<Arc<Identifier>> {
         self.cache
             .identifiers
             .entry(identifier.hash())
-            .or_insert_with(|| {
-                Arc::new(
-                    self.references
-                        .get_identifier(identifier.hash())
-                        .ok_or_else(|| {
-                            Error::Data(format!("identifier not found ({})", identifier.hash()))
-                        })
-                        .expect("get identifier: data error"),
-                )
-            })
-            .clone()
+            .or_try_insert_with(|| self.get_identifier_from_references(identifier.hash()))
+            .map(|entry| entry.value().clone())
     }
 
-    fn get_tags(&self, tags: &[TagHash]) -> Vec<Arc<Tag>> {
+    fn get_identifier_from_references(&self, hash: u64) -> Result<Arc<Identifier>> {
+        self.references.get_identifier(hash).and_then(|identifier| {
+            identifier
+                .ok_or_else(|| Error::data(format!("identifier not found: {hash}")))
+                .map(Arc::new)
+        })
+    }
+
+    fn get_tags(&self, tags: &[TagHash]) -> Result<Vec<Arc<Tag>>> {
         tags.iter().filter_map(|tag| self.get_tag(tag)).collect()
     }
 
-    fn get_tag(&self, tag: &TagHash) -> Option<Arc<Tag>> {
+    fn get_tag(&self, tag: &TagHash) -> Option<Result<Arc<Tag>>> {
         match &self.options {
             Some(options) if options.retrieve_tags => Some(
                 self.cache
                     .tags
                     .entry(tag.hash())
-                    .or_insert_with(|| {
-                        Arc::new(
-                            self.references
-                                .get_tag(tag.hash())
-                                .ok_or_else(|| {
-                                    Error::Data(format!("tag not found ({})", tag.hash()))
-                                })
-                                .expect("get tag: data error"),
-                        )
-                    })
-                    .clone(),
+                    .or_try_insert_with(|| self.get_tag_from_references(tag.hash()))
+                    .map(|entry| entry.value().clone()),
             ),
             _ => self
                 .cache
                 .tags
                 .get(&tag.hash())
-                .map(|key_value| key_value.value().clone()),
+                .map(|key_value| Ok(key_value.value().clone())),
         }
+    }
+
+    fn get_tag_from_references(&self, hash: u64) -> Result<Arc<Tag>> {
+        self.references.get_tag(hash).and_then(|tag| {
+            tag.ok_or_else(|| Error::data(format!("tag not found: {hash}")))
+                .map(Arc::new)
+        })
     }
 }
 
@@ -231,12 +228,15 @@ impl Iterator for QueryIterator<'_> {
             Some(Ok(event)) => {
                 let (data, identifier, position, tags, timestamp, version) = event.take();
 
-                let identifier = self.get_identifier(&identifier);
-                let tags = self.get_tags(&tags);
-
-                Some(Ok(SequencedEvent::new(
-                    data, identifier, position, tags, timestamp, version,
-                )))
+                match self.get_identifier(&identifier) {
+                    Ok(identifier) => match self.get_tags(&tags) {
+                        Ok(tags) => Some(Ok(SequencedEvent::new(
+                            data, identifier, position, tags, timestamp, version,
+                        ))),
+                        Err(err) => Some(Err(err)),
+                    },
+                    Err(err) => Some(Err(err)),
+                }
             }
             Some(Err(err)) => Some(Err(err)),
             None => None,

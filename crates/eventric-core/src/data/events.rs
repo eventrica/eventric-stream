@@ -118,19 +118,14 @@ impl Events {
 // Properties
 
 impl Events {
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
+    pub fn is_empty(&self) -> Result<bool> {
+        self.len().map(|len| len == 0)
     }
 
-    pub fn len(&self) -> u64 {
-        match self
-            .keyspace
-            .last_key_value()
-            .map_err(Error::from)
-            .expect("last key value: database error")
-        {
-            Some((key, _)) => key.as_ref().get_u64() + 1,
-            _ => 0,
+    pub fn len(&self) -> Result<u64> {
+        match self.keyspace.last_key_value()? {
+            Some((key, _)) => Ok(key.as_ref().get_u64() + 1),
+            _ => Ok(0),
         }
     }
 }
