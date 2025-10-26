@@ -16,18 +16,25 @@ pub enum Error {
 
 impl Error {
     #[allow(dead_code)]
-    pub(crate) fn data(message: impl Into<String>) -> Self {
+    pub(crate) fn data<M>(message: M) -> Self
+    where
+        M: Into<String>,
+    {
         Self::Data(message.into())
     }
 
     #[allow(dead_code)]
-    pub(crate) fn internal(message: impl Into<String>) -> Self {
+    pub(crate) fn internal<M>(message: M) -> Self
+    where
+        M: Into<String>,
+    {
         Self::Internal(message.into())
     }
 }
 
+#[cfg(test)]
 impl PartialEq for Error {
     fn eq(&self, _other: &Self) -> bool {
-        false
+        unreachable!("only used for test trait compliance")
     }
 }
