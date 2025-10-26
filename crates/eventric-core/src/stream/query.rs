@@ -55,15 +55,16 @@ impl Stream {
         cache: &'a QueryCache,
         options: Option<QueryOptions>,
     ) -> QueryIterator<'a> {
-        let position = condition.position;
-        let iter = match condition.query {
+        let position = condition.from;
+        let iter = match condition.matches {
             Some(query) => {
-                let query_hash_ref: &QueryHashRef<'_> = &query.into();
-                let query_hash: &QueryHash = &query_hash_ref.into();
+                let query = query.into();
 
-                cache.populate(query_hash_ref);
+                cache.populate(&query);
 
-                self.query_indices(query_hash, position)
+                let query = query.into();
+
+                self.query_indices(&query, position)
             }
             None => self.query_events(position),
         };
@@ -80,10 +81,10 @@ impl Stream {
         query: &QueryHash,
         position: Option<Position>,
     ) -> QuerySequencedEventHashIterator<'_> {
-        let iter = self.data.indices.query(query, position);
-        let iter = QueryMappedSequencedEventHashIterator::new(&self.data.events, iter);
-
-        QuerySequencedEventHashIterator::Mapped(iter)
+        QuerySequencedEventHashIterator::Mapped(QueryMappedSequencedEventHashIterator::new(
+            &self.data.events,
+            self.data.indices.query(query, position),
+        ))
     }
 }
 
@@ -136,21 +137,21 @@ impl QueryCache {
 #[new(vis())]
 pub struct QueryCondition<'a> {
     #[new(default)]
-    pub(crate) query: Option<&'a Query>,
+    pub(crate) matches: Option<&'a Query>,
     #[new(default)]
-    pub(crate) position: Option<Position>,
+    pub(crate) from: Option<Position>,
 }
 
 impl<'a> QueryCondition<'a> {
     #[must_use]
-    pub fn query(mut self, query: &'a Query) -> Self {
-        self.query = Some(query);
+    pub fn matches(mut self, query: &'a Query) -> Self {
+        self.matches = Some(query);
         self
     }
 
     #[must_use]
-    pub fn position(mut self, position: Position) -> Self {
-        self.position = Some(position);
+    pub fn from(mut self, position: Position) -> Self {
+        self.from = Some(position);
         self
     }
 }

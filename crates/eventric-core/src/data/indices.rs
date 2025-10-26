@@ -135,19 +135,19 @@ impl Iterator for SequentialIterator<'_> {
 }
 
 impl<'a> From<SequentialAndIterator<SequentialIterator<'a>, Position>> for SequentialIterator<'a> {
-    fn from(value: SequentialAndIterator<SequentialIterator<'a>, Position>) -> Self {
-        Self::And(value)
+    fn from(iter: SequentialAndIterator<SequentialIterator<'a>, Position>) -> Self {
+        Self::And(iter)
     }
 }
 
 impl<'a> From<SequentialOrIterator<SequentialIterator<'a>, Position>> for SequentialIterator<'a> {
-    fn from(value: SequentialOrIterator<SequentialIterator<'a>, Position>) -> Self {
-        Self::Or(value)
+    fn from(iter: SequentialOrIterator<SequentialIterator<'a>, Position>) -> Self {
+        Self::Or(iter)
     }
 }
 
 impl<'a> From<Box<dyn Iterator<Item = Result<Position>> + 'a>> for SequentialIterator<'a> {
-    fn from(value: Box<dyn Iterator<Item = Result<Position>> + 'a>) -> Self {
-        Self::Owned(value)
+    fn from(iter: Box<dyn Iterator<Item = Result<Position>> + 'a>) -> Self {
+        Self::Owned(iter)
     }
 }

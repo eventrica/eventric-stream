@@ -60,8 +60,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     )]));
 
     let condition = QueryCondition::default()
-        .query(&query)
-        .position(Position::new(0));
+        .matches(&query)
+        .from(Position::new(0));
 
     let cache = QueryCache::default();
     let options = QueryOptions::default().retrieve_tags(false);

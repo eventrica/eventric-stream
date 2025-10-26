@@ -78,8 +78,8 @@ where
     I: Iterator<Item = Result<T>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
-    fn from(value: S) -> Self {
-        CachingIterators::new(value)
+    fn from(iterators: S) -> Self {
+        CachingIterators::new(iterators)
     }
 }
 
@@ -388,20 +388,20 @@ mod test {
     }
 
     impl From<SequentialAndIterator<TestIterator, u64>> for TestIterator {
-        fn from(value: SequentialAndIterator<TestIterator, u64>) -> Self {
-            Self::And(value)
+        fn from(iter: SequentialAndIterator<TestIterator, u64>) -> Self {
+            Self::And(iter)
         }
     }
 
     impl From<SequentialOrIterator<TestIterator, u64>> for TestIterator {
-        fn from(value: SequentialOrIterator<TestIterator, u64>) -> Self {
-            Self::Or(value)
+        fn from(iter: SequentialOrIterator<TestIterator, u64>) -> Self {
+            Self::Or(iter)
         }
     }
 
     impl From<Vec<u64>> for TestIterator {
-        fn from(value: Vec<u64>) -> Self {
-            Self::Vec(0, value)
+        fn from(vec: Vec<u64>) -> Self {
+            Self::Vec(0, vec)
         }
     }
 

@@ -36,8 +36,8 @@ impl Query {
 }
 
 impl From<Query> for Vec<QueryItem> {
-    fn from(value: Query) -> Self {
-        value.items
+    fn from(query: Query) -> Self {
+        query.items
     }
 }
 
@@ -54,9 +54,21 @@ impl QueryHash {
     }
 }
 
+impl From<Query> for QueryHash {
+    fn from(query: Query) -> Self {
+        (&query).into()
+    }
+}
+
 impl From<&Query> for QueryHash {
-    fn from(value: &Query) -> Self {
-        Self::new(value.items().iter().map(Into::into).collect::<Vec<_>>())
+    fn from(query: &Query) -> Self {
+        Self::new(query.items().iter().map(Into::into).collect::<Vec<_>>())
+    }
+}
+
+impl From<QueryHashRef<'_>> for QueryHash {
+    fn from(query: QueryHashRef<'_>) -> Self {
+        (&query).into()
     }
 }
 
@@ -80,8 +92,8 @@ impl QueryHashRef<'_> {
 }
 
 impl<'a> From<&'a Query> for QueryHashRef<'a> {
-    fn from(value: &'a Query) -> Self {
-        Self::new(value.items().iter().map(Into::into).collect::<Vec<_>>())
+    fn from(query: &'a Query) -> Self {
+        Self::new(query.items().iter().map(Into::into).collect::<Vec<_>>())
     }
 }
 
@@ -104,8 +116,8 @@ pub enum QueryItemHash {
 }
 
 impl From<&QueryItem> for QueryItemHash {
-    fn from(value: &QueryItem) -> Self {
-        match value {
+    fn from(item: &QueryItem) -> Self {
+        match item {
             QueryItem::Specifiers(specifiers) => {
                 Self::Specifiers(specifiers.iter().map(Into::into).collect())
             }
@@ -119,8 +131,8 @@ impl From<&QueryItem> for QueryItemHash {
 }
 
 impl From<&QueryItemHashRef<'_>> for QueryItemHash {
-    fn from(value: &QueryItemHashRef<'_>) -> Self {
-        match value {
+    fn from(item: &QueryItemHashRef<'_>) -> Self {
+        match item {
             QueryItemHashRef::Specifiers(specifiers) => {
                 Self::Specifiers(specifiers.iter().map(Into::into).collect())
             }
@@ -141,8 +153,8 @@ pub enum QueryItemHashRef<'a> {
 }
 
 impl<'a> From<&'a QueryItem> for QueryItemHashRef<'a> {
-    fn from(value: &'a QueryItem) -> Self {
-        match value {
+    fn from(item: &'a QueryItem) -> Self {
+        match item {
             QueryItem::Specifiers(specs) => {
                 Self::Specifiers(specs.iter().map(Into::into).collect())
             }

@@ -135,8 +135,8 @@ impl Events {
 // Conversions
 
 impl From<Slice> for Position {
-    fn from(value: Slice) -> Self {
-        Self::new(value.as_ref().get_u64())
+    fn from(slice: Slice) -> Self {
+        Self::new(slice.as_ref().get_u64())
     }
 }
 

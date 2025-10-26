@@ -19,7 +19,6 @@ use crate::{
 // =================================================================================================
 
 impl Stream {
-    #[rustfmt::skip]
     pub fn append<'a, E>(
         &mut self,
         events: E,
@@ -29,14 +28,35 @@ impl Stream {
         E: IntoIterator<Item = &'a Event>,
     {
         if let Some(condition) = condition {
-            let query_hash = &condition.query.into();
-            let position = condition.position;
-
-            if self.data.indices.contains(query_hash, position) {
-                return Err(AppendError::Concurrency);
-            }
+            self.append_check(condition)?;
         }
 
+        self.append_put(events)?;
+
+        Ok(())
+    }
+
+    #[rustfmt::skip]
+    fn append_check(&self, condition: &AppendCondition<'_>) -> Result<(), AppendError> {
+        if let Some(after) = condition.after && after >= self.position {
+            return Ok(());
+        }
+
+        let query = condition.fail_if_matches.into();
+        let position = condition.after.map(Position::increment);
+
+        if self.data.indices.contains(&query, position) {
+            return Err(AppendError::Concurrency);
+        }
+
+        Ok(())
+    }
+
+    #[rustfmt::skip]
+    fn append_put<'a, E>(&mut self, events: E) -> Result<(), Error>
+    where
+        E: IntoIterator<Item = &'a Event>,
+    {
         let mut batch = self.database.batch();
 
         for event in events {
@@ -63,22 +83,22 @@ impl Stream {
 #[derive(new, Debug)]
 #[new(name(inner), vis())]
 pub struct AppendCondition<'a> {
-    pub(crate) query: &'a Query,
     #[new(default)]
-    pub(crate) position: Option<Position>,
+    pub(crate) after: Option<Position>,
+    pub(crate) fail_if_matches: &'a Query,
 }
 
 impl<'a> AppendCondition<'a> {
     #[must_use]
-    pub fn new(query: &'a Query) -> Self {
-        Self::inner(query)
+    pub fn new(fail_if_matches: &'a Query) -> Self {
+        Self::inner(fail_if_matches)
     }
 }
 
 impl AppendCondition<'_> {
     #[must_use]
-    pub fn position(mut self, position: Position) -> Self {
-        self.position = Some(position);
+    pub fn after(mut self, after: Position) -> Self {
+        self.after = Some(after);
         self
     }
 }
