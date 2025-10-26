@@ -2,16 +2,17 @@ pub mod events;
 pub mod indices;
 pub mod references;
 
-use std::error::Error;
-
 use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::Database;
 
-use crate::data::{
-    events::Events,
-    indices::Indices,
-    references::References,
+use crate::{
+    data::{
+        events::Events,
+        indices::Indices,
+        references::References,
+    },
+    error::Result,
 };
 
 // =================================================================================================
@@ -37,7 +38,7 @@ pub struct Data {
 }
 
 impl Data {
-    pub fn open(database: &Database) -> Result<Self, Box<dyn Error>> {
+    pub fn open(database: &Database) -> Result<Self> {
         let events = Events::open(database)?;
         let indices = Indices::open(database)?;
         let references = References::open(database)?;

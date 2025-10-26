@@ -2,8 +2,6 @@ mod identifiers;
 mod tags;
 mod timestamps;
 
-use std::error::Error;
-
 use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::{
@@ -18,6 +16,7 @@ use crate::{
         tags::Tags,
         timestamps::Timestamps,
     },
+    error::Result,
     model::{
         event::{
             EventHashRef,
@@ -56,7 +55,7 @@ pub struct Indices {
 }
 
 impl Indices {
-    pub fn open(database: &Database) -> Result<Self, Box<dyn Error>> {
+    pub fn open(database: &Database) -> Result<Self> {
         let keyspace = database.keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?;
 
         let identifiers = Identifiers::new(keyspace.clone());
@@ -120,11 +119,11 @@ impl Indices {
 pub enum SequentialIterator<'a> {
     And(SequentialAndIterator<SequentialIterator<'a>, Position>),
     Or(SequentialOrIterator<SequentialIterator<'a>, Position>),
-    Owned(#[debug("OwnedSequentialIterator")] Box<dyn Iterator<Item = Position> + 'a>),
+    Owned(#[debug("OwnedSequentialIterator")] Box<dyn Iterator<Item = Result<Position>> + 'a>),
 }
 
 impl Iterator for SequentialIterator<'_> {
-    type Item = Position;
+    type Item = Result<Position>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -147,8 +146,8 @@ impl<'a> From<SequentialOrIterator<SequentialIterator<'a>, Position>> for Sequen
     }
 }
 
-impl<'a> From<Box<dyn Iterator<Item = Position> + 'a>> for SequentialIterator<'a> {
-    fn from(value: Box<dyn Iterator<Item = Position> + 'a>) -> Self {
+impl<'a> From<Box<dyn Iterator<Item = Result<Position>> + 'a>> for SequentialIterator<'a> {
+    fn from(value: Box<dyn Iterator<Item = Result<Position>> + 'a>) -> Self {
         Self::Owned(value)
     }
 }

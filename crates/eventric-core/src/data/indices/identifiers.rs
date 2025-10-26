@@ -5,8 +5,6 @@ use bytes::{
 use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::{
-    Error,
-    Guard,
     Keyspace,
     Slice,
     WriteBatch,
@@ -19,9 +17,13 @@ use crate::{
         POSITION_LEN,
         indices::SequentialIterator,
     },
+    error::Error,
     model::{
         event::{
-            identifier::IdentifierHashRef,
+            identifier::{
+                IdentifierHash,
+                IdentifierHashRef,
+            },
             version::Version,
         },
         query::specifier::SpecifierHash,
@@ -91,9 +93,7 @@ impl Identifiers {
             .as_ref()
             .map_or(u8::MIN..u8::MAX, |r| r.start.value()..r.end.value());
 
-        let predicate = move |key_value: Result<(Slice, Slice), Error>| {
-            let (key, value) = key_value.expect("iteration key/value error");
-
+        let f = move |key: Slice, value: Slice| {
             if !version_range.contains(&value.as_ref().get_u8()) {
                 return None;
             }
@@ -106,49 +106,45 @@ impl Identifiers {
         };
 
         match position {
-            Some(position) => self.query_specifier_range(specifier, position, predicate),
-            None => self.query_specifier_prefix(specifier, predicate),
+            Some(position) => self.query_specifier_range(specifier.identifer(), position, f),
+            None => self.query_specifier_prefix(specifier.identifer(), f),
         }
     }
 
-    fn query_specifier_prefix<P>(
-        &self,
-        specifier: &SpecifierHash,
-        predicate: P,
-    ) -> SequentialIterator<'_>
+    fn query_specifier_prefix<F>(&self, identifier: &IdentifierHash, f: F) -> SequentialIterator<'_>
     where
-        P: Fn(Result<(Slice, Slice), Error>) -> Option<Position> + 'static,
+        F: Fn(Slice, Slice) -> Option<Position> + 'static,
     {
-        let hash = specifier.identifer().hash();
+        let hash = identifier.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
-        SequentialIterator::Owned(Box::new(
-            self.keyspace
-                .prefix(prefix)
-                .map(Guard::into_inner)
-                .filter_map(predicate),
-        ))
+        SequentialIterator::Owned(Box::new(self.keyspace.prefix(prefix).filter_map(
+            move |guard| match guard.into_inner() {
+                Ok((key, value)) => f(key, value).map(Ok),
+                Err(err) => Some(Err(Error::from(err))),
+            },
+        )))
     }
 
-    fn query_specifier_range<P>(
+    fn query_specifier_range<F>(
         &self,
-        specifier: &SpecifierHash,
+        identifier: &IdentifierHash,
         position: Position,
-        predicate: P,
+        f: F,
     ) -> SequentialIterator<'_>
     where
-        P: Fn(Result<(Slice, Slice), Error>) -> Option<Position> + 'static,
+        F: Fn(Slice, Slice) -> Option<Position> + 'static,
     {
-        let hash = specifier.identifer().hash();
+        let hash = identifier.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(position, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
-        SequentialIterator::Owned(Box::new(
-            self.keyspace
-                .range(lower..upper)
-                .map(Guard::into_inner)
-                .filter_map(predicate),
-        ))
+        SequentialIterator::Owned(Box::new(self.keyspace.range(lower..upper).filter_map(
+            move |guard| match guard.into_inner() {
+                Ok((key, value)) => f(key, value).map(Ok),
+                Err(err) => Some(Err(Error::from(err))),
+            },
+        )))
     }
 }
 

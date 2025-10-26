@@ -3,6 +3,7 @@
 #![allow(clippy::missing_panics_doc)]
 
 mod data;
+mod error;
 mod model;
 mod stream;
 mod util;
@@ -14,6 +15,10 @@ mod util;
 // Re-Exports
 
 pub use self::{
+    error::{
+        Error,
+        Result,
+    },
     model::{
         event::{
             Event,

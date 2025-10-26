@@ -1,10 +1,7 @@
 pub mod append;
 pub mod query;
 
-use std::{
-    error::Error,
-    path::Path,
-};
+use std::path::Path;
 
 use derive_more::Debug;
 use fancy_constructor::new;
@@ -12,6 +9,7 @@ use fjall::Database;
 
 use crate::{
     data::Data,
+    error::Result,
     model::stream::position::Position,
 };
 
@@ -42,11 +40,11 @@ impl Stream {
 // Properties
 
 impl Stream {
-    pub fn is_empty(&self) -> Result<bool, Box<dyn Error>> {
+    pub fn is_empty(&self) -> Result<bool> {
         self.data.events.is_empty()
     }
 
-    pub fn len(&self) -> Result<u64, Box<dyn Error>> {
+    pub fn len(&self) -> Result<u64> {
         self.data.events.len()
     }
 }
@@ -70,7 +68,7 @@ impl<P> StreamBuilder<P>
 where
     P: AsRef<Path>,
 {
-    pub fn open(self) -> Result<Stream, Box<dyn Error>> {
+    pub fn open(self) -> Result<Stream> {
         let database = Database::builder(self.path)
             .temporary(self.temporary.unwrap_or_default())
             .open()?;

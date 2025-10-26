@@ -1,8 +1,6 @@
 mod identifiers;
 mod tags;
 
-use std::error::Error;
-
 use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::{
@@ -16,6 +14,7 @@ use crate::{
         identifiers::Identifiers,
         tags::Tags,
     },
+    error::Result,
     model::event::{
         EventHashRef,
         identifier::Identifier,
@@ -43,7 +42,7 @@ pub struct References {
 }
 
 impl References {
-    pub fn open(database: &Database) -> Result<Self, Box<dyn Error>> {
+    pub fn open(database: &Database) -> Result<Self> {
         let keyspace = database.keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?;
 
         let identifiers = Identifiers::new(keyspace.clone());
@@ -56,11 +55,11 @@ impl References {
 // Get/Put
 
 impl References {
-    pub fn get_identifier(&self, hash: u64) -> Result<Option<Identifier>, Box<dyn Error>> {
+    pub fn get_identifier(&self, hash: u64) -> Result<Option<Identifier>> {
         self.identifiers.get(hash)
     }
 
-    pub fn get_tag(&self, hash: u64) -> Result<Option<Tag>, Box<dyn Error>> {
+    pub fn get_tag(&self, hash: u64) -> Result<Option<Tag>> {
         self.tags.get(hash)
     }
 

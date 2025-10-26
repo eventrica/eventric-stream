@@ -5,7 +5,6 @@ use bytes::{
 use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::{
-    Error,
     Guard,
     Keyspace,
     Slice,
@@ -19,6 +18,7 @@ use crate::{
         POSITION_LEN,
         indices::SequentialIterator,
     },
+    error::Error,
     model::{
         event::tag::{
             TagHash,
@@ -75,14 +75,15 @@ impl Tags {
     }
 
     fn query_tag(&self, tag: &TagHash, position: Option<Position>) -> SequentialIterator<'_> {
-        let map = |key: Result<Slice, Error>| {
-            let key = key.expect("iteration key error");
+        let map = |key: Result<Slice, fjall::Error>| match key {
+            Ok(key) => {
+                let mut key = &key[..];
 
-            let mut key = &key[..];
+                key.advance(ID_LEN + HASH_LEN);
 
-            key.advance(ID_LEN + HASH_LEN);
-
-            Position::new(key.get_u64())
+                Ok(Position::new(key.get_u64()))
+            }
+            Err(err) => Err(Error::from(err)),
         };
 
         match position {
@@ -91,33 +92,28 @@ impl Tags {
         }
     }
 
-    fn query_tag_prefix<M>(&self, tag: &TagHash, map: M) -> SequentialIterator<'_>
+    fn query_tag_prefix<F>(&self, tag: &TagHash, f: F) -> SequentialIterator<'_>
     where
-        M: Fn(Result<Slice, Error>) -> Position + 'static,
+        F: Fn(Result<Slice, fjall::Error>) -> Result<Position, Error> + 'static,
     {
         let hash = tag.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
         SequentialIterator::Owned(Box::new(
-            self.keyspace.prefix(prefix).map(Guard::key).map(map),
+            self.keyspace.prefix(prefix).map(Guard::key).map(f),
         ))
     }
 
-    fn query_tag_range<M>(
-        &self,
-        tag: &TagHash,
-        position: Position,
-        map: M,
-    ) -> SequentialIterator<'_>
+    fn query_tag_range<F>(&self, tag: &TagHash, position: Position, f: F) -> SequentialIterator<'_>
     where
-        M: Fn(Result<Slice, Error>) -> Position + 'static,
+        F: Fn(Result<Slice, fjall::Error>) -> Result<Position, Error> + 'static,
     {
         let hash = tag.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(position, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
         SequentialIterator::Owned(Box::new(
-            self.keyspace.range(lower..upper).map(Guard::key).map(map),
+            self.keyspace.range(lower..upper).map(Guard::key).map(f),
         ))
     }
 }
