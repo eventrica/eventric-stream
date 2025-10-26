@@ -40,10 +40,22 @@ impl Stream {
 // Properties
 
 impl Stream {
+    /// Returns whether this [`Stream`] is empty (i.e. has no events stored
+    /// within it).
+    ///
+    /// # Errors
+    ///
+    /// Returns error if an underlying database IO error occurred.
     pub fn is_empty(&self) -> Result<bool, Error> {
         self.data.events.is_empty()
     }
 
+    /// Returns the current length of this [`Stream`] (i.e. how many events are
+    /// contained within it).
+    ///
+    /// # Errors
+    ///
+    /// Returns error if an underlying database IO error occurred.
     pub fn len(&self) -> Result<u64, Error> {
         self.data.events.len()
     }

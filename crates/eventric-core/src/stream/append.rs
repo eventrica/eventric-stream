@@ -61,7 +61,7 @@ impl Stream {
 
         for event in events {
             let event = event.into();
-            let timestamp = Timestamp::now();
+            let timestamp = Timestamp::now()?;
 
             self.data.events.put(&mut batch, &event, timestamp, self.position);
             self.data.indices.put(&mut batch, &event, timestamp, self.position);

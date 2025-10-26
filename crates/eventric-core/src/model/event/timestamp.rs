@@ -6,6 +6,8 @@ use std::time::{
 use derive_more::Debug;
 use fancy_constructor::new;
 
+use crate::error::Error;
+
 // =================================================================================================
 // Timestamp
 // =================================================================================================
@@ -28,15 +30,14 @@ impl Timestamp {
     ///
     /// This should probably be replaced at some point with something like TAI
     /// time.
-    #[must_use]
-    pub fn now() -> Self {
-        let ns = SystemTime::now()
+    pub(crate) fn now() -> Result<Self, Error> {
+        let duration = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .expect("timestamp conversion: duration error")
-            .as_nanos();
+            .map_err(|err| Error::internal(format!("duration error: {err}")))?;
 
-        let ns = u64::try_from(ns).expect("timestamp creation: duration range error");
+        let nanos = u64::try_from(duration.as_nanos())
+            .map_err(|_| Error::internal("duration size error: {err}"))?;
 
-        Self(ns)
+        Ok(Self(nanos))
     }
 }

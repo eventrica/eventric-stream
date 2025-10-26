@@ -15,7 +15,7 @@ pub struct Tag(String);
 
 impl Tag {
     #[must_use]
-    pub fn hash(&self) -> u64 {
+    pub(crate) fn hash(&self) -> u64 {
         v3::rapidhash_v3_seeded(self.0.as_bytes(), &SEED)
     }
 
