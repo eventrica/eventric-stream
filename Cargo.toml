@@ -2,7 +2,7 @@
 debug = true
 
 [profile.release]
-debug = false
+debug = true
 
 [workspace]
 members  = ["benches/*", "crates/*", "examples/*"]
