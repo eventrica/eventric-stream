@@ -2,26 +2,57 @@ use std::ops::Deref;
 
 use fancy_constructor::new;
 use rapidhash::v3;
+use validator::Validate;
 
-use crate::model::SEED;
+use crate::{
+    error::Error,
+    model::SEED,
+    util::validation::Validated,
+};
 
 // =================================================================================================
 // Identifier
 // =================================================================================================
 
-#[derive(new, Clone, Debug, Eq, PartialEq)]
-#[new(const_fn)]
-pub struct Identifier(String);
+/// The [`Identifier`] type is a typed/validated wrapper around a [`String`]
+/// identifier for an event (an identifier is effectively equivalent to a *type
+/// name*, and combines with a version value to fully specify the logical type
+/// of an event).
+#[derive(new, Clone, Debug, Eq, PartialEq, Validate)]
+#[new(const_fn, name(new_unvalidated), vis(pub(crate)))]
+pub struct Identifier {
+    #[validate(length(min = 1, max = 255), non_control_character)]
+    identifier: String,
+}
 
 impl Identifier {
-    #[must_use]
-    pub(crate) fn hash(&self) -> u64 {
-        v3::rapidhash_v3_seeded(self.0.as_bytes(), &SEED)
+    /// Constructs a new instance of the [`Identifier`] given any value which
+    /// can be converted into a (valid) [`String`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error on validation failure. Identifiers must conform to the
+    /// following constraints:
+    /// - Minimum length: 1
+    /// - Maxiumum length: 255
+    /// - No utf-8 control characters
+    pub fn new<I>(identifier: I) -> Result<Self, Error>
+    where
+        I: Into<String>,
+    {
+        Self::new_unvalidated(identifier.into()).validated()
     }
+}
 
-    #[must_use]
-    pub fn value(&self) -> &str {
-        &self.0
+impl Identifier {
+    pub(crate) fn hash(&self) -> u64 {
+        v3::rapidhash_v3_seeded(self.identifier.as_bytes(), &SEED)
+    }
+}
+
+impl AsRef<str> for Identifier {
+    fn as_ref(&self) -> &str {
+        &self.identifier
     }
 }
 

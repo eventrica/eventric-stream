@@ -18,6 +18,7 @@ fancy_constructor = { version = "2" }
 fjall             = { version = "=3.0.0-pre.0" }
 rapidhash         = { version = "4" }
 thiserror         = { version = "2" }
+validator         = { version = "0.20", features = ["derive", "unic"] }
 
 [workspace.lints.clippy]
 cargo       = "warn"

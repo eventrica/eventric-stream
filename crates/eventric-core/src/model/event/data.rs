@@ -1,22 +1,38 @@
 use fancy_constructor::new;
+use validator::Validate;
+
+use crate::{
+    error::Error,
+    util::validation::Validated as _,
+};
 
 // =================================================================================================
 // Data
 // =================================================================================================
 
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub struct Data(Vec<u8>);
+/// The [`Data`] type is the payload of any form of event, and is a simple
+/// immutable owned vector of bytes. Higher-level libraries may determine the
+/// meaning of the payload depending on the identifier and version of the event,
+/// but at core level it is opaque.
+#[derive(new, Debug, Validate)]
+#[new(const_fn, name(new_unvalidated), vis(pub(crate)))]
+pub struct Data {
+    #[validate(length(min = 1))]
+    data: Vec<u8>,
+}
 
 impl Data {
-    #[must_use]
-    pub fn as_slice(&self) -> &[u8] {
-        &self.0[..]
+    /// Constructs a new instance of [`Data`] given an owned vector of bytes.
+    pub fn new<D>(data: D) -> Result<Self, Error>
+    where
+        D: Into<Vec<u8>>,
+    {
+        Self::new_unvalidated(data.into()).validated()
     }
 }
 
 impl AsRef<[u8]> for Data {
     fn as_ref(&self) -> &[u8] {
-        &self.0
+        &self.data
     }
 }

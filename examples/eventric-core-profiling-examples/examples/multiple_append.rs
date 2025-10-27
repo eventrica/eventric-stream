@@ -24,8 +24,8 @@ pub fn main() -> Result<(), Error> {
     let events = (0..count as u64)
         .map(|_| {
             Event::new(
-                Data::new("Hello World".bytes().collect()),
-                Identifier::new("test_identifier".into()),
+                Data::new("Hello World").unwrap(),
+                Identifier::new("test_identifier").unwrap(),
                 Vec::from_iter([Tag::new("test_tag_a".into()), Tag::new("test_tag_b".into())]),
                 Version::new(0),
             )

@@ -30,8 +30,8 @@ pub fn single_append(c: &mut Criterion) {
             .unwrap();
 
         let events = [Event::new(
-            Data::new("Hello World".bytes().collect()),
-            Identifier::new("test_identifier".into()),
+            Data::new("Hello World").unwrap(),
+            Identifier::new("test_identifier").unwrap(),
             Vec::from_iter([Tag::new("test_tag_a".into()), Tag::new("test_tag_b".into())]),
             Version::new(0),
         )];
@@ -64,8 +64,8 @@ pub fn multiple_append(c: &mut Criterion) {
             let events = (0..10)
                 .map(|_| {
                     Event::new(
-                        Data::new("Hello World".bytes().collect()),
-                        Identifier::new("test_identifier".into()),
+                        Data::new("Hello World").unwrap(),
+                        Identifier::new("test_identifier").unwrap(),
                         Vec::from_iter([
                             Tag::new("test_tag_a".into()),
                             Tag::new("test_tag_b".into()),

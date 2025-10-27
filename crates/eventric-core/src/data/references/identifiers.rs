@@ -42,24 +42,21 @@ pub struct Identifiers {
 // Get/Put
 
 impl Identifiers {
-    #[rustfmt::skip]
     pub fn get(&self, hash: u64) -> Result<Option<Identifier>, Error> {
         let key: [u8; KEY_LEN] = Hash(hash).into();
 
         match self.keyspace.get(key)? {
-            Some(value) => {
-                let bytes = value.to_vec();
-                let string = String::from_utf8(bytes).map_err(|err| Error::data(format!("identifier: {err}")))?;
-
-                Ok(Some(Identifier::new(string)))
-            }
+            Some(value) => String::from_utf8(value.to_vec())
+                .map_err(|err| Error::data(format!("identifier utf8: {err}")))
+                .map(Identifier::new_unvalidated)
+                .map(Some),
             None => Ok(None),
         }
     }
 
     pub fn put(&self, batch: &mut WriteBatch, identifier: &IdentifierHashRef<'_>) {
         let key: [u8; KEY_LEN] = Hash(identifier.hash()).into();
-        let value = identifier.value().as_bytes();
+        let value = identifier.as_ref().as_bytes();
 
         batch.insert(&self.keyspace, key, value);
     }

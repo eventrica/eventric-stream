@@ -1,4 +1,5 @@
 use thiserror::Error;
+use validator::ValidationErrors;
 
 // =================================================================================================
 // Error
@@ -12,6 +13,8 @@ pub enum Error {
     Database(#[from] fjall::Error),
     #[error("Internal Error: {0}")]
     Internal(String),
+    #[error("Validation Errors: {0}")]
+    Validation(#[from] ValidationErrors),
 }
 
 impl Error {
