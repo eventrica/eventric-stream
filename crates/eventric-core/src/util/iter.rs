@@ -154,7 +154,7 @@ where
 // Tests
 
 #[cfg(test)]
-mod test {
+mod tests {
     use derive_more::Debug;
     use fancy_constructor::new;
 

@@ -14,17 +14,11 @@ use eventric_core::{
 // Single Append
 // =================================================================================================
 
-// Configuration
-
-static PATH: &str = "./temp";
-
-// -------------------------------------------------------------------------------------------------
-
-// Profile
-
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 pub fn main() -> Result<(), Error> {
-    let mut stream = Stream::builder(PATH).temporary(true).open()?;
+    let mut stream = Stream::builder(eventric_core::temp_path())
+        .temporary(true)
+        .open()?;
 
     let events = [Event::new(
         Data::new("Hello World".bytes().collect()),

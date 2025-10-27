@@ -18,19 +18,16 @@ use eventric_core::{
 // Append
 // =================================================================================================
 
-// Configuration
-
-static PATH: &str = "./temp";
-
-// -------------------------------------------------------------------------------------------------
-
-// Benches
+// Single
 
 pub fn single_append(c: &mut Criterion) {
     let mut group = c.benchmark_group("append");
 
     group.sample_size(10).bench_function("1000 x 1 event", |b| {
-        let mut stream = Stream::builder(PATH).temporary(true).open().unwrap();
+        let mut stream = Stream::builder(eventric_core::temp_path())
+            .temporary(true)
+            .open()
+            .unwrap();
 
         let events = [Event::new(
             Data::new("Hello World".bytes().collect()),
@@ -51,13 +48,18 @@ pub fn single_append(c: &mut Criterion) {
     group.finish();
 }
 
+// Multiple
+
 pub fn multiple_append(c: &mut Criterion) {
     let mut group = c.benchmark_group("append");
 
     group
         .sample_size(10)
         .bench_function("1000 x 10 events", |b| {
-            let mut stream = Stream::builder(PATH).temporary(true).open().unwrap();
+            let mut stream = Stream::builder(eventric_core::temp_path())
+                .temporary(true)
+                .open()
+                .unwrap();
 
             let events = (0..10)
                 .map(|_| {

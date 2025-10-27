@@ -131,12 +131,12 @@ where
 // Tests
 
 #[cfg(test)]
-mod test {
+mod tests {
     use crate::{
         error::Error,
         util::iter::{
             and::SequentialAndIterator,
-            test::TestIterator,
+            tests::TestIterator,
         },
     };
 

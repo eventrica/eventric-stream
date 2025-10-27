@@ -23,7 +23,7 @@ impl Stream {
         &mut self,
         events: E,
         condition: Option<&AppendCondition<'_>>,
-    ) -> Result<(), AppendError>
+    ) -> Result<Position, AppendError>
     where
         E: IntoIterator<Item = &'a Event>,
     {
@@ -33,17 +33,17 @@ impl Stream {
 
         self.append_put(events)?;
 
-        Ok(())
+        Ok(self.position)
     }
 
     #[rustfmt::skip]
     fn append_check(&self, condition: &AppendCondition<'_>) -> Result<(), AppendError> {
-        if let Some(after) = condition.after && after >= self.position {
+        if let Some(position) = condition.after && position >= self.position {
             return Ok(());
         }
 
         let query = condition.fail_if_matches.into();
-        let position = condition.after.map(Position::increment);
+        let position = condition.after.map(|position| position + 1);
 
         if self.data.indices.contains(&query, position) {
             return Err(AppendError::Concurrency);
@@ -67,7 +67,7 @@ impl Stream {
             self.data.indices.put(&mut batch, &event, timestamp, self.position);
             self.data.references.put(&mut batch, &event);
 
-            self.position = self.position.increment();
+            self.position += 1;
         }
 
         batch.commit().map_err(Error::from)?;
