@@ -7,7 +7,6 @@ use derive_more::{
     Debug,
     Deref,
 };
-use fancy_constructor::new;
 
 use crate::error::Error;
 
@@ -15,14 +14,19 @@ use crate::error::Error;
 // Timestamp
 // =================================================================================================
 
-#[derive(new, Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd)]
-#[new(const_fn, name(new_inner), vis())]
+/// The [`Timestamp`] type is typed wrapper around a `u64` nanosecond value,
+/// used to represent the insertion time of an event in a stream. The value
+/// represents nanoseconds since Unix Epoch, a u64 being sufficient to represent
+/// comfortably over a century.
+#[derive(Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Timestamp(u64);
 
 impl Timestamp {
+    /// Constructs a new instance of [`Timestamp`] from a given `u64` nanosecond
+    /// value.
     #[must_use]
     pub const fn new(nanos: u64) -> Self {
-        Self::new_inner(nanos)
+        Self(nanos)
     }
 }
 

@@ -64,7 +64,7 @@ impl References {
     }
 
     pub fn put(&self, batch: &mut WriteBatch, event: &EventHashRef<'_>) {
-        self.identifiers.put(batch, event.identifier());
-        self.tags.put(batch, event.tags());
+        self.identifiers.put(batch, &event.identifier);
+        self.tags.put(batch, &event.tags);
     }
 }

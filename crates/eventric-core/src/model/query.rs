@@ -1,6 +1,9 @@
 pub mod specifier;
 
-use derive_more::Debug;
+use derive_more::{
+    AsRef,
+    Debug,
+};
 use fancy_constructor::new;
 
 use crate::model::{
@@ -22,37 +25,30 @@ use crate::model::{
 
 // Query
 
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub struct Query {
-    items: Vec<QueryItem>,
-}
+#[derive(AsRef, Debug)]
+#[as_ref([QueryItem])]
+pub struct Query(Vec<QueryItem>);
 
 impl Query {
-    #[must_use]
-    pub fn items(&self) -> &Vec<QueryItem> {
-        &self.items
+    pub fn new<I>(items: I) -> Self
+    where
+        I: Into<Vec<QueryItem>>,
+    {
+        Self(items.into())
     }
 }
 
 impl From<Query> for Vec<QueryItem> {
     fn from(query: Query) -> Self {
-        query.items
+        query.0
     }
 }
 
-#[derive(new, Debug)]
-pub struct QueryHash {
-    #[new(into)]
-    items: Vec<QueryItemHash>,
-}
+// Hash
 
-impl QueryHash {
-    #[must_use]
-    pub fn items(&self) -> &Vec<QueryItemHash> {
-        &self.items
-    }
-}
+#[derive(new, AsRef, Debug)]
+#[as_ref([QueryItemHash])]
+pub struct QueryHash(Vec<QueryItemHash>);
 
 impl From<Query> for QueryHash {
     fn from(query: Query) -> Self {
@@ -62,7 +58,7 @@ impl From<Query> for QueryHash {
 
 impl From<&Query> for QueryHash {
     fn from(query: &Query) -> Self {
-        Self::new(query.items().iter().map(Into::into).collect::<Vec<_>>())
+        Self::new(query.as_ref().iter().map(Into::into).collect::<Vec<_>>())
     }
 }
 
@@ -74,26 +70,19 @@ impl From<QueryHashRef<'_>> for QueryHash {
 
 impl From<&QueryHashRef<'_>> for QueryHash {
     fn from(query: &QueryHashRef<'_>) -> Self {
-        Self::new(query.items().iter().map(Into::into).collect::<Vec<_>>())
+        Self::new(query.as_ref().iter().map(Into::into).collect::<Vec<_>>())
     }
 }
 
-#[derive(new, Debug)]
-pub struct QueryHashRef<'a> {
-    #[new(into)]
-    items: Vec<QueryItemHashRef<'a>>,
-}
+// Hash Ref
 
-impl QueryHashRef<'_> {
-    #[must_use]
-    pub fn items(&self) -> &Vec<QueryItemHashRef<'_>> {
-        &self.items
-    }
-}
+#[derive(new, AsRef, Debug)]
+#[as_ref([QueryItemHashRef<'a>])]
+pub struct QueryHashRef<'a>(Vec<QueryItemHashRef<'a>>);
 
 impl<'a> From<&'a Query> for QueryHashRef<'a> {
     fn from(query: &'a Query) -> Self {
-        Self::new(query.items().iter().map(Into::into).collect::<Vec<_>>())
+        Self::new(query.as_ref().iter().map(Into::into).collect::<Vec<_>>())
     }
 }
 

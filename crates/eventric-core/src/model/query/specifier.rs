@@ -15,8 +15,7 @@ use crate::model::event::{
 // Specifier
 // =================================================================================================
 
-#[derive(new, Debug, Eq, PartialEq)]
-#[new(const_fn, name(new_inner), vis())]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Specifier {
     identifier: Identifier,
     range: Option<Range<Version>>,
@@ -25,7 +24,7 @@ pub struct Specifier {
 impl Specifier {
     #[must_use]
     pub const fn new(identifier: Identifier, range: Option<Range<Version>>) -> Self {
-        Self::new_inner(identifier, range)
+        Self { identifier, range }
     }
 }
 
@@ -45,18 +44,9 @@ impl Specifier {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub struct SpecifierHash(IdentifierHash, Option<Range<Version>>);
-
-impl SpecifierHash {
-    #[must_use]
-    pub fn identifer(&self) -> &IdentifierHash {
-        &self.0
-    }
-
-    #[must_use]
-    pub fn range(&self) -> Option<&Range<Version>> {
-        self.1.as_ref()
-    }
+pub struct SpecifierHash {
+    pub(crate) identifier: IdentifierHash,
+    pub(crate) range: Option<Range<Version>>,
 }
 
 impl From<&Specifier> for SpecifierHash {
@@ -70,8 +60,8 @@ impl From<&Specifier> for SpecifierHash {
 
 impl From<&SpecifierHashRef<'_>> for SpecifierHash {
     fn from(specifier: &SpecifierHashRef<'_>) -> Self {
-        let identifier = specifier.identifier().into();
-        let range = specifier.range().cloned();
+        let identifier = (&specifier.identifier).into();
+        let range = specifier.range.clone();
 
         Self::new(identifier, range)
     }
@@ -81,18 +71,9 @@ impl From<&SpecifierHashRef<'_>> for SpecifierHash {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub struct SpecifierHashRef<'a>(IdentifierHashRef<'a>, Option<Range<Version>>);
-
-impl SpecifierHashRef<'_> {
-    #[must_use]
-    pub fn identifier(&self) -> &IdentifierHashRef<'_> {
-        &self.0
-    }
-
-    #[must_use]
-    pub fn range(&self) -> Option<&Range<Version>> {
-        self.1.as_ref()
-    }
+pub struct SpecifierHashRef<'a> {
+    pub(crate) identifier: IdentifierHashRef<'a>,
+    pub(crate) range: Option<Range<Version>>,
 }
 
 impl<'a> From<&'a Specifier> for SpecifierHashRef<'a> {

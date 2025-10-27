@@ -7,21 +7,19 @@ use derive_more::{
         SubAssign,
     },
 };
-use fancy_constructor::new;
 
 // =================================================================================================
 // Position
 // =================================================================================================
 
 #[rustfmt::skip]
-#[derive(new, Add, AddAssign, Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd, Sub, SubAssign)]
-#[new(const_fn, name(new_inner), vis())]
+#[derive(Add, AddAssign, Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd, Sub, SubAssign)]
 pub struct Position(u64);
 
 impl Position {
     #[must_use]
     pub const fn new(position: u64) -> Self {
-        Self::new_inner(position)
+        Self(position)
     }
 }
 

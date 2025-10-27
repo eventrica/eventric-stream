@@ -97,7 +97,7 @@ pub struct QueryCache {
 
 impl QueryCache {
     fn populate(&self, query: &QueryHashRef<'_>) {
-        for item in query.items() {
+        for item in query.as_ref() {
             match item {
                 QueryItemHashRef::Specifiers(specifiers) => self.populate_identifiers(specifiers),
                 QueryItemHashRef::SpecifiersAndTags(specifiers, tags) => {
@@ -112,8 +112,8 @@ impl QueryCache {
     fn populate_identifiers(&self, specifiers: &[SpecifierHashRef<'_>]) {
         for specifier in specifiers {
             self.identifiers
-                .entry(specifier.identifier().hash())
-                .or_insert_with(|| Arc::new((*specifier.identifier()).clone()));
+                .entry(specifier.identifier.hash())
+                .or_insert_with(|| Arc::new(specifier.identifier.clone()));
         }
     }
 

@@ -1,8 +1,8 @@
 //! # Eventric Core
 
 #![allow(clippy::multiple_crate_versions)]
-#![allow(clippy::missing_errors_doc)]
-// #![warn(missing_docs)]
+// #![allow(clippy::missing_errors_doc)]
+#![warn(missing_docs)]
 
 mod data;
 mod error;

@@ -85,8 +85,8 @@ impl Indices {
         event: &EventHashRef<'_>,
         timestamp: Timestamp,
     ) {
-        self.identifiers.put(batch, at, event.identifier(), *event.version());
-        self.tags.put(batch, at, event.tags());
+        self.identifiers.put(batch, at, &event.identifier, event.version);
+        self.tags.put(batch, at, &event.tags);
         self.timestamps.put(batch, at, timestamp);
     }
 }
@@ -96,7 +96,7 @@ impl Indices {
 impl Indices {
     #[must_use]
     pub fn query(&self, query: &QueryHash, from: Option<Position>) -> SequentialIterator<'_> {
-        SequentialOrIterator::combine(query.items().iter().map(|item| match item {
+        SequentialOrIterator::combine(query.as_ref().iter().map(|item| match item {
             QueryItemHash::Specifiers(specifiers) => {
                 self.identifiers.query(specifiers.iter(), from)
             }

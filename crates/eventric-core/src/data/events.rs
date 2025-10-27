@@ -160,16 +160,16 @@ impl From<EventAndTimestamp<'_>> for Vec<u8> {
     fn from(EventAndTimestamp(event, timestamp): EventAndTimestamp<'_>) -> Self {
         let mut value = Vec::new();
 
-        value.put_u64(event.identifier().hash());
-        value.put_u8(**event.version());
-        value.put_u8(u8::try_from(event.tags().len()).expect("max tag count exceeded"));
+        value.put_u64(event.identifier.hash());
+        value.put_u8(*event.version);
+        value.put_u8(u8::try_from(event.tags.len()).expect("max tag count exceeded"));
 
-        for tag in event.tags() {
+        for tag in &event.tags {
             value.put_u64(tag.hash());
         }
 
         value.put_u64(*timestamp);
-        value.put_slice(event.data().as_ref());
+        value.put_slice(event.data.as_ref());
 
         value
     }

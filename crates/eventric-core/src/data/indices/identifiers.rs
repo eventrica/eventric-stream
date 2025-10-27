@@ -89,7 +89,7 @@ impl Identifiers {
         from: Option<Position>,
     ) -> SequentialIterator<'_> {
         let version_range = specifier
-            .range()
+            .range
             .as_ref()
             .map_or(u8::MIN..u8::MAX, |r| *r.start..*r.end);
 
@@ -106,8 +106,8 @@ impl Identifiers {
         };
 
         match from {
-            Some(position) => self.query_specifier_range(specifier.identifer(), position, f),
-            None => self.query_specifier_prefix(specifier.identifer(), f),
+            Some(position) => self.query_specifier_range(&specifier.identifier, position, f),
+            None => self.query_specifier_prefix(&specifier.identifier, f),
         }
     }
 

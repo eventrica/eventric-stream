@@ -33,13 +33,23 @@ use crate::model::{
 
 // Event
 
-#[derive(new, Debug)]
-#[new(const_fn)]
+#[derive(Debug)]
 pub struct Event {
     data: Data,
     identifier: Identifier,
     tags: Vec<Tag>,
     version: Version,
+}
+
+impl Event {
+    pub const fn new(data: Data, identifier: Identifier, tags: Vec<Tag>, version: Version) -> Self {
+        Self {
+            data,
+            identifier,
+            tags,
+            version,
+        }
+    }
 }
 
 impl Event {
@@ -69,32 +79,10 @@ impl Event {
 #[derive(new, Debug)]
 #[new(const_fn)]
 pub struct EventHashRef<'a> {
-    data: &'a Data,
-    identifier: IdentifierHashRef<'a>,
-    tags: Vec<TagHashRef<'a>>,
-    version: Version,
-}
-
-impl EventHashRef<'_> {
-    #[must_use]
-    pub fn data(&self) -> &Data {
-        self.data
-    }
-
-    #[must_use]
-    pub fn identifier(&self) -> &IdentifierHashRef<'_> {
-        &self.identifier
-    }
-
-    #[must_use]
-    pub fn tags(&self) -> &Vec<TagHashRef<'_>> {
-        &self.tags
-    }
-
-    #[must_use]
-    pub fn version(&self) -> &Version {
-        &self.version
-    }
+    pub(crate) data: &'a Data,
+    pub(crate) identifier: IdentifierHashRef<'a>,
+    pub(crate) tags: Vec<TagHashRef<'a>>,
+    pub(crate) version: Version,
 }
 
 impl<'a> From<&'a Event> for EventHashRef<'a> {
@@ -160,12 +148,12 @@ impl SequencedEvent {
 #[derive(new, Debug)]
 #[new(const_fn)]
 pub struct SequencedEventHash {
-    data: Data,
-    identifier: IdentifierHash,
-    position: Position,
-    tags: Vec<TagHash>,
-    timestamp: Timestamp,
-    version: Version,
+    pub(crate) data: Data,
+    pub(crate) identifier: IdentifierHash,
+    pub(crate) position: Position,
+    pub(crate) tags: Vec<TagHash>,
+    pub(crate) timestamp: Timestamp,
+    pub(crate) version: Version,
 }
 
 impl SequencedEventHash {
