@@ -4,6 +4,7 @@ dashmap.workspace           = true
 derive_more.workspace       = true
 fancy_constructor.workspace = true
 fjall.workspace             = true
+include-utils.workspace     = true
 rapidhash.workspace         = true
 thiserror.workspace         = true
 validator.workspace         = true
