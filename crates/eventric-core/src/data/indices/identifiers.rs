@@ -65,7 +65,7 @@ impl Identifiers {
         version: Version,
     ) {
         let key: [u8; KEY_LEN] = PositionAndHash(at, identifier.hash()).into();
-        let value = version.value().to_be_bytes();
+        let value = version.to_be_bytes();
 
         batch.insert(&self.keyspace, key, value);
     }
@@ -91,7 +91,7 @@ impl Identifiers {
         let version_range = specifier
             .range()
             .as_ref()
-            .map_or(u8::MIN..u8::MAX, |r| r.start.value()..r.end.value());
+            .map_or(u8::MIN..u8::MAX, |r| *r.start..*r.end);
 
         let f = move |key: Slice, value: Slice| {
             if !version_range.contains(&value.as_ref().get_u8()) {
@@ -163,7 +163,7 @@ impl From<PositionAndHash> for [u8; KEY_LEN] {
 
             key.put_u8(INDEX_ID);
             key.put_u64(hash);
-            key.put_u64(position.value());
+            key.put_u64(*position);
         }
 
         key

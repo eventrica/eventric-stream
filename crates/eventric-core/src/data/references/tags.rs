@@ -42,17 +42,14 @@ pub struct Tags {
 // Get/Put
 
 impl Tags {
-    #[rustfmt::skip]
     pub fn get(&self, hash: u64) -> Result<Option<Tag>, Error> {
         let key: [u8; KEY_LEN] = Hash(hash).into();
 
         match self.keyspace.get(key)? {
-            Some(value) => {
-                let bytes = value.to_vec();
-                let string = String::from_utf8(bytes).map_err(|err| Error::data(format!("tag: {err}")))?;
-
-                Ok(Some(Tag::new(string)))
-            }
+            Some(value) => String::from_utf8(value.to_vec())
+                .map_err(|err| Error::data(format!("tag utf8: {err}")))
+                .map(Tag::new_unvalidated)
+                .map(Some),
             None => Ok(None),
         }
     }
@@ -60,7 +57,7 @@ impl Tags {
     pub fn put(&self, batch: &mut WriteBatch, tags: &[TagHashRef<'_>]) {
         for tag in tags {
             let key: [u8; KEY_LEN] = Hash(tag.hash()).into();
-            let value = tag.value().as_bytes();
+            let value: &[u8] = tag.as_ref();
 
             batch.insert(&self.keyspace, key, value);
         }

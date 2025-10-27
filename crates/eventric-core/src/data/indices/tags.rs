@@ -133,7 +133,7 @@ impl From<PositionAndHash> for [u8; KEY_LEN] {
 
             key.put_u8(INDEX_ID);
             key.put_u64(hash);
-            key.put_u64(position.value());
+            key.put_u64(*position);
         }
 
         key

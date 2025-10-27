@@ -1,27 +1,54 @@
 use std::ops::Deref;
 
+use derive_more::AsRef;
 use fancy_constructor::new;
 use rapidhash::v3;
+use validator::Validate;
 
-use crate::model::SEED;
+use crate::{
+    error::Error,
+    model::SEED,
+    util::validation::Validated as _,
+};
 
 // =================================================================================================
 // Tag
 // =================================================================================================
 
-#[derive(new, Clone, Debug, Eq, PartialEq)]
-#[new(const_fn)]
-pub struct Tag(String);
+/// The [`Tag`] type is a typed/validated wrapper around a [`String`]
+/// tag for an event (an event can have zero or more tags which may be used as
+/// part of queries, and which form part of a dynamic consistency boundaryt in
+/// doing so).
+#[derive(new, AsRef, Clone, Debug, Eq, PartialEq, Validate)]
+#[as_ref(str, [u8])]
+#[new(const_fn, name(new_unvalidated), vis(pub(crate)))]
+pub struct Tag {
+    #[validate(length(min = 1, max = 255), non_control_character)]
+    tag: String,
+}
 
 impl Tag {
-    #[must_use]
-    pub(crate) fn hash(&self) -> u64 {
-        v3::rapidhash_v3_seeded(self.0.as_bytes(), &SEED)
+    /// Constructs a new instance of [`Tag`] given any value which
+    /// can be converted into a (valid) [`String`].
+    ///
+    /// # Errors
+    ///
+    /// Returns an error on validation failure. Tags must conform to the
+    /// following constraints:
+    /// - Minimum length: 1
+    /// - Maxiumum length: 255
+    /// - No utf-8 control characters
+    pub fn new<T>(tag: T) -> Result<Self, Error>
+    where
+        T: Into<String>,
+    {
+        Self::new_unvalidated(tag.into()).validated()
     }
+}
 
-    #[must_use]
-    pub fn value(&self) -> &str {
-        &self.0
+impl Tag {
+    pub(crate) fn hash(&self) -> u64 {
+        v3::rapidhash_v3_seeded(self.tag.as_bytes(), &SEED)
     }
 }
 

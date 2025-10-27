@@ -59,7 +59,7 @@ impl Events {
 
 impl Events {
     pub fn get(&self, at: Position) -> Result<Option<SequencedEventHash>, Error> {
-        let key = at.value().to_be_bytes();
+        let key = at.to_be_bytes();
         let value = self.keyspace.get(key)?;
 
         Ok(value.map(|value| SliceAndPosition(value, at).into()))
@@ -72,7 +72,7 @@ impl Events {
         event: &EventHashRef<'_>,
         timestamp: Timestamp,
     ) {
-        let key = at.value().to_be_bytes();
+        let key = at.to_be_bytes();
         let value: Vec<u8> = EventAndTimestamp(event, timestamp).into();
 
         batch.insert(&self.keyspace, key, value);
@@ -100,14 +100,12 @@ impl Events {
 
     fn iterate_from(&self, from: Position) -> SequencedEventHashIterator<'_> {
         SequencedEventHashIterator {
-            iter: Box::new(
-                self.keyspace
-                    .range(from.value().to_be_bytes()..)
-                    .map(|guard| match guard.into_inner() {
-                        Ok((key, value)) => Ok(SliceAndPosition(value, key.into()).into()),
-                        Err(err) => Err(Error::from(err)),
-                    }),
-            ),
+            iter: Box::new(self.keyspace.range(from.to_be_bytes()..).map(|guard| {
+                match guard.into_inner() {
+                    Ok((key, value)) => Ok(SliceAndPosition(value, key.into()).into()),
+                    Err(err) => Err(Error::from(err)),
+                }
+            })),
         }
     }
 }
@@ -163,14 +161,14 @@ impl From<EventAndTimestamp<'_>> for Vec<u8> {
         let mut value = Vec::new();
 
         value.put_u64(event.identifier().hash());
-        value.put_u8(event.version().value());
+        value.put_u8(**event.version());
         value.put_u8(u8::try_from(event.tags().len()).expect("max tag count exceeded"));
 
         for tag in event.tags() {
             value.put_u64(tag.hash());
         }
 
-        value.put_u64(timestamp.nanos());
+        value.put_u64(*timestamp);
         value.put_slice(event.data().as_ref());
 
         value

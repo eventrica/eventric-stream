@@ -1,5 +1,6 @@
 use std::ops::Deref;
 
+use derive_more::AsRef;
 use fancy_constructor::new;
 use rapidhash::v3;
 use validator::Validate;
@@ -18,7 +19,8 @@ use crate::{
 /// identifier for an event (an identifier is effectively equivalent to a *type
 /// name*, and combines with a version value to fully specify the logical type
 /// of an event).
-#[derive(new, Clone, Debug, Eq, PartialEq, Validate)]
+#[derive(new, AsRef, Clone, Debug, Eq, PartialEq, Validate)]
+#[as_ref(str, [u8])]
 #[new(const_fn, name(new_unvalidated), vis(pub(crate)))]
 pub struct Identifier {
     #[validate(length(min = 1, max = 255), non_control_character)]
@@ -26,7 +28,7 @@ pub struct Identifier {
 }
 
 impl Identifier {
-    /// Constructs a new instance of the [`Identifier`] given any value which
+    /// Constructs a new instance of [`Identifier`] given any value which
     /// can be converted into a (valid) [`String`].
     ///
     /// # Errors
@@ -50,11 +52,11 @@ impl Identifier {
     }
 }
 
-impl AsRef<str> for Identifier {
-    fn as_ref(&self) -> &str {
-        &self.identifier
-    }
-}
+// impl AsRef<str> for Identifier {
+//     fn as_ref(&self) -> &str {
+//         &self.identifier
+//     }
+// }
 
 // Hash
 

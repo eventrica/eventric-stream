@@ -1,16 +1,10 @@
+use derive_more::Deref;
 use fancy_constructor::new;
 
 // =================================================================================================
 // Version
 // =================================================================================================
 
-#[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[new(const_fn)]
-pub struct Version(u8);
-
-impl Version {
-    #[must_use]
-    pub fn value(self) -> u8 {
-        self.0
-    }
-}
+#[derive(new, Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd)]
+#[new(args(version: u8), const_fn)]
+pub struct Version(#[new(val(version))] u8);

@@ -3,7 +3,10 @@ use std::time::{
     UNIX_EPOCH,
 };
 
-use derive_more::Debug;
+use derive_more::{
+    Debug,
+    Deref,
+};
 use fancy_constructor::new;
 
 use crate::error::Error;
@@ -12,16 +15,11 @@ use crate::error::Error;
 // Timestamp
 // =================================================================================================
 
-#[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[new(const_fn)]
-pub struct Timestamp(u64);
+#[derive(new, Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd)]
+#[new(args(nanos: u64), const_fn)]
+pub struct Timestamp(#[new(val(nanos))] u64);
 
 impl Timestamp {
-    #[must_use]
-    pub fn nanos(self) -> u64 {
-        self.0
-    }
-
     /// NOTE: Important - this uses [`SystemTime`] which is not guaranteed to be
     /// monotonic. In practice it's unlikely to be an issue, but this is
     /// worth monitoring/noting when using the generated timestamp values as

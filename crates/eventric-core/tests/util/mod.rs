@@ -15,7 +15,10 @@ pub fn event() -> Event {
     Event::new(
         Data::new("test_data").unwrap(),
         Identifier::new("test_identifier").unwrap(),
-        Vec::from_iter([Tag::new("test_tag_1".into()), Tag::new("test_tag_2".into())]),
+        Vec::from_iter([
+            Tag::new("test_tag_1").unwrap(),
+            Tag::new("test_tag_2").unwrap(),
+        ]),
         Version::new(0),
     )
 }

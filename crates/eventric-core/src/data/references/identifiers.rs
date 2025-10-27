@@ -56,7 +56,7 @@ impl Identifiers {
 
     pub fn put(&self, batch: &mut WriteBatch, identifier: &IdentifierHashRef<'_>) {
         let key: [u8; KEY_LEN] = Hash(identifier.hash()).into();
-        let value = identifier.as_ref().as_bytes();
+        let value: &[u8] = identifier.as_ref();
 
         batch.insert(&self.keyspace, key, value);
     }

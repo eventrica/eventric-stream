@@ -23,7 +23,10 @@ pub fn main() -> Result<(), Error> {
     let events = [Event::new(
         Data::new("Hello World").unwrap(),
         Identifier::new("test_identifier").unwrap(),
-        Vec::from_iter([Tag::new("test_tag_a".into()), Tag::new("test_tag_b".into())]),
+        Vec::from_iter([
+            Tag::new("test_tag_a").unwrap(),
+            Tag::new("test_tag_b").unwrap(),
+        ]),
         Version::new(0),
     )];
 
