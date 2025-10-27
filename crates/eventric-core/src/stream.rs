@@ -19,7 +19,20 @@ use crate::{
 // =================================================================================================
 
 #[doc = include_md!("README.md:stream")]
-#[doc = include_md!("README.md:open_stream")]
+/// ```
+/// use eventric_core::{
+///     Error,
+///     Stream,
+/// };
+///
+/// let path = eventric_core::temp_path();
+///
+/// let mut stream = Stream::builder(path).temporary(true).open()?;
+///
+/// assert!(stream.is_empty()?);
+///
+/// Ok::<(), Error>(())
+/// ```
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
 pub struct Stream {
