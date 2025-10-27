@@ -23,7 +23,7 @@ pub struct Stream {
     #[debug("Database")]
     database: Database,
     data: Data,
-    position: Position,
+    next: Position,
 }
 
 // Configuration

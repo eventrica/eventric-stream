@@ -60,11 +60,11 @@ impl Identifiers {
     pub fn put(
         &self,
         batch: &mut WriteBatch,
-        position: Position,
+        at: Position,
         identifier: &IdentifierHashRef<'_>,
         version: Version,
     ) {
-        let key: [u8; KEY_LEN] = PositionAndHash(position, identifier.hash()).into();
+        let key: [u8; KEY_LEN] = PositionAndHash(at, identifier.hash()).into();
         let value = version.value().to_be_bytes();
 
         batch.insert(&self.keyspace, key, value);
@@ -74,19 +74,19 @@ impl Identifiers {
 // Query
 
 impl Identifiers {
-    pub fn query<'a, S>(&self, specifiers: S, position: Option<Position>) -> SequentialIterator<'_>
+    pub fn query<'a, S>(&self, specifiers: S, from: Option<Position>) -> SequentialIterator<'_>
     where
         S: Iterator<Item = &'a SpecifierHash>,
     {
         SequentialOrIterator::combine(
-            specifiers.map(|specifier| self.query_specifier(specifier, position)),
+            specifiers.map(|specifier| self.query_specifier(specifier, from)),
         )
     }
 
     fn query_specifier(
         &self,
         specifier: &SpecifierHash,
-        position: Option<Position>,
+        from: Option<Position>,
     ) -> SequentialIterator<'_> {
         let version_range = specifier
             .range()
@@ -105,7 +105,7 @@ impl Identifiers {
             Some(Position::new(key.get_u64()))
         };
 
-        match position {
+        match from {
             Some(position) => self.query_specifier_range(specifier.identifer(), position, f),
             None => self.query_specifier_prefix(specifier.identifer(), f),
         }
@@ -129,14 +129,14 @@ impl Identifiers {
     fn query_specifier_range<F>(
         &self,
         identifier: &IdentifierHash,
-        position: Position,
+        from: Position,
         f: F,
     ) -> SequentialIterator<'_>
     where
         F: Fn(Slice, Slice) -> Option<Position> + 'static,
     {
         let hash = identifier.hash();
-        let lower: [u8; KEY_LEN] = PositionAndHash(position, hash).into();
+        let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
         SequentialIterator::Boxed(Box::new(self.keyspace.range(lower..upper).filter_map(

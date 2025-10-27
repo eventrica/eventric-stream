@@ -54,9 +54,9 @@ pub struct Tags {
 // Put
 
 impl Tags {
-    pub fn put(&self, batch: &mut WriteBatch, position: Position, tags: &[TagHashRef<'_>]) {
+    pub fn put(&self, batch: &mut WriteBatch, at: Position, tags: &[TagHashRef<'_>]) {
         for tag in tags {
-            let key: [u8; KEY_LEN] = PositionAndHash(position, tag.hash()).into();
+            let key: [u8; KEY_LEN] = PositionAndHash(at, tag.hash()).into();
             let value = [];
 
             batch.insert(&self.keyspace, key, value);
@@ -67,14 +67,14 @@ impl Tags {
 // Query
 
 impl Tags {
-    pub fn query<'a, T>(&self, tags: T, position: Option<Position>) -> SequentialIterator<'_>
+    pub fn query<'a, T>(&self, tags: T, from: Option<Position>) -> SequentialIterator<'_>
     where
         T: Iterator<Item = &'a TagHash>,
     {
-        SequentialAndIterator::combine(tags.map(|tag| self.query_tag(tag, position)))
+        SequentialAndIterator::combine(tags.map(|tag| self.query_tag(tag, from)))
     }
 
-    fn query_tag(&self, tag: &TagHash, position: Option<Position>) -> SequentialIterator<'_> {
+    fn query_tag(&self, tag: &TagHash, from: Option<Position>) -> SequentialIterator<'_> {
         let map = |key: Result<Slice, fjall::Error>| match key {
             Ok(key) => {
                 let mut key = &key[..];
@@ -86,7 +86,7 @@ impl Tags {
             Err(err) => Err(Error::from(err)),
         };
 
-        match position {
+        match from {
             Some(position) => self.query_tag_range(tag, position, map),
             None => self.query_tag_prefix(tag, map),
         }
@@ -104,12 +104,12 @@ impl Tags {
         ))
     }
 
-    fn query_tag_range<F>(&self, tag: &TagHash, position: Position, f: F) -> SequentialIterator<'_>
+    fn query_tag_range<F>(&self, tag: &TagHash, from: Position, f: F) -> SequentialIterator<'_>
     where
         F: Fn(Result<Slice, fjall::Error>) -> Result<Position, Error> + 'static,
     {
         let hash = tag.hash();
-        let lower: [u8; KEY_LEN] = PositionAndHash(position, hash).into();
+        let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
         SequentialIterator::Boxed(Box::new(

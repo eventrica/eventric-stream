@@ -69,8 +69,8 @@ impl Indices {
 // Contains
 
 impl Indices {
-    pub fn contains(&self, query: &QueryHash, position: Option<Position>) -> bool {
-        self.query(query, position).any(|_| true)
+    pub fn contains(&self, query: &QueryHash, from: Option<Position>) -> bool {
+        self.query(query, from).any(|_| true)
     }
 }
 
@@ -81,13 +81,13 @@ impl Indices {
     pub fn put(
         &self,
         batch: &mut WriteBatch,
+        at: Position,
         event: &EventHashRef<'_>,
         timestamp: Timestamp,
-        position: Position,
     ) {
-        self.identifiers.put(batch, position, event.identifier(), *event.version());
-        self.tags.put(batch, position, event.tags());
-        self.timestamps.put(batch, position, timestamp);
+        self.identifiers.put(batch, at, event.identifier(), *event.version());
+        self.tags.put(batch, at, event.tags());
+        self.timestamps.put(batch, at, timestamp);
     }
 }
 
@@ -95,16 +95,16 @@ impl Indices {
 
 impl Indices {
     #[must_use]
-    pub fn query(&self, query: &QueryHash, position: Option<Position>) -> SequentialIterator<'_> {
+    pub fn query(&self, query: &QueryHash, from: Option<Position>) -> SequentialIterator<'_> {
         SequentialOrIterator::combine(query.items().iter().map(|item| match item {
             QueryItemHash::Specifiers(specifiers) => {
-                self.identifiers.query(specifiers.iter(), position)
+                self.identifiers.query(specifiers.iter(), from)
             }
             QueryItemHash::SpecifiersAndTags(specifiers, tags) => SequentialAndIterator::combine([
-                self.identifiers.query(specifiers.iter(), position),
-                self.tags.query(tags.iter(), position),
+                self.identifiers.query(specifiers.iter(), from),
+                self.tags.query(tags.iter(), from),
             ]),
-            QueryItemHash::Tags(tags) => self.tags.query(tags.iter(), position),
+            QueryItemHash::Tags(tags) => self.tags.query(tags.iter(), from),
         }))
     }
 }

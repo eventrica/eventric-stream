@@ -31,21 +31,21 @@ impl Stream {
             self.append_check(condition)?;
         }
 
-        self.append_put(events)?;
+        let position = self.append_put(events)?;
 
-        Ok(self.position)
+        Ok(position)
     }
 
     #[rustfmt::skip]
     fn append_check(&self, condition: &AppendCondition<'_>) -> Result<(), AppendError> {
-        if let Some(position) = condition.after && position >= self.position {
+        if let Some(after) = condition.after && after >= self.next {
             return Ok(());
         }
 
         let query = condition.fail_if_matches.into();
-        let position = condition.after.map(|position| position + 1);
+        let from = condition.after.map(|after| after + 1);
 
-        if self.data.indices.contains(&query, position) {
+        if self.data.indices.contains(&query, from) {
             return Err(AppendError::Concurrency);
         }
 
@@ -53,7 +53,7 @@ impl Stream {
     }
 
     #[rustfmt::skip]
-    fn append_put<'a, E>(&mut self, events: E) -> Result<(), Error>
+    fn append_put<'a, E>(&mut self, events: E) -> Result<Position, Error>
     where
         E: IntoIterator<Item = &'a Event>,
     {
@@ -63,16 +63,16 @@ impl Stream {
             let event = event.into();
             let timestamp = Timestamp::now()?;
 
-            self.data.events.put(&mut batch, &event, timestamp, self.position);
-            self.data.indices.put(&mut batch, &event, timestamp, self.position);
+            self.data.events.put(&mut batch, self.next, &event, timestamp);
+            self.data.indices.put(&mut batch, self.next, &event, timestamp);
             self.data.references.put(&mut batch, &event);
 
-            self.position += 1;
+            self.next += 1;
         }
 
         batch.commit().map_err(Error::from)?;
 
-        Ok(())
+        Ok(self.next - 1)
     }
 }
 

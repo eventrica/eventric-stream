@@ -39,9 +39,9 @@ pub struct Timestamps {
 // Get/Put
 
 impl Timestamps {
-    pub fn put(&self, batch: &mut WriteBatch, position: Position, timestamp: Timestamp) {
+    pub fn put(&self, batch: &mut WriteBatch, at: Position, timestamp: Timestamp) {
         let key: [u8; KEY_LEN] = timestamp.into();
-        let value = position.value().to_be_bytes();
+        let value = at.value().to_be_bytes();
 
         batch.insert(&self.keyspace, key, value);
     }

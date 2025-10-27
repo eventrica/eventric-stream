@@ -52,7 +52,7 @@ impl Stream {
         cache: &'a QueryCache,
         options: Option<QueryOptions>,
     ) -> QueryIterator<'a> {
-        let position = condition.from;
+        let from = condition.from;
         let iter = match condition.matches {
             Some(query) => {
                 let query = query.into();
@@ -61,26 +61,26 @@ impl Stream {
 
                 let query = query.into();
 
-                self.query_indices(&query, position)
+                self.query_indices(&query, from)
             }
-            None => self.query_events(position),
+            None => self.query_events(from),
         };
 
         QueryIterator::new(cache, iter, options, &self.data.references)
     }
 
-    fn query_events(&self, position: Option<Position>) -> QuerySequencedEventHashIterator<'_> {
-        QuerySequencedEventHashIterator::Direct(self.data.events.iterate(position))
+    fn query_events(&self, from: Option<Position>) -> QuerySequencedEventHashIterator<'_> {
+        QuerySequencedEventHashIterator::Direct(self.data.events.iterate(from))
     }
 
     fn query_indices(
         &self,
         query: &QueryHash,
-        position: Option<Position>,
+        from: Option<Position>,
     ) -> QuerySequencedEventHashIterator<'_> {
         QuerySequencedEventHashIterator::Mapped(QueryMappedSequencedEventHashIterator::new(
             &self.data.events,
-            self.data.indices.query(query, position),
+            self.data.indices.query(query, from),
         ))
     }
 }

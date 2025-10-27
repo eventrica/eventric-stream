@@ -1,15 +1,17 @@
-use std::ops::{
+use derive_more::with_trait::{
     Add,
     AddAssign,
+    Sub,
+    SubAssign,
 };
-
 use fancy_constructor::new;
 
 // =================================================================================================
 // Position
 // =================================================================================================
 
-#[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[rustfmt::skip]
+#[derive(new, Add, AddAssign, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Sub, SubAssign)]
 #[new(const_fn)]
 pub struct Position(u64);
 
@@ -25,14 +27,6 @@ impl Position {
     }
 }
 
-impl Add for Position {
-    type Output = Position;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        Position(self.0 + rhs.0)
-    }
-}
-
 impl Add<u64> for Position {
     type Output = Position;
 
@@ -41,14 +35,22 @@ impl Add<u64> for Position {
     }
 }
 
-impl AddAssign for Position {
-    fn add_assign(&mut self, rhs: Self) {
-        self.0 += rhs.0;
-    }
-}
-
 impl AddAssign<u64> for Position {
     fn add_assign(&mut self, rhs: u64) {
         self.0 += rhs;
+    }
+}
+
+impl Sub<u64> for Position {
+    type Output = Position;
+
+    fn sub(self, rhs: u64) -> Self::Output {
+        Position(self.0 - rhs)
+    }
+}
+
+impl SubAssign<u64> for Position {
+    fn sub_assign(&mut self, rhs: u64) {
+        self.0 -= rhs;
     }
 }

@@ -58,21 +58,21 @@ impl Events {
 // Get/Put
 
 impl Events {
-    pub fn get(&self, position: Position) -> Result<Option<SequencedEventHash>, Error> {
-        let key = position.value().to_be_bytes();
+    pub fn get(&self, at: Position) -> Result<Option<SequencedEventHash>, Error> {
+        let key = at.value().to_be_bytes();
         let value = self.keyspace.get(key)?;
 
-        Ok(value.map(|value| SliceAndPosition(value, position).into()))
+        Ok(value.map(|value| SliceAndPosition(value, at).into()))
     }
 
     pub fn put(
         &self,
         batch: &mut WriteBatch,
+        at: Position,
         event: &EventHashRef<'_>,
         timestamp: Timestamp,
-        position: Position,
     ) {
-        let key = position.value().to_be_bytes();
+        let key = at.value().to_be_bytes();
         let value: Vec<u8> = EventAndTimestamp(event, timestamp).into();
 
         batch.insert(&self.keyspace, key, value);
@@ -82,8 +82,8 @@ impl Events {
 // Iterate
 
 impl Events {
-    pub fn iterate(&self, position: Option<Position>) -> SequencedEventHashIterator<'_> {
-        match position {
+    pub fn iterate(&self, from: Option<Position>) -> SequencedEventHashIterator<'_> {
+        match from {
             Some(position) => self.iterate_from(position),
             None => self.iterate_all(),
         }
@@ -98,11 +98,11 @@ impl Events {
         }
     }
 
-    fn iterate_from(&self, position: Position) -> SequencedEventHashIterator<'_> {
+    fn iterate_from(&self, from: Position) -> SequencedEventHashIterator<'_> {
         SequencedEventHashIterator {
             iter: Box::new(
                 self.keyspace
-                    .range(position.value().to_be_bytes()..)
+                    .range(from.value().to_be_bytes()..)
                     .map(|guard| match guard.into_inner() {
                         Ok((key, value)) => Ok(SliceAndPosition(value, key.into()).into()),
                         Err(err) => Err(Error::from(err)),
