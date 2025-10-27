@@ -81,7 +81,7 @@ impl Stream {
 // Append Condition
 
 #[derive(new, Debug)]
-#[new(name(inner), vis())]
+#[new(name(new_inner), vis())]
 pub struct AppendCondition<'a> {
     #[new(default)]
     pub(crate) after: Option<Position>,
@@ -91,7 +91,7 @@ pub struct AppendCondition<'a> {
 impl<'a> AppendCondition<'a> {
     #[must_use]
     pub fn new(fail_if_matches: &'a Query) -> Self {
-        Self::inner(fail_if_matches)
+        Self::new_inner(fail_if_matches)
     }
 }
 

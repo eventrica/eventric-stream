@@ -6,6 +6,8 @@ use crate::error::Error;
 // Validation
 // =================================================================================================
 
+// Validated
+
 pub trait Validated {
     fn validated(self) -> Result<Self, Error>
     where

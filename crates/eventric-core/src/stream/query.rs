@@ -291,7 +291,7 @@ impl Iterator for QueryMappedSequencedEventHashIterator<'_> {
 // Query Options
 
 #[derive(new, Debug)]
-#[new(name(inner), vis())]
+#[new(name(new_inner), vis())]
 pub struct QueryOptions {
     #[new(default)]
     retrieve_tags: bool,
@@ -307,6 +307,6 @@ impl QueryOptions {
 
 impl Default for QueryOptions {
     fn default() -> Self {
-        Self::inner()
+        Self::new_inner()
     }
 }

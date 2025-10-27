@@ -1,14 +1,16 @@
-use std::ops::Deref;
-
-use derive_more::AsRef;
+use derive_more::{
+    AsRef,
+    Deref,
+};
 use fancy_constructor::new;
-use rapidhash::v3;
 use validator::Validate;
 
 use crate::{
     error::Error,
-    model::SEED,
-    util::validation::Validated,
+    util::{
+        self,
+        validate::Validated,
+    },
 };
 
 // =================================================================================================
@@ -48,15 +50,9 @@ impl Identifier {
 
 impl Identifier {
     pub(crate) fn hash(&self) -> u64 {
-        v3::rapidhash_v3_seeded(self.identifier.as_bytes(), &SEED)
+        util::hash(self)
     }
 }
-
-// impl AsRef<str> for Identifier {
-//     fn as_ref(&self) -> &str {
-//         &self.identifier
-//     }
-// }
 
 // Hash
 
@@ -89,22 +85,14 @@ impl From<&IdentifierHashRef<'_>> for IdentifierHash {
 
 // Hash Ref
 
-#[derive(new, Debug)]
+#[derive(new, Debug, Deref)]
 #[new(const_fn)]
-pub struct IdentifierHashRef<'a>(u64, &'a Identifier);
+pub struct IdentifierHashRef<'a>(u64, #[deref] &'a Identifier);
 
 impl IdentifierHashRef<'_> {
     #[must_use]
     pub fn hash(&self) -> u64 {
         self.0
-    }
-}
-
-impl Deref for IdentifierHashRef<'_> {
-    type Target = Identifier;
-
-    fn deref(&self) -> &Self::Target {
-        self.1
     }
 }
 

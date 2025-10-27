@@ -4,7 +4,7 @@ use validator::Validate;
 
 use crate::{
     error::Error,
-    util::validation::Validated as _,
+    util::validate::Validated as _,
 };
 
 // =================================================================================================

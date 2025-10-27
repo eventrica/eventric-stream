@@ -16,18 +16,28 @@ use crate::model::event::{
 // =================================================================================================
 
 #[derive(new, Debug, Eq, PartialEq)]
-#[new(const_fn)]
-pub struct Specifier(Identifier, Option<Range<Version>>);
+#[new(const_fn, name(new_inner), vis())]
+pub struct Specifier {
+    identifier: Identifier,
+    range: Option<Range<Version>>,
+}
+
+impl Specifier {
+    #[must_use]
+    pub const fn new(identifier: Identifier, range: Option<Range<Version>>) -> Self {
+        Self::new_inner(identifier, range)
+    }
+}
 
 impl Specifier {
     #[must_use]
     pub fn identifier(&self) -> &Identifier {
-        &self.0
+        &self.identifier
     }
 
     #[must_use]
     pub fn range(&self) -> Option<&Range<Version>> {
-        self.1.as_ref()
+        self.range.as_ref()
     }
 }
 

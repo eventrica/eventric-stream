@@ -1,14 +1,16 @@
-use std::ops::Deref;
-
-use derive_more::AsRef;
+use derive_more::{
+    AsRef,
+    Deref,
+};
 use fancy_constructor::new;
-use rapidhash::v3;
 use validator::Validate;
 
 use crate::{
     error::Error,
-    model::SEED,
-    util::validation::Validated as _,
+    util::{
+        self,
+        validate::Validated as _,
+    },
 };
 
 // =================================================================================================
@@ -17,7 +19,7 @@ use crate::{
 
 /// The [`Tag`] type is a typed/validated wrapper around a [`String`]
 /// tag for an event (an event can have zero or more tags which may be used as
-/// part of queries, and which form part of a dynamic consistency boundaryt in
+/// part of queries, and which form part of a dynamic consistency boundary in
 /// doing so).
 #[derive(new, AsRef, Clone, Debug, Eq, PartialEq, Validate)]
 #[as_ref(str, [u8])]
@@ -48,7 +50,7 @@ impl Tag {
 
 impl Tag {
     pub(crate) fn hash(&self) -> u64 {
-        v3::rapidhash_v3_seeded(self.tag.as_bytes(), &SEED)
+        util::hash(self)
     }
 }
 
@@ -83,22 +85,14 @@ impl From<&TagHashRef<'_>> for TagHash {
 
 // Hash Ref
 
-#[derive(new, Debug)]
+#[derive(new, Debug, Deref)]
 #[new(const_fn)]
-pub struct TagHashRef<'a>(u64, &'a Tag);
+pub struct TagHashRef<'a>(u64, #[deref] &'a Tag);
 
 impl TagHashRef<'_> {
     #[must_use]
     pub fn hash(&self) -> u64 {
         self.0
-    }
-}
-
-impl Deref for TagHashRef<'_> {
-    type Target = Tag;
-
-    fn deref(&self) -> &Self::Target {
-        self.1
     }
 }
 

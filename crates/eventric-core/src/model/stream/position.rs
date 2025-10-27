@@ -15,19 +15,26 @@ use fancy_constructor::new;
 
 #[rustfmt::skip]
 #[derive(new, Add, AddAssign, Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd, Sub, SubAssign)]
-#[new(args(position: u64), const_fn)]
-pub struct Position(#[new(val(position))] u64);
+#[new(const_fn, name(new_inner), vis())]
+pub struct Position(u64);
 
 impl Position {
-    pub const MAX: Position = Position::new(u64::MAX);
-    pub const MIN: Position = Position::new(u64::MIN);
+    #[must_use]
+    pub const fn new(position: u64) -> Self {
+        Self::new_inner(position)
+    }
+}
+
+impl Position {
+    pub const MAX: Self = Self::new(u64::MAX);
+    pub const MIN: Self = Self::new(u64::MIN);
 }
 
 impl Add<u64> for Position {
-    type Output = Position;
+    type Output = Self;
 
     fn add(self, rhs: u64) -> Self::Output {
-        Position(self.0 + rhs)
+        Self(self.0 + rhs)
     }
 }
 
@@ -38,10 +45,10 @@ impl AddAssign<u64> for Position {
 }
 
 impl Sub<u64> for Position {
-    type Output = Position;
+    type Output = Self;
 
     fn sub(self, rhs: u64) -> Self::Output {
-        Position(self.0 - rhs)
+        Self(self.0 - rhs)
     }
 }
 

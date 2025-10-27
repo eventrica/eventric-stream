@@ -16,8 +16,15 @@ use crate::error::Error;
 // =================================================================================================
 
 #[derive(new, Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd)]
-#[new(args(nanos: u64), const_fn)]
-pub struct Timestamp(#[new(val(nanos))] u64);
+#[new(const_fn, name(new_inner), vis())]
+pub struct Timestamp(u64);
+
+impl Timestamp {
+    #[must_use]
+    pub const fn new(nanos: u64) -> Self {
+        Self::new_inner(nanos)
+    }
+}
 
 impl Timestamp {
     /// NOTE: Important - this uses [`SystemTime`] which is not guaranteed to be
