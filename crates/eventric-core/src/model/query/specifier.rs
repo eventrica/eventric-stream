@@ -1,21 +1,31 @@
 use std::ops::Range;
 
+use derive_more::AsRef;
 use fancy_constructor::new;
+use serde::{
+    Deserialize,
+    Serialize,
+};
+use validator::Validate;
 
-use crate::model::event::{
-    identifier::{
-        Identifier,
-        IdentifierHash,
-        IdentifierHashRef,
+use crate::{
+    error::Error,
+    model::event::{
+        identifier::{
+            Identifier,
+            IdentifierHash,
+            IdentifierHashRef,
+        },
+        version::Version,
     },
-    version::Version,
+    util::validate::Validated as _,
 };
 
 // =================================================================================================
 // Specifier
 // =================================================================================================
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Specifier {
     identifier: Identifier,
     range: Option<Range<Version>>,
@@ -82,5 +92,38 @@ impl<'a> From<&'a Specifier> for SpecifierHashRef<'a> {
         let range = specifier.range().cloned();
 
         Self::new(identifier, range)
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Specifiers
+
+#[derive(new, AsRef, Debug, Deserialize, Serialize, Validate)]
+#[as_ref([Specifier])]
+#[new(const_fn, name(new_unvalidated), vis())]
+pub struct Specifiers {
+    #[validate(length(min = 1))]
+    specifiers: Vec<Specifier>,
+}
+
+impl Specifiers {
+    pub fn new<T>(specifiers: T) -> Result<Self, Error>
+    where
+        T: Into<Vec<Specifier>>,
+    {
+        Self::new_unvalidated(specifiers.into()).validated()
+    }
+}
+
+impl From<&Specifiers> for Vec<SpecifierHash> {
+    fn from(specifiers: &Specifiers) -> Self {
+        specifiers.as_ref().iter().map(Into::into).collect()
+    }
+}
+
+impl<'a> From<&'a Specifiers> for Vec<SpecifierHashRef<'a>> {
+    fn from(specifiers: &'a Specifiers) -> Self {
+        specifiers.as_ref().iter().map(Into::into).collect()
     }
 }

@@ -7,13 +7,17 @@ use derive_more::{
         SubAssign,
     },
 };
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 // =================================================================================================
 // Position
 // =================================================================================================
 
 #[rustfmt::skip]
-#[derive(Add, AddAssign, Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd, Sub, SubAssign)]
+#[derive(Add, AddAssign, Clone, Copy, Debug, Deref, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize, Sub, SubAssign)]
 pub struct Position(u64);
 
 impl Position {
@@ -24,7 +28,11 @@ impl Position {
 }
 
 impl Position {
+    /// Represents the maximum possible value of a [`Position`] (which is
+    /// effectively `u64::MAX` internally).
     pub const MAX: Self = Self::new(u64::MAX);
+    /// Represents the minimum possible value of a [`Position`] (which is
+    /// `u64::MIN` - zero - the first event in a stream).
     pub const MIN: Self = Self::new(u64::MIN);
 }
 

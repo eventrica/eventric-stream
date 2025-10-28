@@ -7,6 +7,10 @@ pub mod version;
 use std::sync::Arc;
 
 use fancy_constructor::new;
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use crate::model::{
     event::{
@@ -33,7 +37,8 @@ use crate::model::{
 
 // Event
 
-#[derive(Debug)]
+#[derive(new, Debug, Deserialize, Serialize)]
+#[new(const_fn, name(new_inner), vis())]
 pub struct Event {
     data: Data,
     identifier: Identifier,
@@ -42,13 +47,9 @@ pub struct Event {
 }
 
 impl Event {
+    #[must_use]
     pub const fn new(data: Data, identifier: Identifier, tags: Vec<Tag>, version: Version) -> Self {
-        Self {
-            data,
-            identifier,
-            tags,
-            version,
-        }
+        Self::new_inner(data, identifier, tags, version)
     }
 }
 

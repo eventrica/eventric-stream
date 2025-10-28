@@ -1,6 +1,5 @@
-#![doc = include_utils::include_md!("README.md:overview")]
 #![allow(clippy::multiple_crate_versions)]
-// #![allow(clippy::missing_errors_doc)]
+#![doc = include_utils::include_md!("README.md:overview")]
 #![warn(missing_docs)]
 
 mod data;
@@ -23,14 +22,20 @@ pub use self::{
             SequencedEvent,
             data::Data,
             identifier::Identifier,
-            tag::Tag,
+            tag::{
+                Tag,
+                Tags,
+            },
             timestamp::Timestamp,
             version::Version,
         },
         query::{
             Query,
             QueryItem,
-            specifier::Specifier,
+            specifier::{
+                Specifier,
+                Specifiers,
+            },
         },
         stream::position::Position,
     },

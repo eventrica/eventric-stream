@@ -11,8 +11,10 @@ use eventric_core::{
     QueryItem,
     QueryOptions,
     Specifier,
+    Specifiers,
     Stream,
     Tag,
+    Tags,
     Version,
 };
 
@@ -45,13 +47,13 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         None,
     )?;
 
-    let query = Query::new(Vec::from_iter([QueryItem::SpecifiersAndTags(
-        Vec::from_iter([
+    let query = Query::new([QueryItem::SpecifiersAndTags(
+        Specifiers::new([
             Specifier::new(Identifier::new("StudentSubscribedToCourse")?, None),
             Specifier::new(Identifier::new("CourseCapacityChanged")?, None),
-        ]),
-        Vec::from_iter([Tag::new("course:523")?]),
-    )]));
+        ])?,
+        Tags::new([Tag::new("course:523")?])?,
+    )])?;
 
     let condition = QueryCondition::default()
         .matches(&query)

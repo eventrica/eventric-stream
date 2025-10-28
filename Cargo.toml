@@ -18,6 +18,7 @@ fancy_constructor = { version = "2" }
 fjall             = { version = "=3.0.0-pre.0" }
 include-utils     = { version = "0.2" }
 rapidhash         = { version = "4" }
+serde             = { version = "1", features = ["derive"] }
 thiserror         = { version = "2" }
 validator         = { version = "0.20", features = ["derive", "unic"] }
 

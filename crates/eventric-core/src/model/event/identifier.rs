@@ -3,6 +3,10 @@ use derive_more::{
     Deref,
 };
 use fancy_constructor::new;
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use validator::Validate;
 
 use crate::{
@@ -19,9 +23,11 @@ use crate::{
 
 /// The [`Identifier`] type is a typed/validated wrapper around a [`String`]
 /// identifier for an event (an identifier is effectively equivalent to a *type
-/// name*, and combines with a version value to fully specify the logical type
-/// of an event).
-#[derive(new, AsRef, Clone, Debug, Eq, PartialEq, Validate)]
+/// name*, and combines with a [`Version`][version] value to fully specify the
+/// logical versioned *type* of an event).
+///
+/// [version]: crate::Version
+#[derive(new, AsRef, Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Validate)]
 #[as_ref(str, [u8])]
 #[new(const_fn, name(new_unvalidated), vis(pub(crate)))]
 pub struct Identifier {

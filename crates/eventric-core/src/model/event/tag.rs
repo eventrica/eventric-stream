@@ -3,6 +3,10 @@ use derive_more::{
     Deref,
 };
 use fancy_constructor::new;
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use validator::Validate;
 
 use crate::{
@@ -21,7 +25,7 @@ use crate::{
 /// tag for an event (an event can have zero or more tags which may be used as
 /// part of queries, and which form part of a dynamic consistency boundary in
 /// doing so).
-#[derive(new, AsRef, Clone, Debug, Eq, PartialEq, Validate)]
+#[derive(new, AsRef, Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Validate)]
 #[as_ref(str, [u8])]
 #[new(const_fn, name(new_unvalidated), vis(pub(crate)))]
 pub struct Tag {
@@ -101,5 +105,48 @@ impl<'a> From<&'a Tag> for TagHashRef<'a> {
         let hash = tag.hash();
 
         Self::new(hash, tag)
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Tags
+
+/// The [`Tags`] type is a validating collection of [`Tag`] instances, used to
+/// ensure that invariants are met when constructing queries.
+#[derive(new, AsRef, Debug, Deserialize, Serialize, Validate)]
+#[as_ref([Tag])]
+#[new(const_fn, name(new_unvalidated), vis())]
+pub struct Tags {
+    #[validate(length(min = 1))]
+    tags: Vec<Tag>,
+}
+
+impl Tags {
+    /// Constructs a new [`Tags`] instance given any value which can be
+    /// converted into a valid [`Vec`] of [`Tag`] instances.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error on validation failure. Tags must conform to the
+    /// following constraints:
+    /// - Min 1 Tag (Non-Zero Length/Non-Empty)
+    pub fn new<T>(tags: T) -> Result<Self, Error>
+    where
+        T: Into<Vec<Tag>>,
+    {
+        Self::new_unvalidated(tags.into()).validated()
+    }
+}
+
+impl From<&Tags> for Vec<TagHash> {
+    fn from(tags: &Tags) -> Self {
+        tags.as_ref().iter().map(Into::into).collect()
+    }
+}
+
+impl<'a> From<&'a Tags> for Vec<TagHashRef<'a>> {
+    fn from(tags: &'a Tags) -> Self {
+        tags.as_ref().iter().map(Into::into).collect()
     }
 }

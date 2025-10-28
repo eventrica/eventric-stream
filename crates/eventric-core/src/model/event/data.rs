@@ -1,5 +1,9 @@
 use derive_more::AsRef;
 use fancy_constructor::new;
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use validator::Validate;
 
 use crate::{
@@ -15,7 +19,7 @@ use crate::{
 /// immutable owned vector of bytes. Higher-level libraries may determine the
 /// meaning of the payload depending on the identifier and version of the event,
 /// but at core level it is opaque.
-#[derive(new, AsRef, Debug, Validate)]
+#[derive(new, AsRef, Debug, Deserialize, Serialize, Validate)]
 #[as_ref([u8])]
 #[new(const_fn, name(new_unvalidated), vis(pub(crate)))]
 pub struct Data {

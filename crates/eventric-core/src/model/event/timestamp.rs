@@ -7,6 +7,10 @@ use derive_more::{
     Debug,
     Deref,
 };
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use crate::error::Error;
 
@@ -14,11 +18,11 @@ use crate::error::Error;
 // Timestamp
 // =================================================================================================
 
-/// The [`Timestamp`] type is typed wrapper around a `u64` nanosecond value,
+/// The [`Timestamp`] type is a typed wrapper around a `u64` nanosecond value,
 /// used to represent the insertion time of an event in a stream. The value
 /// represents nanoseconds since Unix Epoch, a u64 being sufficient to represent
 /// comfortably over a century.
-#[derive(Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Deref, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct Timestamp(u64);
 
 impl Timestamp {
