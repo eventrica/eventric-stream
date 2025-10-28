@@ -4,7 +4,7 @@ use eventric_core::{
     error::Error,
     event::{
         Data,
-        NewEvent,
+        EphemeralEvent,
         Identifier,
         Tag,
         Version,
@@ -25,7 +25,7 @@ pub fn main() -> Result<(), Error> {
     let count = 10f64;
     let events = (0..count as u64)
         .map(|_| {
-            NewEvent::new(
+            EphemeralEvent::new(
                 Data::new("Hello World").unwrap(),
                 Identifier::new("test_identifier").unwrap(),
                 Vec::from_iter([

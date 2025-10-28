@@ -25,9 +25,8 @@ pub mod error {
 /// within queries.
 pub mod event {
     pub use eventric_core_event::{
-        Event,
-        EventArc,
-        NewEvent,
+        EphemeralEvent,
+        PersistentEvent,
         data::Data,
         identifier::Identifier,
         position::Position,

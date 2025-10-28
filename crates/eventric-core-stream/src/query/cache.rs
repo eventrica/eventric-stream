@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use dashmap::DashMap;
 use derive_more::Debug;
 use eventric_core_event::{
@@ -22,8 +20,8 @@ use crate::query::{
 
 #[derive(Debug, Default)]
 pub struct Cache {
-    pub(crate) identifiers: DashMap<u64, Arc<Identifier>>,
-    pub(crate) tags: DashMap<u64, Arc<Tag>>,
+    pub(crate) identifiers: DashMap<u64, Identifier>,
+    pub(crate) tags: DashMap<u64, Tag>,
 }
 
 impl Cache {
@@ -44,7 +42,7 @@ impl Cache {
         for specifier in specifiers {
             self.identifiers
                 .entry(specifier.identifier.hash())
-                .or_insert_with(|| Arc::new(specifier.identifier.clone()));
+                .or_insert_with(|| specifier.identifier.clone());
         }
     }
 
@@ -52,7 +50,7 @@ impl Cache {
         for tag in tags {
             self.tags
                 .entry(tag.hash())
-                .or_insert_with(|| Arc::new((*tag).clone()));
+                .or_insert_with(|| (*tag).clone());
         }
     }
 }

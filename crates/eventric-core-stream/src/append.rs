@@ -2,7 +2,7 @@ pub mod condition;
 
 use eventric_core_error::Error;
 use eventric_core_event::{
-    NewEvent,
+    EphemeralEvent,
     position::Position,
     timestamp::Timestamp,
 };
@@ -23,7 +23,7 @@ impl Stream {
         condition: Option<&Condition<'_>>,
     ) -> Result<Position, Error>
     where
-        E: IntoIterator<Item = &'a NewEvent>,
+        E: IntoIterator<Item = &'a EphemeralEvent>,
     {
         if let Some(condition) = condition {
             self.append_check(condition)?;
@@ -53,7 +53,7 @@ impl Stream {
     #[rustfmt::skip]
     fn append_put<'a, E>(&mut self, events: E) -> Result<Position, Error>
     where
-        E: IntoIterator<Item = &'a NewEvent>,
+        E: IntoIterator<Item = &'a EphemeralEvent>,
     {
         let mut batch = self.database.batch();
 

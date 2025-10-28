@@ -14,8 +14,6 @@ pub mod tag;
 pub mod timestamp;
 pub mod version;
 
-use std::sync::Arc;
-
 use fancy_constructor::new;
 
 use crate::{
@@ -39,11 +37,11 @@ use crate::{
 // Event
 // =================================================================================================
 
-// Event
+// Persistent
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub struct Event {
+pub struct PersistentEvent {
     data: Data,
     identifier: Identifier,
     position: Position,
@@ -52,7 +50,7 @@ pub struct Event {
     version: Version,
 }
 
-impl Event {
+impl PersistentEvent {
     #[must_use]
     pub fn data(&self) -> &Data {
         &self.data
@@ -84,69 +82,11 @@ impl Event {
     }
 }
 
-impl From<EventArc> for Event {
-    fn from(value: EventArc) -> Self {
-        Self {
-            data: value.data,
-            identifier: Arc::unwrap_or_clone(value.identifier),
-            position: value.position,
-            tags: value.tags.into_iter().map(Arc::unwrap_or_clone).collect(),
-            timestamp: value.timestamp,
-            version: value.version,
-        }
-    }
-}
-
-// Arc
-
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub struct EventArc {
-    data: Data,
-    identifier: Arc<Identifier>,
-    position: Position,
-    tags: Vec<Arc<Tag>>,
-    timestamp: Timestamp,
-    version: Version,
-}
-
-impl EventArc {
-    #[must_use]
-    pub fn data(&self) -> &Data {
-        &self.data
-    }
-
-    #[must_use]
-    pub fn identifier(&self) -> &Arc<Identifier> {
-        &self.identifier
-    }
-
-    #[must_use]
-    pub fn position(&self) -> &Position {
-        &self.position
-    }
-
-    #[must_use]
-    pub fn tags(&self) -> &Vec<Arc<Tag>> {
-        &self.tags
-    }
-
-    #[must_use]
-    pub fn timestamp(&self) -> &Timestamp {
-        &self.timestamp
-    }
-
-    #[must_use]
-    pub fn version(&self) -> &Version {
-        &self.version
-    }
-}
-
 // Hash
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub struct EventHash {
+pub struct PersistentEventHash {
     pub data: Data,
     pub identifier: IdentifierHash,
     pub position: Position,
@@ -155,7 +95,7 @@ pub struct EventHash {
     pub version: Version,
 }
 
-impl EventHash {
+impl PersistentEventHash {
     #[must_use]
     #[rustfmt::skip]
     pub fn take(self) -> (Data, IdentifierHash, Position, Vec<TagHash>, Timestamp, Version) {
@@ -172,25 +112,25 @@ impl EventHash {
 
 // -------------------------------------------------------------------------------------------------
 
-// New Event
+// Ephemeral
 
 #[derive(new, Debug)]
 #[new(const_fn, name(new_inner), vis())]
-pub struct NewEvent {
+pub struct EphemeralEvent {
     data: Data,
     identifier: Identifier,
     tags: Vec<Tag>,
     version: Version,
 }
 
-impl NewEvent {
+impl EphemeralEvent {
     #[must_use]
     pub const fn new(data: Data, identifier: Identifier, tags: Vec<Tag>, version: Version) -> Self {
         Self::new_inner(data, identifier, tags, version)
     }
 }
 
-impl NewEvent {
+impl EphemeralEvent {
     #[must_use]
     pub fn data(&self) -> &Data {
         &self.data
@@ -216,15 +156,15 @@ impl NewEvent {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub struct NewEventHashRef<'a> {
+pub struct EphemeralEventHashRef<'a> {
     pub data: &'a Data,
     pub identifier: IdentifierHashRef<'a>,
     pub tags: Vec<TagHashRef<'a>>,
     pub version: Version,
 }
 
-impl<'a> From<&'a NewEvent> for NewEventHashRef<'a> {
-    fn from(event: &'a NewEvent) -> Self {
+impl<'a> From<&'a EphemeralEvent> for EphemeralEventHashRef<'a> {
+    fn from(event: &'a EphemeralEvent) -> Self {
         Self::new(
             event.data(),
             event.identifier().into(),
