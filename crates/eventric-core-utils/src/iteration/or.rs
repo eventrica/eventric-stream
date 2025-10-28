@@ -1,3 +1,9 @@
+//! The [`or`][or] module provides an iterator which provides the boolean OR
+//! operation over a collection of sequential iterators, such that an item will
+//! appear in the output if it occurs in any of the input iterators.
+//!
+//! [or]: self]
+
 use std::cmp::Ordering;
 
 use derive_more::with_trait::Debug;
@@ -13,16 +19,12 @@ use crate::iteration::{
 // Or
 // =================================================================================================
 
-/// The [`SequentialOr`] type represents an iterator over the combined values of
-/// a set of sequential iterators (such as the [`SequentialIterator`][seq_int]
-/// type found in the [`index`][index] module). The resulting iterator is
+/// The [`SequentialOrIterator`] type represents an iterator over the combined
+/// values of a set of sequential iterators. The resulting iterator is
 /// equivalent to an ordered union (∪) of the underlying iterators (i.e. values
 /// appear only once, and are totally ordered).
 ///
 /// See local unit tests for simple examples.
-///
-/// [index]: crate::persistence::index
-/// [seq_int]: crate::persistence::index::SequentialIterator
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
 pub struct SequentialOrIterator<I, T>(CachingIterators<I, T>)
@@ -35,6 +37,9 @@ where
     I: Iterator<Item = Result<T, Error>> + From<SequentialOrIterator<I, T>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
+    /// Take a an iterable value of iterators, and return an iterator of the
+    /// same type which will implement the boolean OR operation on the input
+    /// iterators.
     pub fn combine<S>(iterators: S) -> I
     where
         S: IntoIterator<Item = I>,

@@ -1,8 +1,8 @@
 #![allow(clippy::multiple_crate_versions)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::missing_panics_doc)]
-#![allow(clippy::missing_safety_doc)]
-#![allow(missing_docs)]
+#![deny(clippy::missing_errors_doc)]
+#![deny(clippy::missing_panics_doc)]
+#![deny(clippy::missing_safety_doc)]
+#![deny(missing_docs)]
 #![deny(unsafe_code)]
 #![doc = include_utils::include_md!("../NOTICE.md")]
 

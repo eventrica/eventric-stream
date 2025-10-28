@@ -5,7 +5,6 @@ use derive_more::{
 use eventric_core_error::Error;
 use eventric_core_utils::validation::{
     Validate,
-    Validated as _,
     validate,
     vec,
 };
@@ -21,13 +20,15 @@ use fancy_constructor::new;
 /// but at core level it is opaque.
 #[derive(new, AsRef, Deref, Debug)]
 #[as_ref([u8])]
-#[new(const_fn, name(new_unvalidated))]
+#[new(const_fn, name(new_inner), vis())]
 pub struct Data {
     data: Vec<u8>,
 }
 
 impl Data {
-    /// Constructs a new instance of [`Data`] given an owned vector of bytes.
+    /// Constructs a new instance of [`Data`] given a value which can be
+    /// converted into an owned vector of bytes, which may fail if the resultant
+    /// vector does not pass the validation criteria.
     ///
     /// # Errors
     ///
@@ -38,7 +39,13 @@ impl Data {
     where
         D: Into<Vec<u8>>,
     {
-        Self::new_unvalidated(data.into()).validated()
+        Self::new_unvalidated(data.into()).validate()
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub fn new_unvalidated(data: Vec<u8>) -> Self {
+        Self::new_inner(data)
     }
 }
 

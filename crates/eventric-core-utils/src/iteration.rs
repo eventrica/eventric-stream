@@ -1,3 +1,10 @@
+//! The [`iteration`][iteration] module provides combinatorial iterators over
+//! collections of sequential iterators, such that sequential order is
+//! maintained while the output represents a boolean logical operation over the
+//! input iterators.
+//!
+//! [iteration]: self
+
 pub mod and;
 pub mod or;
 

@@ -7,7 +7,6 @@ use eventric_core_utils::{
     hashing::hash,
     validation::{
         Validate,
-        Validated as _,
         string,
         validate,
     },
@@ -23,10 +22,10 @@ use fancy_constructor::new;
 /// name*, and combines with a [`Version`][version] value to fully specify the
 /// logical versioned *type* of an event).
 ///
-/// [version]: crate::event::Version
+/// [version]: crate::version::Version
 #[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
 #[as_ref(str, [u8])]
-#[new(const_fn, name(new_unvalidated))]
+#[new(const_fn, name(new_inner), vis())]
 pub struct Identifier {
     identifier: String,
 }
@@ -47,7 +46,13 @@ impl Identifier {
     where
         I: Into<String>,
     {
-        Self::new_unvalidated(identifier.into()).validated()
+        Self::new_unvalidated(identifier.into()).validate()
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub fn new_unvalidated(identifier: String) -> Self {
+        Self::new_inner(identifier)
     }
 }
 

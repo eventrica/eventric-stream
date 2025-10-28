@@ -7,7 +7,6 @@ use eventric_core_utils::{
     hashing::hash,
     validation::{
         Validate,
-        Validated as _,
         string,
         validate,
     },
@@ -24,7 +23,7 @@ use fancy_constructor::new;
 /// doing so).
 #[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
 #[as_ref(str, [u8])]
-#[new(const_fn, name(new_unvalidated))]
+#[new(const_fn, name(new_inner), vis())]
 pub struct Tag {
     tag: String,
 }
@@ -45,7 +44,13 @@ impl Tag {
     where
         T: Into<String>,
     {
-        Self::new_unvalidated(tag.into()).validated()
+        Self::new_unvalidated(tag.into()).validate()
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub fn new_unvalidated(tag: String) -> Self {
+        Self::new_inner(tag)
     }
 }
 

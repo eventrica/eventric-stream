@@ -37,6 +37,70 @@ use crate::{
 // Event
 // =================================================================================================
 
+// Ephemeral
+
+#[derive(new, Debug)]
+#[new(const_fn, name(new_inner), vis())]
+pub struct EphemeralEvent {
+    data: Data,
+    identifier: Identifier,
+    tags: Vec<Tag>,
+    version: Version,
+}
+
+impl EphemeralEvent {
+    #[must_use]
+    pub const fn new(data: Data, identifier: Identifier, tags: Vec<Tag>, version: Version) -> Self {
+        Self::new_inner(data, identifier, tags, version)
+    }
+}
+
+impl EphemeralEvent {
+    #[must_use]
+    pub fn data(&self) -> &Data {
+        &self.data
+    }
+
+    #[must_use]
+    pub fn identifier(&self) -> &Identifier {
+        &self.identifier
+    }
+
+    #[must_use]
+    pub fn tags(&self) -> &Vec<Tag> {
+        &self.tags
+    }
+
+    #[must_use]
+    pub fn version(&self) -> &Version {
+        &self.version
+    }
+}
+
+// Hash Ref
+
+#[derive(new, Debug)]
+#[new(const_fn)]
+pub struct EphemeralEventHashRef<'a> {
+    pub data: &'a Data,
+    pub identifier: IdentifierHashRef<'a>,
+    pub tags: Vec<TagHashRef<'a>>,
+    pub version: Version,
+}
+
+impl<'a> From<&'a EphemeralEvent> for EphemeralEventHashRef<'a> {
+    fn from(event: &'a EphemeralEvent) -> Self {
+        Self::new(
+            event.data(),
+            event.identifier().into(),
+            event.tags().iter().map(Into::into).collect(),
+            *event.version(),
+        )
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
 // Persistent
 
 #[derive(new, Debug)]
@@ -106,70 +170,6 @@ impl PersistentEventHash {
             self.tags,
             self.timestamp,
             self.version,
-        )
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Ephemeral
-
-#[derive(new, Debug)]
-#[new(const_fn, name(new_inner), vis())]
-pub struct EphemeralEvent {
-    data: Data,
-    identifier: Identifier,
-    tags: Vec<Tag>,
-    version: Version,
-}
-
-impl EphemeralEvent {
-    #[must_use]
-    pub const fn new(data: Data, identifier: Identifier, tags: Vec<Tag>, version: Version) -> Self {
-        Self::new_inner(data, identifier, tags, version)
-    }
-}
-
-impl EphemeralEvent {
-    #[must_use]
-    pub fn data(&self) -> &Data {
-        &self.data
-    }
-
-    #[must_use]
-    pub fn identifier(&self) -> &Identifier {
-        &self.identifier
-    }
-
-    #[must_use]
-    pub fn tags(&self) -> &Vec<Tag> {
-        &self.tags
-    }
-
-    #[must_use]
-    pub fn version(&self) -> &Version {
-        &self.version
-    }
-}
-
-// Hash Ref
-
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub struct EphemeralEventHashRef<'a> {
-    pub data: &'a Data,
-    pub identifier: IdentifierHashRef<'a>,
-    pub tags: Vec<TagHashRef<'a>>,
-    pub version: Version,
-}
-
-impl<'a> From<&'a EphemeralEvent> for EphemeralEventHashRef<'a> {
-    fn from(event: &'a EphemeralEvent) -> Self {
-        Self::new(
-            event.data(),
-            event.identifier().into(),
-            event.tags().iter().map(Into::into).collect(),
-            *event.version(),
         )
     }
 }

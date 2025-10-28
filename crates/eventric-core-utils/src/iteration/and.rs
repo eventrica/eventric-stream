@@ -1,3 +1,9 @@
+//! The [`and`][and] module provides an iterator which provides the boolean AND
+//! operation over a collection of sequential iterators, such that an item will
+//! only appear in the output if it occurs in all of the input iterators.
+//!
+//! [and]: self]
+
 use std::cmp::Ordering;
 
 use derive_more::with_trait::Debug;
@@ -13,17 +19,12 @@ use crate::iteration::{
 // And
 // =================================================================================================
 
-/// The [`SequentialAnd`] type represents an iterator over the combined values
-/// of a set of sequential iterators (such as the
-/// [`SequentialIterator`][seq_int] type found in the [`index`][index] module).
-/// The resulting iterator is equivalent to an ordered intersection (∩) of the
-/// underlying iterators (i.e. values appear only once, and are totally
-/// ordered).
+/// The [`SequentialAndIterator`] type represents an iterator over the combined
+/// values of a set of sequential iterators The resulting iterator is equivalent
+/// to an ordered intersection (∩) of the underlying iterators (i.e. values
+/// appear only once, and are totally ordered).
 ///
 /// See local unit tests for simple examples.
-///
-/// [index]: crate::persistence::index
-/// [seq_int]: crate::persistence::index::SequentialIterator
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
 pub struct SequentialAndIterator<I, T>(CachingIterators<I, T>)
@@ -36,6 +37,9 @@ where
     I: Iterator<Item = Result<T, Error>> + From<SequentialAndIterator<I, T>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
+    /// Take a an iterable value of iterators, and return an iterator of the
+    /// same type which will implement the boolean AND operation on the input
+    /// iterators.
     pub fn combine<S>(iterators: S) -> I
     where
         S: IntoIterator<Item = I>,

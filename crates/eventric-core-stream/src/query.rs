@@ -23,7 +23,6 @@ use eventric_core_event::{
 };
 use eventric_core_utils::validation::{
     Validate,
-    Validated as _,
     validate,
     vec,
 };
@@ -90,7 +89,7 @@ impl Stream {
 
 #[derive(new, AsRef, Debug)]
 #[as_ref([QueryItem])]
-#[new(const_fn, name(new_unvalidated), vis())]
+#[new(const_fn, name(new_inner), vis())]
 pub struct Query {
     items: Vec<QueryItem>,
 }
@@ -100,7 +99,13 @@ impl Query {
     where
         I: Into<Vec<QueryItem>>,
     {
-        Self::new_unvalidated(items.into()).validated()
+        Self::new_unvalidated(items.into()).validate()
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub fn new_unvalidated(items: Vec<QueryItem>) -> Self {
+        Self::new_inner(items)
     }
 }
 
@@ -226,19 +231,37 @@ impl<'a> From<&'a QueryItem> for QueryItemHashRef<'a> {
 
 // -------------------------------------------------------------------------------------------------
 
+// Specifiers
+
+/// The [`Specifiers`] type is a validating collection of [`Specifier`]
+/// instances, used to ensure that invariants are met when constructing queries.
 #[derive(new, AsRef, Debug)]
 #[as_ref([Specifier])]
-#[new(const_fn, name(new_unvalidated), vis())]
+#[new(const_fn, name(new_inner), vis())]
 pub struct Specifiers {
     specifiers: Vec<Specifier>,
 }
 
 impl Specifiers {
+    /// Constructs a new [`Specifiers`] instance given any value which can be
+    /// converted into a valid [`Vec`] of [`Specifier`] instances.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error on validation failure. Specifiers must conform to the
+    /// following constraints:
+    /// - Min 1 Specifier (Non-Zero Length/Non-Empty)
     pub fn new<T>(specifiers: T) -> Result<Self, Error>
     where
         T: Into<Vec<Specifier>>,
     {
-        Self::new_unvalidated(specifiers.into()).validated()
+        Self::new_unvalidated(specifiers.into()).validate()
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub fn new_unvalidated(specifiers: Vec<Specifier>) -> Self {
+        Self::new_inner(specifiers)
     }
 }
 
@@ -270,7 +293,7 @@ impl Validate for Specifiers {
 /// ensure that invariants are met when constructing queries.
 #[derive(new, AsRef, Debug)]
 #[as_ref([Tag])]
-#[new(const_fn, name(new_unvalidated), vis())]
+#[new(const_fn, name(new_inner), vis())]
 pub struct Tags {
     tags: Vec<Tag>,
 }
@@ -288,7 +311,13 @@ impl Tags {
     where
         T: Into<Vec<Tag>>,
     {
-        Self::new_unvalidated(tags.into()).validated()
+        Self::new_unvalidated(tags.into()).validate()
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub fn new_unvalidated(tags: Vec<Tag>) -> Self {
+        Self::new_inner(tags)
     }
 }
 
