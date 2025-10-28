@@ -13,11 +13,11 @@ use eventric_core::{
     stream::{
         Stream,
         query::{
+            Cache,
+            Condition,
+            Options,
             Query,
-            QueryCache,
-            QueryCondition,
             QueryItem,
-            QueryOptions,
             Specifiers,
             Tags,
         },
@@ -61,12 +61,10 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         Tags::new([Tag::new("course:523")?])?,
     )])?;
 
-    let condition = QueryCondition::default()
-        .matches(&query)
-        .from(Position::MIN);
+    let condition = Condition::default().matches(&query).from(Position::MIN);
 
-    let cache = QueryCache::default();
-    let options = QueryOptions::default().retrieve_tags(false);
+    let cache = Cache::default();
+    let options = Options::default().retrieve_tags(false);
 
     for event in stream.query(&condition, &cache, Some(options)) {
         println!("event: {event:#?}");

@@ -10,15 +10,6 @@ use std::sync::Arc;
 
 use fancy_constructor::new;
 
-pub use crate::event::{
-    data::Data,
-    identifier::Identifier,
-    position::Position,
-    specifier::Specifier,
-    tag::Tag,
-    timestamp::Timestamp,
-    version::Version,
-};
 use crate::event::{
     identifier::{
         IdentifierHash,
@@ -232,3 +223,13 @@ impl SequencedEventHash {
 // -------------------------------------------------------------------------------------------------
 
 // Re-Exports
+
+pub use self::{
+    data::Data,
+    identifier::Identifier,
+    position::Position,
+    specifier::Specifier,
+    tag::Tag,
+    timestamp::Timestamp,
+    version::Version,
+};

@@ -12,14 +12,14 @@ use crate::{
 
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct QueryCondition<'a> {
+pub struct Condition<'a> {
     #[new(default)]
     pub(crate) matches: Option<&'a Query>,
     #[new(default)]
     pub(crate) from: Option<Position>,
 }
 
-impl<'a> QueryCondition<'a> {
+impl<'a> Condition<'a> {
     #[must_use]
     pub fn matches(mut self, query: &'a Query) -> Self {
         self.matches = Some(query);
@@ -33,7 +33,7 @@ impl<'a> QueryCondition<'a> {
     }
 }
 
-impl Default for QueryCondition<'_> {
+impl Default for Condition<'_> {
     fn default() -> Self {
         Self::new()
     }

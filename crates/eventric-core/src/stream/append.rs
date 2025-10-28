@@ -18,7 +18,7 @@ impl Stream {
     pub fn append<'a, E>(
         &mut self,
         events: E,
-        condition: Option<&AppendCondition<'_>>,
+        condition: Option<&Condition<'_>>,
     ) -> Result<Position, Error>
     where
         E: IntoIterator<Item = &'a Event>,
@@ -33,7 +33,7 @@ impl Stream {
     }
 
     #[rustfmt::skip]
-    fn append_check(&self, condition: &AppendCondition<'_>) -> Result<(), Error> {
+    fn append_check(&self, condition: &Condition<'_>) -> Result<(), Error> {
         if let Some(after) = condition.after && after >= self.next {
             return Ok(());
         }
@@ -76,4 +76,4 @@ impl Stream {
 
 // Re-Exports
 
-pub use self::condition::AppendCondition;
+pub use self::condition::Condition;

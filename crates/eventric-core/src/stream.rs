@@ -24,8 +24,8 @@ use crate::{
 /// events or querying existing events, and any higher-level libraries are built
 /// on this underlying abstraction.
 ///
-/// To open a new [`Stream`] instance use a [`StreamBuilder`], which can be
-/// obtained using the [`Stream::builder`] function.
+/// To open a new [`Stream`] instance use a [`Builder`], which can be obtained
+/// using the [`Stream::builder`] function.
 ///
 /// ```
 /// # use eventric_core::{
@@ -59,13 +59,13 @@ pub struct Stream {
 // Building
 
 impl Stream {
-    /// Constructs a new [`StreamBuilder`] which which can be used to configure
-    /// the properties of a new [`Stream`] to be opened..
-    pub fn builder<P>(path: P) -> StreamBuilder<P>
+    /// Constructs a new [`Builder`] which which can be used to configure the
+    /// properties of a new [`Stream`] to be opened..
+    pub fn builder<P>(path: P) -> Builder<P>
     where
         P: AsRef<Path>,
     {
-        StreamBuilder::new(path)
+        Builder::new(path)
     }
 }
 
@@ -95,14 +95,14 @@ impl Stream {
 
 // -------------------------------------------------------------------------------------------------
 
-// Stream Builder
+//  Builder
 
-/// The [`StreamBuilder`] type configures and creates new [`Stream`] instances.
-/// An instance of [`StreamBuilder`] can be obtained by calling
-/// [`Stream::builder`] with a chosen path for stream storage.
+/// The [`Builder`] type configures and creates new [`Stream`] instances.
+/// An instance of [`Builder`] can be obtained by calling [`Stream::builder`]
+/// with a chosen path for stream storage.
 #[derive(new, Debug)]
 #[new(vis())]
-pub struct StreamBuilder<P>
+pub struct Builder<P>
 where
     P: AsRef<Path>,
 {
@@ -111,7 +111,7 @@ where
     temporary: Option<bool>,
 }
 
-impl<P> StreamBuilder<P>
+impl<P> Builder<P>
 where
     P: AsRef<Path>,
 {
@@ -134,7 +134,7 @@ where
     }
 }
 
-impl<P> StreamBuilder<P>
+impl<P> Builder<P>
 where
     P: AsRef<Path>,
 {

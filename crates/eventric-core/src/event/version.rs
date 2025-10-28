@@ -9,7 +9,7 @@ use derive_more::Deref;
 /// When paired with the [`Identifier`][ident] value, the pair forms a
 /// specification of the logical versioned *type* of the event.
 ///
-/// [ident]: crate::Identifier
+/// [ident]: crate::event::Identifier
 #[derive(Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Version(u8);
 

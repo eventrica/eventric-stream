@@ -26,7 +26,7 @@ use crate::{
 /// name*, and combines with a [`Version`][version] value to fully specify the
 /// logical versioned *type* of an event).
 ///
-/// [version]: crate::Version
+/// [version]: crate::event::Version
 #[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
 #[as_ref(str, [u8])]
 #[new(const_fn, name(new_unvalidated), vis(pub(crate)))]

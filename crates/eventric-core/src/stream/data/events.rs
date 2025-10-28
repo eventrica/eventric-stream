@@ -1,3 +1,5 @@
+use std::iter;
+
 use bytes::{
     Buf as _,
     BufMut as _,
@@ -80,15 +82,15 @@ impl Events {
 // Iterate
 
 impl Events {
-    pub fn iterate(&self, from: Option<Position>) -> SequencedEventHashIterator<'_> {
+    pub fn iterate(&self, from: Option<Position>) -> Iterator<'_> {
         match from {
             Some(position) => self.iterate_from(position),
             None => self.iterate_all(),
         }
     }
 
-    fn iterate_all(&self) -> SequencedEventHashIterator<'_> {
-        SequencedEventHashIterator {
+    fn iterate_all(&self) -> Iterator<'_> {
+        Iterator {
             iter: Box::new(self.keyspace.iter().map(|guard| match guard.into_inner() {
                 Ok((key, value)) => Ok(SliceAndPosition(value, key.into()).into()),
                 Err(err) => Err(Error::from(err)),
@@ -96,8 +98,8 @@ impl Events {
         }
     }
 
-    fn iterate_from(&self, from: Position) -> SequencedEventHashIterator<'_> {
-        SequencedEventHashIterator {
+    fn iterate_from(&self, from: Position) -> Iterator<'_> {
+        Iterator {
             iter: Box::new(self.keyspace.range(from.to_be_bytes()..).map(|guard| {
                 match guard.into_inner() {
                     Ok((key, value)) => Ok(SliceAndPosition(value, key.into()).into()),
@@ -178,12 +180,12 @@ impl From<EventAndTimestamp<'_>> for Vec<u8> {
 // Iterator
 
 #[derive(new, Debug)]
-pub(crate) struct SequencedEventHashIterator<'a> {
+pub(crate) struct Iterator<'a> {
     #[debug("Iterator")]
-    iter: Box<dyn Iterator<Item = Result<SequencedEventHash, Error>> + 'a>,
+    iter: Box<dyn iter::Iterator<Item = Result<SequencedEventHash, Error>> + 'a>,
 }
 
-impl Iterator for SequencedEventHashIterator<'_> {
+impl iter::Iterator for Iterator<'_> {
     type Item = Result<SequencedEventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
