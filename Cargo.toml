@@ -9,11 +9,17 @@ members  = ["benches/*", "crates/*", "examples/*"]
 resolver = "2"
 
 [workspace.dependencies]
+
+eventric-core        = { path = "crates/eventric-core" }
+eventric-core-error  = { path = "crates/eventric-core-error" }
+eventric-core-event  = { path = "crates/eventric-core-event" }
+eventric-core-stream = { path = "crates/eventric-core-stream" }
+eventric-core-util   = { path = "crates/eventric-core-util" }
+
 bytes             = { version = "1" }
 criterion         = { version = "0.7" }
 dashmap           = { version = "6", features = ["inline"] }
 derive_more       = { version = "2", features = ["full"] }
-eventric-core     = { path = "crates/eventric-core" }
 fancy_constructor = { version = "2" }
 fjall             = { version = "=3.0.0-pre.0" }
 include-utils     = { version = "0.2" }

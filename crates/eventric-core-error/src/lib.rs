@@ -1,7 +1,13 @@
+#![allow(clippy::multiple_crate_versions)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(missing_docs)]
+
 use thiserror::Error;
 
 // =================================================================================================
-// Error
+// Eventric Core Error
 // =================================================================================================
 
 #[derive(Debug, Error)]
@@ -34,7 +40,6 @@ impl Error {
     }
 }
 
-#[cfg(test)]
 impl PartialEq for Error {
     fn eq(&self, _other: &Self) -> bool {
         unreachable!("only used for test trait compliance")
