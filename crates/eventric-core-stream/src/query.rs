@@ -127,7 +127,7 @@ impl Validate for Query {
 
 #[derive(new, AsRef, Debug)]
 #[as_ref([QueryItemHash])]
-pub struct QueryHash(Vec<QueryItemHash>);
+pub(crate) struct QueryHash(Vec<QueryItemHash>);
 
 impl From<Query> for QueryHash {
     fn from(query: Query) -> Self {
@@ -157,7 +157,7 @@ impl From<&QueryHashRef<'_>> for QueryHash {
 
 #[derive(new, AsRef, Debug)]
 #[as_ref([QueryItemHashRef<'a>])]
-pub struct QueryHashRef<'a>(Vec<QueryItemHashRef<'a>>);
+pub(crate) struct QueryHashRef<'a>(Vec<QueryItemHashRef<'a>>);
 
 impl<'a> From<&'a Query> for QueryHashRef<'a> {
     fn from(query: &'a Query) -> Self {
@@ -177,7 +177,7 @@ pub enum QueryItem {
 }
 
 #[derive(Debug)]
-pub enum QueryItemHash {
+pub(crate) enum QueryItemHash {
     Specifiers(Vec<SpecifierHash>),
     SpecifiersAndTags(Vec<SpecifierHash>, Vec<TagHash>),
     Tags(Vec<TagHash>),
@@ -212,7 +212,7 @@ impl From<&QueryItemHashRef<'_>> for QueryItemHash {
 }
 
 #[derive(Debug)]
-pub enum QueryItemHashRef<'a> {
+pub(crate) enum QueryItemHashRef<'a> {
     Specifiers(Vec<SpecifierHashRef<'a>>),
     SpecifiersAndTags(Vec<SpecifierHashRef<'a>>, Vec<TagHashRef<'a>>),
     Tags(Vec<TagHashRef<'a>>),

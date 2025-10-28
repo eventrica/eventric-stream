@@ -1,14 +1,15 @@
 #![allow(clippy::multiple_crate_versions)]
-#![allow(clippy::missing_errors_doc)]
+#![warn(clippy::missing_errors_doc)]
 #![deny(clippy::missing_panics_doc)]
 #![deny(clippy::missing_safety_doc)]
-#![allow(missing_docs)]
+#![warn(missing_docs)]
 #![deny(unsafe_code)]
 #![doc = include_utils::include_md!("../NOTICE.md")]
 
 pub mod append;
-pub mod data;
 pub mod query;
+
+mod data;
 
 use std::path::Path;
 
