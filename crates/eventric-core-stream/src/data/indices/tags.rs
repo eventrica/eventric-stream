@@ -11,7 +11,7 @@ use eventric_core_event::{
         TagHashRef,
     },
 };
-use eventric_core_util::iteration::and::SequentialAndIterator;
+use eventric_core_utils::iteration::and::SequentialAndIterator;
 use fancy_constructor::new;
 use fjall::{
     Guard,

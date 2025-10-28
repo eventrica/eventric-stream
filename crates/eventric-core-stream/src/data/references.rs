@@ -34,7 +34,7 @@ static KEYSPACE_NAME: &str = "references";
 
 #[derive(new, Clone, Debug)]
 #[new(const_fn, vis())]
-pub(crate) struct References {
+pub struct References {
     identifiers: Identifiers,
     tags: Tags,
 }

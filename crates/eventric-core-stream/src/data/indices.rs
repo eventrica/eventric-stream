@@ -9,7 +9,7 @@ use eventric_core_event::{
     position::Position,
     timestamp::Timestamp,
 };
-use eventric_core_util::iteration::{
+use eventric_core_utils::iteration::{
     and::SequentialAndIterator,
     or::SequentialOrIterator,
 };
@@ -46,7 +46,7 @@ static KEYSPACE_NAME: &str = "indices";
 
 #[derive(new, Clone, Debug)]
 #[new(const_fn, vis())]
-pub(crate) struct Indices {
+pub struct Indices {
     identifiers: Identifiers,
     tags: Tags,
     timestamps: Timestamps,
@@ -67,6 +67,7 @@ impl Indices {
 // Contains
 
 impl Indices {
+    #[must_use]
     pub fn contains(&self, query: &QueryHash, from: Option<Position>) -> bool {
         self.query(query, from).any(|_| true)
     }

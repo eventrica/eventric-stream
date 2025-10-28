@@ -1,8 +1,9 @@
 [dependencies]
 derive_more.workspace         = true
 eventric-core-error.workspace = true
-eventric-core-util.workspace  = true
+eventric-core-utils.workspace = true
 fancy_constructor.workspace   = true
+include-utils.workspace       = true
 
 [lints]
 workspace = true

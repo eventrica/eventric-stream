@@ -1,12 +1,9 @@
 [dependencies]
-bytes.workspace             = true
-dashmap.workspace           = true
-derive_more.workspace       = true
-fancy_constructor.workspace = true
-fjall.workspace             = true
-include-utils.workspace     = true
-rapidhash.workspace         = true
-thiserror.workspace         = true
+eventric-core-error.workspace  = true
+eventric-core-event.workspace  = true
+eventric-core-stream.workspace = true
+eventric-core-utils.workspace  = true
+include-utils.workspace        = true
 
 [lints]
 workspace = true

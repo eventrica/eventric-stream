@@ -1,7 +1,7 @@
-mod cache;
-mod condition;
-mod iter;
-mod options;
+pub mod cache;
+pub mod condition;
+pub mod iter;
+pub mod options;
 
 use derive_more::{
     AsRef,
@@ -21,7 +21,7 @@ use eventric_core_event::{
         TagHashRef,
     },
 };
-use eventric_core_util::validation::{
+use eventric_core_utils::validation::{
     Validate,
     Validated as _,
     validate,
@@ -31,9 +31,15 @@ use fancy_constructor::new;
 
 use crate::{
     Stream,
-    query::iter::{
-        HashIterator,
-        MappedHashIterator,
+    query::{
+        cache::Cache,
+        condition::Condition,
+        iter::{
+            HashIterator,
+            Iterator,
+            MappedHashIterator,
+        },
+        options::Options,
     },
 };
 
@@ -116,7 +122,7 @@ impl Validate for Query {
 
 #[derive(new, AsRef, Debug)]
 #[as_ref([QueryItemHash])]
-pub(crate) struct QueryHash(Vec<QueryItemHash>);
+pub struct QueryHash(Vec<QueryItemHash>);
 
 impl From<Query> for QueryHash {
     fn from(query: Query) -> Self {
@@ -146,7 +152,7 @@ impl From<&QueryHashRef<'_>> for QueryHash {
 
 #[derive(new, AsRef, Debug)]
 #[as_ref([QueryItemHashRef<'a>])]
-pub(crate) struct QueryHashRef<'a>(Vec<QueryItemHashRef<'a>>);
+pub struct QueryHashRef<'a>(Vec<QueryItemHashRef<'a>>);
 
 impl<'a> From<&'a Query> for QueryHashRef<'a> {
     fn from(query: &'a Query) -> Self {
@@ -166,7 +172,7 @@ pub enum QueryItem {
 }
 
 #[derive(Debug)]
-pub(crate) enum QueryItemHash {
+pub enum QueryItemHash {
     Specifiers(Vec<SpecifierHash>),
     SpecifiersAndTags(Vec<SpecifierHash>, Vec<TagHash>),
     Tags(Vec<TagHash>),
@@ -201,7 +207,7 @@ impl From<&QueryItemHashRef<'_>> for QueryItemHash {
 }
 
 #[derive(Debug)]
-pub(crate) enum QueryItemHashRef<'a> {
+pub enum QueryItemHashRef<'a> {
     Specifiers(Vec<SpecifierHashRef<'a>>),
     SpecifiersAndTags(Vec<SpecifierHashRef<'a>>, Vec<TagHashRef<'a>>),
     Tags(Vec<TagHashRef<'a>>),
@@ -305,14 +311,3 @@ impl Validate for Tags {
         Ok(self)
     }
 }
-
-// -------------------------------------------------------------------------------------------------
-
-// Re-Exports
-
-pub use self::{
-    cache::Cache,
-    condition::Condition,
-    iter::Iterator,
-    options::Options,
-};

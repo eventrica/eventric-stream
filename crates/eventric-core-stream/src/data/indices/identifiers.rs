@@ -13,7 +13,7 @@ use eventric_core_event::{
     specifier::SpecifierHash,
     version::Version,
 };
-use eventric_core_util::iteration::or::SequentialOrIterator;
+use eventric_core_utils::iteration::or::SequentialOrIterator;
 use fancy_constructor::new;
 use fjall::{
     Keyspace,

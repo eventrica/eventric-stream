@@ -4,9 +4,10 @@ dashmap.workspace             = true
 derive_more.workspace         = true
 eventric-core-error.workspace = true
 eventric-core-event.workspace = true
-eventric-core-util.workspace  = true
+eventric-core-utils.workspace = true
 fancy_constructor.workspace   = true
 fjall.workspace               = true
+include-utils.workspace       = true
 
 [lints]
 workspace = true

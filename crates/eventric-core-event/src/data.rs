@@ -1,6 +1,9 @@
-use derive_more::AsRef;
+use derive_more::{
+    AsRef,
+    Deref,
+};
 use eventric_core_error::Error;
-use eventric_core_util::validation::{
+use eventric_core_utils::validation::{
     Validate,
     Validated as _,
     validate,
@@ -16,7 +19,7 @@ use fancy_constructor::new;
 /// immutable owned vector of bytes. Higher-level libraries may determine the
 /// meaning of the payload depending on the identifier and version of the event,
 /// but at core level it is opaque.
-#[derive(new, AsRef, Debug)]
+#[derive(new, AsRef, Deref, Debug)]
 #[as_ref([u8])]
 #[new(const_fn, name(new_unvalidated))]
 pub struct Data {

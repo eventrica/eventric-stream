@@ -1,6 +1,6 @@
-pub(crate) mod events;
-pub(crate) mod indices;
-pub(crate) mod references;
+pub mod events;
+pub mod indices;
+pub mod references;
 
 use derive_more::Debug;
 use eventric_core_error::Error;
@@ -30,9 +30,9 @@ static POSITION_LEN: usize = size_of::<u64>();
 #[derive(new, Debug)]
 #[new(const_fn)]
 pub struct Data {
-    pub(crate) events: Events,
-    pub(crate) indices: Indices,
-    pub(crate) references: References,
+    pub events: Events,
+    pub indices: Indices,
+    pub references: References,
 }
 
 impl Data {

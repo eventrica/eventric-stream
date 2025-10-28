@@ -3,7 +3,7 @@ use derive_more::{
     Deref,
 };
 use eventric_core_error::Error;
-use eventric_core_util::{
+use eventric_core_utils::{
     hashing::hash,
     validation::{
         Validate,
@@ -50,7 +50,8 @@ impl Tag {
 }
 
 impl Tag {
-    pub(crate) fn hash(&self) -> u64 {
+    #[must_use]
+    pub fn hash(&self) -> u64 {
         hash(self)
     }
 }

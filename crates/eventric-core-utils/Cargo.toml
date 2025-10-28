@@ -2,6 +2,7 @@
 derive_more.workspace         = true
 eventric-core-error.workspace = true
 fancy_constructor.workspace   = true
+include-utils.workspace       = true
 rapidhash.workspace           = true
 
 [lints]
@@ -14,7 +15,7 @@ description          = "Eventric Core Utilities"
 edition.workspace    = true
 keywords.workspace   = true
 license.workspace    = true
-name                 = "eventric-core-util"
+name                 = "eventric-core-utils"
 readme.workspace     = true
 repository.workspace = true
 version.workspace    = true

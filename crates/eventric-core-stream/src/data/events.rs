@@ -39,7 +39,7 @@ static KEYSPACE_NAME: &str = "events";
 
 #[derive(new, Clone, Debug)]
 #[new(const_fn, vis())]
-pub(crate) struct Events {
+pub struct Events {
     #[debug("Keyspace(\"{}\")", keyspace.name)]
     keyspace: Keyspace,
 }
@@ -79,6 +79,7 @@ impl Events {
 // Iterate
 
 impl Events {
+    #[must_use]
     pub fn iterate(&self, from: Option<Position>) -> Iterator<'_> {
         match from {
             Some(position) => self.iterate_from(position),
@@ -183,7 +184,7 @@ impl From<EventAndTimestamp<'_>> for Vec<u8> {
 // Iterator
 
 #[derive(new, Debug)]
-pub(crate) struct Iterator<'a> {
+pub struct Iterator<'a> {
     #[debug("Iterator")]
     iter: Box<dyn iter::Iterator<Item = Result<SequencedEventHash, Error>> + 'a>,
 }

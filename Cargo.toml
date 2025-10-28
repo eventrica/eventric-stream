@@ -14,7 +14,7 @@ eventric-core        = { path = "crates/eventric-core" }
 eventric-core-error  = { path = "crates/eventric-core-error" }
 eventric-core-event  = { path = "crates/eventric-core-event" }
 eventric-core-stream = { path = "crates/eventric-core-stream" }
-eventric-core-util   = { path = "crates/eventric-core-util" }
+eventric-core-utils  = { path = "crates/eventric-core-utils" }
 
 bytes             = { version = "1" }
 criterion         = { version = "0.7" }

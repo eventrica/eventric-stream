@@ -120,7 +120,7 @@ impl iter::Iterator for Iterator<'_> {
 // Hash Iterator
 
 #[derive(Debug)]
-pub(crate) enum HashIterator<'a> {
+pub enum HashIterator<'a> {
     Direct(events::Iterator<'a>),
     Mapped(MappedHashIterator<'a>),
 }
@@ -140,7 +140,7 @@ impl iter::Iterator for HashIterator<'_> {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub(crate) struct MappedHashIterator<'a> {
+pub struct MappedHashIterator<'a> {
     events: &'a Events,
     iter: SequentialIterator<'a>,
 }

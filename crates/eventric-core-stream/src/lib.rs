@@ -3,6 +3,7 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::missing_safety_doc)]
 #![allow(missing_docs)]
+#![doc = include_utils::include_md!("../NOTICE.md")]
 
 pub mod append;
 pub mod data;

@@ -3,6 +3,7 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::missing_safety_doc)]
 #![allow(missing_docs)]
+#![doc = include_utils::include_md!("../NOTICE.md")]
 
 use thiserror::Error;
 
@@ -41,7 +42,12 @@ impl Error {
 }
 
 impl PartialEq for Error {
-    fn eq(&self, _other: &Self) -> bool {
-        unreachable!("only used for test trait compliance")
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Concurrency, Self::Concurrency) => true,
+            (Self::Data(lhs), Self::Data(rhs)) if lhs == rhs => true,
+            (Self::Validation(lhs), Self::Validation(rhs)) if lhs == rhs => true,
+            _ => false,
+        }
     }
 }

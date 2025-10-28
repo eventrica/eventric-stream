@@ -5,16 +5,52 @@
 #![allow(missing_docs)]
 #![doc = include_utils::include_md!("README.md:overview")]
 
-pub mod error;
-pub mod event;
-pub mod stream;
-
-mod util;
-
 // =================================================================================================
 // Eventric Core
 // =================================================================================================
 
 // Re-Exports
 
-pub use crate::util::temp_path;
+pub mod error {
+    pub use eventric_core_error::Error;
+}
+
+pub mod event {
+    pub use eventric_core_event::{
+        Event,
+        SequencedEvent,
+        SequencedEventArc,
+        data::Data,
+        identifier::Identifier,
+        position::Position,
+        specifier::Specifier,
+        tag::Tag,
+        timestamp::Timestamp,
+        version::Version,
+    };
+}
+
+pub mod stream {
+    pub mod append {
+        pub use eventric_core_stream::append::condition::Condition;
+    }
+
+    pub mod query {
+        pub use eventric_core_stream::query::{
+            Query,
+            QueryItem,
+            Specifiers,
+            Tags,
+            cache::Cache,
+            condition::Condition,
+            options::Options,
+        };
+    }
+
+    pub use eventric_core_stream::{
+        Builder,
+        Stream,
+    };
+}
+
+pub use eventric_core_utils::temp_path;

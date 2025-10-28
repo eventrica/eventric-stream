@@ -286,14 +286,11 @@ dependencies = [
 name = "eventric-core"
 version = "0.1.0"
 dependencies = [
- "bytes",
- "dashmap",
- "derive_more",
- "fancy_constructor",
- "fjall",
+ "eventric-core-error",
+ "eventric-core-event",
+ "eventric-core-stream",
+ "eventric-core-utils",
  "include-utils",
- "rapidhash",
- "thiserror",
 ]
 
 [[package]]
@@ -309,6 +306,7 @@ name = "eventric-core-error"
 version = "0.1.0"
 dependencies = [
  "fjall",
+ "include-utils",
  "thiserror",
 ]
 
@@ -318,8 +316,9 @@ version = "0.1.0"
 dependencies = [
  "derive_more",
  "eventric-core-error",
- "eventric-core-util",
+ "eventric-core-utils",
  "fancy_constructor",
+ "include-utils",
 ]
 
 [[package]]
@@ -345,18 +344,20 @@ dependencies = [
  "derive_more",
  "eventric-core-error",
  "eventric-core-event",
- "eventric-core-util",
+ "eventric-core-utils",
  "fancy_constructor",
  "fjall",
+ "include-utils",
 ]
 
 [[package]]
-name = "eventric-core-util"
+name = "eventric-core-utils"
 version = "0.1.0"
 dependencies = [
  "derive_more",
  "eventric-core-error",
  "fancy_constructor",
+ "include-utils",
  "rapidhash",
 ]
 
