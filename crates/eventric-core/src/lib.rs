@@ -46,10 +46,7 @@ pub use self::{
     stream::{
         Stream,
         StreamBuilder,
-        append::{
-            AppendCondition,
-            AppendError,
-        },
+        append::AppendCondition,
         query::{
             QueryCache,
             QueryCondition,

@@ -1,5 +1,4 @@
 use fancy_constructor::new;
-use thiserror::Error;
 
 use crate::{
     error::Error,
@@ -101,16 +100,4 @@ impl AppendCondition<'_> {
         self.after = Some(after);
         self
     }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Append Error
-
-#[derive(Debug, Error)]
-pub enum AppendError {
-    #[error("Concurrency Error")]
-    Concurrency,
-    #[error("Internal Error: {0}")]
-    Internal(#[from] Error),
 }
