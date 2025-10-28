@@ -14,17 +14,15 @@ use fjall::{
 
 use crate::{
     error::Error,
-    model::{
-        event::{
-            EventHashRef,
-            SequencedEventHash,
-            data::Data,
-            identifier::IdentifierHash,
-            tag::TagHash,
-            timestamp::Timestamp,
-            version::Version,
-        },
-        stream::position::Position,
+    event::{
+        Data,
+        EventHashRef,
+        Position,
+        SequencedEventHash,
+        Timestamp,
+        Version,
+        identifier::IdentifierHash,
+        tag::TagHash,
     },
 };
 
@@ -42,7 +40,7 @@ static KEYSPACE_NAME: &str = "events";
 
 #[derive(new, Clone, Debug)]
 #[new(const_fn, vis())]
-pub struct Events {
+pub(crate) struct Events {
     #[debug("Keyspace(\"{}\")", keyspace.name)]
     keyspace: Keyspace,
 }
@@ -180,7 +178,7 @@ impl From<EventAndTimestamp<'_>> for Vec<u8> {
 // Iterator
 
 #[derive(new, Debug)]
-pub struct SequencedEventHashIterator<'a> {
+pub(crate) struct SequencedEventHashIterator<'a> {
     #[debug("Iterator")]
     iter: Box<dyn Iterator<Item = Result<SequencedEventHash, Error>> + 'a>,
 }

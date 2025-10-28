@@ -2,7 +2,7 @@ mod util;
 
 use std::error::Error;
 
-use eventric_core::Stream;
+use eventric_core::stream::Stream;
 
 // =================================================================================================
 // Properties

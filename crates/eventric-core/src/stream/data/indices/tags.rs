@@ -12,19 +12,19 @@ use fjall::{
 };
 
 use crate::{
-    data::{
+    error::Error,
+    event::{
+        Position,
+        tag::{
+            TagHash,
+            TagHashRef,
+        },
+    },
+    stream::data::{
         HASH_LEN,
         ID_LEN,
         POSITION_LEN,
         indices::SequentialIterator,
-    },
-    error::Error,
-    model::{
-        event::tag::{
-            TagHash,
-            TagHashRef,
-        },
-        stream::position::Position,
     },
     util::iteration::and::SequentialAndIterator,
 };

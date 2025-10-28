@@ -11,23 +11,21 @@ use fjall::{
 };
 
 use crate::{
-    data::{
+    error::Error,
+    event::{
+        Position,
+        Version,
+        identifier::{
+            IdentifierHash,
+            IdentifierHashRef,
+        },
+        specifier::SpecifierHash,
+    },
+    stream::data::{
         HASH_LEN,
         ID_LEN,
         POSITION_LEN,
         indices::SequentialIterator,
-    },
-    error::Error,
-    model::{
-        event::{
-            identifier::{
-                IdentifierHash,
-                IdentifierHashRef,
-            },
-            version::Version,
-        },
-        query::specifier::SpecifierHash,
-        stream::position::Position,
     },
     util::iteration::or::SequentialOrIterator,
 };

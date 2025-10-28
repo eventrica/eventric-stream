@@ -1,23 +1,13 @@
 use std::ops::Range;
 
-use derive_more::AsRef;
 use fancy_constructor::new;
 
-use crate::{
-    error::Error,
-    model::event::{
-        identifier::{
-            Identifier,
-            IdentifierHash,
-            IdentifierHashRef,
-        },
-        version::Version,
-    },
-    util::validation::{
-        self,
-        Validate,
-        Validated as _,
-        vec,
+use crate::event::{
+    Identifier,
+    Version,
+    identifier::{
+        IdentifierHash,
+        IdentifierHashRef,
     },
 };
 
@@ -98,39 +88,3 @@ impl<'a> From<&'a Specifier> for SpecifierHashRef<'a> {
 // -------------------------------------------------------------------------------------------------
 
 // Specifiers
-
-#[derive(new, AsRef, Debug)]
-#[as_ref([Specifier])]
-#[new(const_fn, name(new_unvalidated), vis())]
-pub struct Specifiers {
-    specifiers: Vec<Specifier>,
-}
-
-impl Specifiers {
-    pub fn new<T>(specifiers: T) -> Result<Self, Error>
-    where
-        T: Into<Vec<Specifier>>,
-    {
-        Self::new_unvalidated(specifiers.into()).validated()
-    }
-}
-
-impl From<&Specifiers> for Vec<SpecifierHash> {
-    fn from(specifiers: &Specifiers) -> Self {
-        specifiers.as_ref().iter().map(Into::into).collect()
-    }
-}
-
-impl<'a> From<&'a Specifiers> for Vec<SpecifierHashRef<'a>> {
-    fn from(specifiers: &'a Specifiers) -> Self {
-        specifiers.as_ref().iter().map(Into::into).collect()
-    }
-}
-
-impl Validate for Specifiers {
-    fn validate(self) -> Result<Self, Error> {
-        validation::validate(&self.specifiers, "specifiers", &[&vec::IsEmpty])?;
-
-        Ok(self)
-    }
-}

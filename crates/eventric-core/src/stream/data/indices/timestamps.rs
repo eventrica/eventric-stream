@@ -7,11 +7,11 @@ use fjall::{
 };
 
 use crate::{
-    data::ID_LEN,
-    model::{
-        event::timestamp::Timestamp,
-        stream::position::Position,
+    event::{
+        Position,
+        Timestamp,
     },
+    stream::data::ID_LEN,
 };
 
 // =================================================================================================

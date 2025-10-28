@@ -1,6 +1,8 @@
 pub mod append;
 pub mod query;
 
+pub(crate) mod data;
+
 use std::path::Path;
 
 use derive_more::Debug;
@@ -8,9 +10,9 @@ use fancy_constructor::new;
 use fjall::Database;
 
 use crate::{
-    data::Data,
     error::Error,
-    model::stream::position::Position,
+    event::position::Position,
+    stream::data::Data,
 };
 
 // =================================================================================================

@@ -1,13 +1,15 @@
 use std::time::Instant;
 
 use eventric_core::{
-    Data,
-    Error,
-    Event,
-    Identifier,
-    Stream,
-    Tag,
-    Version,
+    error::Error,
+    event::{
+        Data,
+        Event,
+        Identifier,
+        Tag,
+        Version,
+    },
+    stream::Stream,
 };
 
 // =================================================================================================

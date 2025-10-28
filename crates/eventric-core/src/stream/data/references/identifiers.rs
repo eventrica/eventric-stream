@@ -7,14 +7,14 @@ use fjall::{
 };
 
 use crate::{
-    data::{
+    error::Error,
+    event::{
+        Identifier,
+        identifier::IdentifierHashRef,
+    },
+    stream::data::{
         HASH_LEN,
         ID_LEN,
-    },
-    error::Error,
-    model::event::identifier::{
-        Identifier,
-        IdentifierHashRef,
     },
 };
 

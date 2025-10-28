@@ -1,21 +1,27 @@
 use std::error::Error;
 
 use eventric_core::{
-    Data,
-    Event,
-    Identifier,
-    Position,
-    Query,
-    QueryCache,
-    QueryCondition,
-    QueryItem,
-    QueryOptions,
-    Specifier,
-    Specifiers,
-    Stream,
-    Tag,
-    Tags,
-    Version,
+    event::{
+        Data,
+        Event,
+        Identifier,
+        Position,
+        Specifier,
+        Tag,
+        Version,
+    },
+    stream::{
+        Stream,
+        query::{
+            Query,
+            QueryCache,
+            QueryCondition,
+            QueryItem,
+            QueryOptions,
+            Specifiers,
+            Tags,
+        },
+    },
 };
 
 pub fn main() -> Result<(), Box<dyn Error>> {

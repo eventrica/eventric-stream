@@ -1,30 +1,33 @@
-pub mod data;
-pub mod identifier;
-pub mod tag;
-pub mod timestamp;
-pub mod version;
+pub(crate) mod data;
+pub(crate) mod identifier;
+pub(crate) mod position;
+pub(crate) mod specifier;
+pub(crate) mod tag;
+pub(crate) mod timestamp;
+pub(crate) mod version;
 
 use std::sync::Arc;
 
 use fancy_constructor::new;
 
-use crate::model::{
-    event::{
-        data::Data,
-        identifier::{
-            Identifier,
-            IdentifierHash,
-            IdentifierHashRef,
-        },
-        tag::{
-            Tag,
-            TagHash,
-            TagHashRef,
-        },
-        timestamp::Timestamp,
-        version::Version,
+pub use crate::event::{
+    data::Data,
+    identifier::Identifier,
+    position::Position,
+    specifier::Specifier,
+    tag::Tag,
+    timestamp::Timestamp,
+    version::Version,
+};
+use crate::event::{
+    identifier::{
+        IdentifierHash,
+        IdentifierHashRef,
     },
-    stream::position::Position,
+    tag::{
+        TagHash,
+        TagHashRef,
+    },
 };
 
 // =================================================================================================
@@ -75,11 +78,11 @@ impl Event {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub struct EventHashRef<'a> {
-    pub(crate) data: &'a Data,
-    pub(crate) identifier: IdentifierHashRef<'a>,
-    pub(crate) tags: Vec<TagHashRef<'a>>,
-    pub(crate) version: Version,
+pub(crate) struct EventHashRef<'a> {
+    pub data: &'a Data,
+    pub identifier: IdentifierHashRef<'a>,
+    pub tags: Vec<TagHashRef<'a>>,
+    pub version: Version,
 }
 
 impl<'a> From<&'a Event> for EventHashRef<'a> {
@@ -202,13 +205,13 @@ impl SequencedEventArc {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub struct SequencedEventHash {
-    pub(crate) data: Data,
-    pub(crate) identifier: IdentifierHash,
-    pub(crate) position: Position,
-    pub(crate) tags: Vec<TagHash>,
-    pub(crate) timestamp: Timestamp,
-    pub(crate) version: Version,
+pub(crate) struct SequencedEventHash {
+    pub data: Data,
+    pub identifier: IdentifierHash,
+    pub position: Position,
+    pub tags: Vec<TagHash>,
+    pub timestamp: Timestamp,
+    pub version: Version,
 }
 
 impl SequencedEventHash {
@@ -225,3 +228,7 @@ impl SequencedEventHash {
         )
     }
 }
+
+// -------------------------------------------------------------------------------------------------
+
+// Re-Exports

@@ -6,12 +6,14 @@ use criterion::{
     criterion_main,
 };
 use eventric_core::{
-    Data,
-    Event,
-    Identifier,
-    Stream,
-    Tag,
-    Version,
+    event::{
+        Data,
+        Event,
+        Identifier,
+        Tag,
+        Version,
+    },
+    stream::Stream,
 };
 
 // =================================================================================================

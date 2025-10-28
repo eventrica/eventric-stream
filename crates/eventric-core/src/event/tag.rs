@@ -13,7 +13,6 @@ use crate::{
             Validate,
             Validated as _,
             string,
-            vec,
         },
     },
 };
@@ -119,55 +118,5 @@ impl<'a> From<&'a Tag> for TagHashRef<'a> {
         let hash = tag.hash();
 
         Self::new(hash, tag)
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Tags
-
-/// The [`Tags`] type is a validating collection of [`Tag`] instances, used to
-/// ensure that invariants are met when constructing queries.
-#[derive(new, AsRef, Debug)]
-#[as_ref([Tag])]
-#[new(const_fn, name(new_unvalidated), vis())]
-pub struct Tags {
-    tags: Vec<Tag>,
-}
-
-impl Tags {
-    /// Constructs a new [`Tags`] instance given any value which can be
-    /// converted into a valid [`Vec`] of [`Tag`] instances.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error on validation failure. Tags must conform to the
-    /// following constraints:
-    /// - Min 1 Tag (Non-Zero Length/Non-Empty)
-    pub fn new<T>(tags: T) -> Result<Self, Error>
-    where
-        T: Into<Vec<Tag>>,
-    {
-        Self::new_unvalidated(tags.into()).validated()
-    }
-}
-
-impl From<&Tags> for Vec<TagHash> {
-    fn from(tags: &Tags) -> Self {
-        tags.as_ref().iter().map(Into::into).collect()
-    }
-}
-
-impl<'a> From<&'a Tags> for Vec<TagHashRef<'a>> {
-    fn from(tags: &'a Tags) -> Self {
-        tags.as_ref().iter().map(Into::into).collect()
-    }
-}
-
-impl Validate for Tags {
-    fn validate(self) -> Result<Self, Error> {
-        validation::validate(&self.tags, "tags", &[&vec::IsEmpty])?;
-
-        Ok(self)
     }
 }

@@ -1,18 +1,18 @@
-pub mod events;
-pub mod indices;
-pub mod references;
+pub(crate) mod events;
+pub(crate) mod indices;
+pub(crate) mod references;
 
 use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::Database;
 
 use crate::{
-    data::{
+    error::Error,
+    stream::data::{
         events::Events,
         indices::Indices,
         references::References,
     },
-    error::Error,
 };
 
 // =================================================================================================

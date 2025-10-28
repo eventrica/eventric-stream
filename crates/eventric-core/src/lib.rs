@@ -5,10 +5,10 @@
 #![allow(missing_docs)]
 #![doc = include_utils::include_md!("README.md:overview")]
 
-mod data;
-mod error;
-mod model;
-mod stream;
+pub mod error;
+pub mod event;
+pub mod stream;
+
 mod util;
 
 // =================================================================================================
@@ -17,42 +17,4 @@ mod util;
 
 // Re-Exports
 
-pub use self::{
-    error::Error,
-    model::{
-        event::{
-            Event,
-            SequencedEvent,
-            SequencedEventArc,
-            data::Data,
-            identifier::Identifier,
-            tag::{
-                Tag,
-                Tags,
-            },
-            timestamp::Timestamp,
-            version::Version,
-        },
-        query::{
-            Query,
-            QueryItem,
-            specifier::{
-                Specifier,
-                Specifiers,
-            },
-        },
-        stream::position::Position,
-    },
-    stream::{
-        Stream,
-        StreamBuilder,
-        append::AppendCondition,
-        query::{
-            QueryCache,
-            QueryCondition,
-            QueryIterator,
-            QueryOptions,
-        },
-    },
-    util::temp_path,
-};
+pub use crate::util::temp_path;

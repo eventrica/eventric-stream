@@ -10,15 +10,15 @@ use fjall::{
 };
 
 use crate::{
-    data::references::{
+    error::Error,
+    event::{
+        EventHashRef,
+        Identifier,
+        Tag,
+    },
+    stream::data::references::{
         identifiers::Identifiers,
         tags::Tags,
-    },
-    error::Error,
-    model::event::{
-        EventHashRef,
-        identifier::Identifier,
-        tag::Tag,
     },
 };
 
@@ -36,7 +36,7 @@ static KEYSPACE_NAME: &str = "references";
 
 #[derive(new, Clone, Debug)]
 #[new(const_fn, vis())]
-pub struct References {
+pub(crate) struct References {
     identifiers: Identifiers,
     tags: Tags,
 }

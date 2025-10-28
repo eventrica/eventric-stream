@@ -11,22 +11,22 @@ use fjall::{
 };
 
 use crate::{
-    data::indices::{
-        identifiers::Identifiers,
-        tags::Tags,
-        timestamps::Timestamps,
-    },
     error::Error,
-    model::{
-        event::{
-            EventHashRef,
-            timestamp::Timestamp,
+    event::{
+        EventHashRef,
+        Position,
+        Timestamp,
+    },
+    stream::{
+        data::indices::{
+            identifiers::Identifiers,
+            tags::Tags,
+            timestamps::Timestamps,
         },
         query::{
             QueryHash,
             QueryItemHash,
         },
-        stream::position::Position,
     },
     util::iteration::{
         and::SequentialAndIterator,
@@ -48,7 +48,7 @@ static KEYSPACE_NAME: &str = "indices";
 
 #[derive(new, Clone, Debug)]
 #[new(const_fn, vis())]
-pub struct Indices {
+pub(crate) struct Indices {
     identifiers: Identifiers,
     tags: Tags,
     timestamps: Timestamps,

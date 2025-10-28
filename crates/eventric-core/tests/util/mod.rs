@@ -1,4 +1,4 @@
-use eventric_core::{
+use eventric_core::event::{
     Data,
     Event,
     Identifier,
