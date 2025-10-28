@@ -1,6 +1,7 @@
 # Crates
 
-The `eventric-core-*` crates support `eventric-core`. Consumers of `eventric-core` should only
-ever take a dependency on the single `eventric-core` crate -- all functionality to use `eventric-core`
-is exported/re-exported from that crate (note that some optional functionality may be gated
-behind features - check the `eventric-core` documentation for information).
+Eventric Core consists of a single library crate, providing the lowest-level
+Event Stream abstraction in the Eventrica ecosystem. See the
+[eventric-core readme](readme) for more detail.
+
+[readme]: ./eventric-core/README.md
