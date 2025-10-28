@@ -1,38 +1,47 @@
 mod util;
 
-use eventric_core::{
-    Position,
-    Stream,
-};
+use std::error::Error;
+
+use eventric_core::Stream;
 
 // =================================================================================================
 // Properties
 // =================================================================================================
 
 #[test]
-fn empty_stream_properties_are_correct() {
+fn empty_stream_properties_are_correct() -> Result<(), Box<dyn Error>> {
     let stream = Stream::builder(eventric_core::temp_path())
         .temporary(true)
-        .open()
-        .unwrap();
+        .open()?;
 
-    assert_eq!(stream.len().unwrap(), 0);
-    assert!(stream.is_empty().unwrap());
+    assert_eq!(0, stream.len()?);
+    assert!(stream.is_empty()?);
+
+    Ok(())
 }
 
 #[test]
-fn stream_properties_before_and_after_append_are_correct() {
+fn stream_properties_before_and_after_append_are_correct() -> Result<(), Box<dyn Error>> {
     let mut stream = Stream::builder(eventric_core::temp_path())
         .temporary(true)
-        .open()
-        .unwrap();
+        .open()?;
 
-    assert_eq!(stream.len().unwrap(), 0);
-    assert!(stream.is_empty().unwrap());
+    assert_eq!(0, stream.len()?);
+    assert!(stream.is_empty()?);
 
-    let position = stream.append([&util::event()], None).unwrap();
+    let position = stream.append(
+        [
+            &util::event(),
+            &util::event(),
+            &util::event(),
+            &util::event(),
+        ],
+        None,
+    )?;
 
-    assert_eq!(position, Position::new(0));
-    assert_eq!(stream.len().unwrap(), 1);
-    assert!(!stream.is_empty().unwrap());
+    assert_eq!(3, *position);
+    assert_eq!(4, stream.len()?);
+    assert!(!stream.is_empty()?);
+
+    Ok(())
 }

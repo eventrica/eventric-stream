@@ -1,5 +1,6 @@
 use thiserror::Error;
-use validator::ValidationErrors;
+
+use crate::util::validation::ValidationError;
 
 // =================================================================================================
 // Error
@@ -13,8 +14,8 @@ pub enum Error {
     Database(#[from] fjall::Error),
     #[error("Internal Error: {0}")]
     Internal(String),
-    #[error("Validation Errors: {0}")]
-    Validation(#[from] ValidationErrors),
+    #[error("Validation Error: {0}")]
+    Validation(#[from] ValidationError),
 }
 
 impl Error {

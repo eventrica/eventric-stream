@@ -1,6 +1,9 @@
 #![allow(clippy::multiple_crate_versions)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::missing_safety_doc)]
+#![allow(missing_docs)]
 #![doc = include_utils::include_md!("README.md:overview")]
-#![warn(missing_docs)]
 
 mod data;
 mod error;
@@ -20,6 +23,7 @@ pub use self::{
         event::{
             Event,
             SequencedEvent,
+            SequencedEventArc,
             data::Data,
             identifier::Identifier,
             tag::{
@@ -42,7 +46,10 @@ pub use self::{
     stream::{
         Stream,
         StreamBuilder,
-        append::AppendCondition,
+        append::{
+            AppendCondition,
+            AppendError,
+        },
         query::{
             QueryCache,
             QueryCondition,
@@ -50,5 +57,8 @@ pub use self::{
             QueryOptions,
         },
     },
-    util::temp_path,
+    util::{
+        temp_path,
+        validation::ValidationError,
+    },
 };

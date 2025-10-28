@@ -26,7 +26,7 @@ use crate::{
         },
         stream::position::Position,
     },
-    util::iter::and::SequentialAndIterator,
+    util::iteration::and::SequentialAndIterator,
 };
 
 // =================================================================================================

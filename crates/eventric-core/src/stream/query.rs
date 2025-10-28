@@ -16,7 +16,7 @@ use crate::{
     error::Error,
     model::{
         event::{
-            SequencedEvent,
+            SequencedEventArc,
             SequencedEventHash,
             identifier::{
                 Identifier,
@@ -219,22 +219,22 @@ impl QueryIterator<'_> {
 }
 
 impl Iterator for QueryIterator<'_> {
-    type Item = Result<SequencedEvent, Error>;
+    type Item = Result<SequencedEventArc, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
             Some(Ok(event)) => {
                 let (data, identifier, position, tags, timestamp, version) = event.take();
 
-                match self.get_identifier(&identifier) {
-                    Ok(identifier) => match self.get_tags(&tags) {
-                        Ok(tags) => Some(Ok(SequencedEvent::new(
-                            data, identifier, position, tags, timestamp, version,
-                        ))),
-                        Err(err) => Some(Err(err)),
-                    },
-                    Err(err) => Some(Err(err)),
-                }
+                Some(
+                    self.get_identifier(&identifier)
+                        .and_then(|identifier| self.get_tags(&tags).map(|tags| (identifier, tags)))
+                        .map(|(identifier, tags)| {
+                            SequencedEventArc::new(
+                                data, identifier, position, tags, timestamp, version,
+                            )
+                        }),
+                )
             }
             Some(Err(err)) => Some(Err(err)),
             None => None,

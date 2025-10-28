@@ -160,7 +160,7 @@ mod tests {
 
     use crate::{
         error::Error,
-        util::iter::{
+        util::iteration::{
             and::SequentialAndIterator,
             or::SequentialOrIterator,
         },

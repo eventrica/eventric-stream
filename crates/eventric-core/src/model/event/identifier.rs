@@ -3,17 +3,18 @@ use derive_more::{
     Deref,
 };
 use fancy_constructor::new;
-use serde::{
-    Deserialize,
-    Serialize,
-};
-use validator::Validate;
 
 use crate::{
     error::Error,
     util::{
-        self,
-        validate::Validated,
+        hashing,
+        validation::{
+            self,
+            Validate,
+            Validated,
+            ValidationError,
+            string,
+        },
     },
 };
 
@@ -27,11 +28,10 @@ use crate::{
 /// logical versioned *type* of an event).
 ///
 /// [version]: crate::Version
-#[derive(new, AsRef, Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Validate)]
+#[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
 #[as_ref(str, [u8])]
 #[new(const_fn, name(new_unvalidated), vis(pub(crate)))]
 pub struct Identifier {
-    #[validate(length(min = 1, max = 255), non_control_character)]
     identifier: String,
 }
 
@@ -43,9 +43,10 @@ impl Identifier {
     ///
     /// Returns an error on validation failure. Identifiers must conform to the
     /// following constraints:
-    /// - Minimum length: 1
-    /// - Maxiumum length: 255
-    /// - No utf-8 control characters
+    /// - Not empty
+    /// - No preceding whitespace
+    /// - No trailing whitespace
+    /// - No control characters
     pub fn new<I>(identifier: I) -> Result<Self, Error>
     where
         I: Into<String>,
@@ -56,7 +57,20 @@ impl Identifier {
 
 impl Identifier {
     pub(crate) fn hash(&self) -> u64 {
-        util::hash(self)
+        hashing::hash(self)
+    }
+}
+
+impl Validate for Identifier {
+    fn validate(self) -> Result<Self, ValidationError> {
+        validation::validate(&self.identifier, "identifier", &[
+            &string::IsEmpty,
+            &string::PrecedingWhitespace,
+            &string::TrailingWhitespace,
+            &string::ControlCharacters,
+        ])?;
+
+        Ok(self)
     }
 }
 

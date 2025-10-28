@@ -3,17 +3,19 @@ use derive_more::{
     Deref,
 };
 use fancy_constructor::new;
-use serde::{
-    Deserialize,
-    Serialize,
-};
-use validator::Validate;
 
 use crate::{
     error::Error,
     util::{
-        self,
-        validate::Validated as _,
+        hashing,
+        validation::{
+            self,
+            Validate,
+            Validated as _,
+            ValidationError,
+            string,
+            vec,
+        },
     },
 };
 
@@ -25,11 +27,10 @@ use crate::{
 /// tag for an event (an event can have zero or more tags which may be used as
 /// part of queries, and which form part of a dynamic consistency boundary in
 /// doing so).
-#[derive(new, AsRef, Clone, Debug, Deserialize, Eq, PartialEq, Serialize, Validate)]
+#[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
 #[as_ref(str, [u8])]
 #[new(const_fn, name(new_unvalidated), vis(pub(crate)))]
 pub struct Tag {
-    #[validate(length(min = 1, max = 255), non_control_character)]
     tag: String,
 }
 
@@ -41,9 +42,10 @@ impl Tag {
     ///
     /// Returns an error on validation failure. Tags must conform to the
     /// following constraints:
-    /// - Minimum length: 1
-    /// - Maxiumum length: 255
-    /// - No utf-8 control characters
+    /// - Not empty
+    /// - No preceding whitespace
+    /// - No trailing whitespace
+    /// - No control characters
     pub fn new<T>(tag: T) -> Result<Self, Error>
     where
         T: Into<String>,
@@ -54,7 +56,20 @@ impl Tag {
 
 impl Tag {
     pub(crate) fn hash(&self) -> u64 {
-        util::hash(self)
+        hashing::hash(self)
+    }
+}
+
+impl Validate for Tag {
+    fn validate(self) -> Result<Self, ValidationError> {
+        validation::validate(&self.tag, "identifier", &[
+            &string::IsEmpty,
+            &string::PrecedingWhitespace,
+            &string::TrailingWhitespace,
+            &string::ControlCharacters,
+        ])?;
+
+        Ok(self)
     }
 }
 
@@ -114,11 +129,10 @@ impl<'a> From<&'a Tag> for TagHashRef<'a> {
 
 /// The [`Tags`] type is a validating collection of [`Tag`] instances, used to
 /// ensure that invariants are met when constructing queries.
-#[derive(new, AsRef, Debug, Deserialize, Serialize, Validate)]
+#[derive(new, AsRef, Debug)]
 #[as_ref([Tag])]
 #[new(const_fn, name(new_unvalidated), vis())]
 pub struct Tags {
-    #[validate(length(min = 1))]
     tags: Vec<Tag>,
 }
 
@@ -148,5 +162,13 @@ impl From<&Tags> for Vec<TagHash> {
 impl<'a> From<&'a Tags> for Vec<TagHashRef<'a>> {
     fn from(tags: &'a Tags) -> Self {
         tags.as_ref().iter().map(Into::into).collect()
+    }
+}
+
+impl Validate for Tags {
+    fn validate(self) -> Result<Self, ValidationError> {
+        validation::validate(&self.tags, "tags", &[&vec::IsEmpty])?;
+
+        Ok(self)
     }
 }

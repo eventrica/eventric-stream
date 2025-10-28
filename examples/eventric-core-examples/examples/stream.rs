@@ -57,7 +57,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
     let condition = QueryCondition::default()
         .matches(&query)
-        .from(Position::new(0));
+        .from(Position::MIN);
 
     let cache = QueryCache::default();
     let options = QueryOptions::default().retrieve_tags(false);

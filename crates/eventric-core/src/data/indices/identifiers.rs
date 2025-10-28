@@ -29,7 +29,7 @@ use crate::{
         query::specifier::SpecifierHash,
         stream::position::Position,
     },
-    util::iter::or::SequentialOrIterator,
+    util::iteration::or::SequentialOrIterator,
 };
 
 // =================================================================================================

@@ -5,11 +5,6 @@ use derive_more::{
     Debug,
 };
 use fancy_constructor::new;
-use serde::{
-    Deserialize,
-    Serialize,
-};
-use validator::Validate;
 
 use crate::{
     error::Error,
@@ -25,7 +20,13 @@ use crate::{
             Specifiers,
         },
     },
-    util::validate::Validated,
+    util::validation::{
+        self,
+        Validate,
+        Validated,
+        ValidationError,
+        vec,
+    },
 };
 
 // =================================================================================================
@@ -34,11 +35,10 @@ use crate::{
 
 // Query
 
-#[derive(new, AsRef, Debug, Deserialize, Serialize, Validate)]
+#[derive(new, AsRef, Debug)]
 #[as_ref([QueryItem])]
 #[new(const_fn, name(new_unvalidated), vis())]
 pub struct Query {
-    #[validate(length(min = 1))]
     items: Vec<QueryItem>,
 }
 
@@ -54,6 +54,14 @@ impl Query {
 impl From<Query> for Vec<QueryItem> {
     fn from(query: Query) -> Self {
         query.items
+    }
+}
+
+impl Validate for Query {
+    fn validate(self) -> Result<Self, ValidationError> {
+        validation::validate(&self.items, "items", &[&vec::IsEmpty])?;
+
+        Ok(self)
     }
 }
 
@@ -103,7 +111,7 @@ impl<'a> From<&'a Query> for QueryHashRef<'a> {
 
 // Query Item
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug)]
 pub enum QueryItem {
     Specifiers(Specifiers),
     SpecifiersAndTags(Specifiers, Tags),

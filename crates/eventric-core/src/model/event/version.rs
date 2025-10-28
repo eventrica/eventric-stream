@@ -1,8 +1,4 @@
 use derive_more::Deref;
-use serde::{
-    Deserialize,
-    Serialize,
-};
 
 // =================================================================================================
 // Version
@@ -14,7 +10,7 @@ use serde::{
 /// specification of the logical versioned *type* of the event.
 ///
 /// [ident]: crate::Identifier
-#[derive(Clone, Copy, Debug, Deref, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[derive(Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Version(u8);
 
 impl Version {

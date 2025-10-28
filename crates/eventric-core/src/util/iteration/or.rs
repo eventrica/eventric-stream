@@ -5,7 +5,7 @@ use fancy_constructor::new;
 
 use crate::{
     error::Error,
-    util::iter::{
+    util::iteration::{
         CachingIterators,
         IteratorCached,
     },
@@ -110,7 +110,7 @@ where
 mod tests {
     use crate::{
         error::Error,
-        util::iter::{
+        util::iteration::{
             or::SequentialOrIterator,
             tests::TestIterator,
         },

@@ -7,22 +7,20 @@ use derive_more::{
         SubAssign,
     },
 };
-use serde::{
-    Deserialize,
-    Serialize,
-};
 
 // =================================================================================================
 // Position
 // =================================================================================================
 
+/// The [`Position`] type is a typed wrapper around `u64` value representing the
+/// position of an event in a stream.
 #[rustfmt::skip]
-#[derive(Add, AddAssign, Clone, Copy, Debug, Deref, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize, Sub, SubAssign)]
+#[derive(Add, AddAssign, Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd, Sub, SubAssign)]
 pub struct Position(u64);
 
 impl Position {
     #[must_use]
-    pub const fn new(position: u64) -> Self {
+    pub(crate) const fn new(position: u64) -> Self {
         Self(position)
     }
 }

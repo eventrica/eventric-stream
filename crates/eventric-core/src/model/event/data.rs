@@ -1,14 +1,13 @@
 use derive_more::AsRef;
 use fancy_constructor::new;
-use serde::{
-    Deserialize,
-    Serialize,
-};
-use validator::Validate;
 
 use crate::{
     error::Error,
-    util::validate::Validated as _,
+    util::validation::{
+        Validate,
+        Validated as _,
+        ValidationError,
+    },
 };
 
 // =================================================================================================
@@ -19,11 +18,10 @@ use crate::{
 /// immutable owned vector of bytes. Higher-level libraries may determine the
 /// meaning of the payload depending on the identifier and version of the event,
 /// but at core level it is opaque.
-#[derive(new, AsRef, Debug, Deserialize, Serialize, Validate)]
+#[derive(new, AsRef, Debug)]
 #[as_ref([u8])]
 #[new(const_fn, name(new_unvalidated), vis(pub(crate)))]
 pub struct Data {
-    #[validate(length(min = 1, max = 4096))]
     data: Vec<u8>,
 }
 
@@ -41,5 +39,19 @@ impl Data {
         D: Into<Vec<u8>>,
     {
         Self::new_unvalidated(data.into()).validated()
+    }
+}
+
+impl Validate for Data {
+    fn validate(self) -> Result<Self, ValidationError> {
+        if self.data.is_empty() {
+            return Err(ValidationError::new("data", "empty"));
+        }
+
+        if self.data.len() > 4096 {
+            return Err(ValidationError::new("data", "maximum size exceeded"));
+        }
+
+        Ok(self)
     }
 }

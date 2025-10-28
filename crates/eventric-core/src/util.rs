@@ -1,5 +1,6 @@
-pub mod iter;
-pub mod validate;
+pub mod hashing;
+pub mod iteration;
+pub mod validation;
 
 use std::{
     path::{
@@ -12,31 +13,9 @@ use std::{
     },
 };
 
-use rapidhash::v3::{
-    self,
-    RapidSecrets,
-};
-
 // =================================================================================================
 // Utilities
 // =================================================================================================
-
-// Configuration
-
-static SEED: RapidSecrets = RapidSecrets::seed(0x2811_2017);
-
-// -------------------------------------------------------------------------------------------------
-
-// Hash
-
-pub fn hash<T>(target: &T) -> u64
-where
-    T: AsRef<[u8]>,
-{
-    v3::rapidhash_v3_seeded(target.as_ref(), &SEED)
-}
-
-// -------------------------------------------------------------------------------------------------
 
 // Temporary Path
 

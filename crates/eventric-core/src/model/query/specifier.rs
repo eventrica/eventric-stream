@@ -2,11 +2,6 @@ use std::ops::Range;
 
 use derive_more::AsRef;
 use fancy_constructor::new;
-use serde::{
-    Deserialize,
-    Serialize,
-};
-use validator::Validate;
 
 use crate::{
     error::Error,
@@ -18,14 +13,18 @@ use crate::{
         },
         version::Version,
     },
-    util::validate::Validated as _,
+    util::validation::{
+        Validate,
+        Validated as _,
+        ValidationError,
+    },
 };
 
 // =================================================================================================
 // Specifier
 // =================================================================================================
 
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Specifier {
     identifier: Identifier,
     range: Option<Range<Version>>,
@@ -99,11 +98,10 @@ impl<'a> From<&'a Specifier> for SpecifierHashRef<'a> {
 
 // Specifiers
 
-#[derive(new, AsRef, Debug, Deserialize, Serialize, Validate)]
+#[derive(new, AsRef, Debug)]
 #[as_ref([Specifier])]
 #[new(const_fn, name(new_unvalidated), vis())]
 pub struct Specifiers {
-    #[validate(length(min = 1))]
     specifiers: Vec<Specifier>,
 }
 
@@ -125,5 +123,15 @@ impl From<&Specifiers> for Vec<SpecifierHash> {
 impl<'a> From<&'a Specifiers> for Vec<SpecifierHashRef<'a>> {
     fn from(specifiers: &'a Specifiers) -> Self {
         specifiers.as_ref().iter().map(Into::into).collect()
+    }
+}
+
+impl Validate for Specifiers {
+    fn validate(self) -> Result<Self, ValidationError> {
+        if self.specifiers.is_empty() {
+            return Err(ValidationError::new("specifiers", "empty"));
+        }
+
+        Ok(self)
     }
 }
