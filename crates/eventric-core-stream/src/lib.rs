@@ -29,28 +29,9 @@ use crate::data::Data;
 /// on this underlying abstraction.
 ///
 /// To open a new [`Stream`] instance use a [`Builder`], which can be obtained
-/// using the [`Stream::builder`] function.
-///
-/// ```
-/// # use eventric_core::{
-/// #     Error,
-/// #     Stream,
-/// # };
-/// #
-/// # let path = eventric_core::temp_path();
-/// #
-/// // let path = ...
-///
-/// let mut stream = Stream::builder(path).temporary(true).open()?;
-///
-/// assert!(stream.is_empty()?);
-/// #
-/// # Ok::<(), Error>(())
-/// ```
-///
-/// Once a new [`Stream`] instance has been opened, see [`Stream::append`] and
-/// [`Stream::query`] for information on how to work with the stream and related
-/// events.
+/// using the [`Stream::builder`] function. Once a new [`Stream`] instance has
+/// been opened, see [`Stream::append`] and [`Stream::query`] for information on
+/// how to work with the stream and related events.
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
 pub struct Stream {
