@@ -3,8 +3,8 @@ use std::error::Error;
 use eventric_core::{
     event::{
         Data,
-        Event,
         Identifier,
+        NewEvent,
         Position,
         Specifier,
         Tag,
@@ -31,19 +31,19 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
     stream.append(
         [
-            &Event::new(
+            &NewEvent::new(
                 Data::new("hello world!")?,
                 Identifier::new("StudentSubscribedToCourse")?,
                 Vec::from_iter([Tag::new("student:3242")?, Tag::new("course:523")?]),
                 Version::new(0),
             ),
-            &Event::new(
+            &NewEvent::new(
                 Data::new("oh, no!")?,
                 Identifier::new("CourseCapacityChanged")?,
                 Vec::from_iter([Tag::new("course:523")?]),
                 Version::new(0),
             ),
-            &Event::new(
+            &NewEvent::new(
                 Data::new("goodbye world...")?,
                 Identifier::new("StudentSubscribedToCourse")?,
                 Vec::from_iter([Tag::new("student:7642")?, Tag::new("course:63")?]),

@@ -12,8 +12,8 @@ use derive_more::{
 // Position
 // =================================================================================================
 
-/// The [`Position`] type is a typed wrapper around `u64` value representing the
-/// position of an event in a stream.
+/// The [`Position`] type is a typed wrapper around a `u64` value representing
+/// the ordinal position of an event in a stream.
 #[rustfmt::skip]
 #[derive(Add, AddAssign, Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd, Sub, SubAssign)]
 pub struct Position(u64);

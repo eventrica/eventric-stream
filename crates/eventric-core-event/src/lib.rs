@@ -1,8 +1,9 @@
 #![allow(clippy::multiple_crate_versions)]
-#![allow(clippy::missing_errors_doc)]
-#![allow(clippy::missing_panics_doc)]
-#![allow(clippy::missing_safety_doc)]
+#![deny(clippy::missing_errors_doc)]
+#![deny(clippy::missing_panics_doc)]
+#![deny(clippy::missing_safety_doc)]
 #![allow(missing_docs)]
+#![deny(unsafe_code)]
 #![doc = include_utils::include_md!("../NOTICE.md")]
 
 pub mod data;
@@ -41,72 +42,8 @@ use crate::{
 // Event
 
 #[derive(new, Debug)]
-#[new(const_fn, name(new_inner), vis())]
+#[new(const_fn)]
 pub struct Event {
-    data: Data,
-    identifier: Identifier,
-    tags: Vec<Tag>,
-    version: Version,
-}
-
-impl Event {
-    #[must_use]
-    pub const fn new(data: Data, identifier: Identifier, tags: Vec<Tag>, version: Version) -> Self {
-        Self::new_inner(data, identifier, tags, version)
-    }
-}
-
-impl Event {
-    #[must_use]
-    pub fn data(&self) -> &Data {
-        &self.data
-    }
-
-    #[must_use]
-    pub fn identifier(&self) -> &Identifier {
-        &self.identifier
-    }
-
-    #[must_use]
-    pub fn tags(&self) -> &Vec<Tag> {
-        &self.tags
-    }
-
-    #[must_use]
-    pub fn version(&self) -> &Version {
-        &self.version
-    }
-}
-
-// Hash Ref
-
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub struct EventHashRef<'a> {
-    pub data: &'a Data,
-    pub identifier: IdentifierHashRef<'a>,
-    pub tags: Vec<TagHashRef<'a>>,
-    pub version: Version,
-}
-
-impl<'a> From<&'a Event> for EventHashRef<'a> {
-    fn from(event: &'a Event) -> Self {
-        Self::new(
-            event.data(),
-            event.identifier().into(),
-            event.tags().iter().map(Into::into).collect(),
-            *event.version(),
-        )
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Sequenced Event
-
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub struct SequencedEvent {
     data: Data,
     identifier: Identifier,
     position: Position,
@@ -115,7 +52,7 @@ pub struct SequencedEvent {
     version: Version,
 }
 
-impl SequencedEvent {
+impl Event {
     #[must_use]
     pub fn data(&self) -> &Data {
         &self.data
@@ -147,8 +84,8 @@ impl SequencedEvent {
     }
 }
 
-impl From<SequencedEventArc> for SequencedEvent {
-    fn from(value: SequencedEventArc) -> Self {
+impl From<EventArc> for Event {
+    fn from(value: EventArc) -> Self {
         Self {
             data: value.data,
             identifier: Arc::unwrap_or_clone(value.identifier),
@@ -164,7 +101,7 @@ impl From<SequencedEventArc> for SequencedEvent {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub struct SequencedEventArc {
+pub struct EventArc {
     data: Data,
     identifier: Arc<Identifier>,
     position: Position,
@@ -173,7 +110,7 @@ pub struct SequencedEventArc {
     version: Version,
 }
 
-impl SequencedEventArc {
+impl EventArc {
     #[must_use]
     pub fn data(&self) -> &Data {
         &self.data
@@ -209,7 +146,7 @@ impl SequencedEventArc {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub struct SequencedEventHash {
+pub struct EventHash {
     pub data: Data,
     pub identifier: IdentifierHash,
     pub position: Position,
@@ -218,7 +155,7 @@ pub struct SequencedEventHash {
     pub version: Version,
 }
 
-impl SequencedEventHash {
+impl EventHash {
     #[must_use]
     #[rustfmt::skip]
     pub fn take(self) -> (Data, IdentifierHash, Position, Vec<TagHash>, Timestamp, Version) {
@@ -229,6 +166,70 @@ impl SequencedEventHash {
             self.tags,
             self.timestamp,
             self.version,
+        )
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// New Event
+
+#[derive(new, Debug)]
+#[new(const_fn, name(new_inner), vis())]
+pub struct NewEvent {
+    data: Data,
+    identifier: Identifier,
+    tags: Vec<Tag>,
+    version: Version,
+}
+
+impl NewEvent {
+    #[must_use]
+    pub const fn new(data: Data, identifier: Identifier, tags: Vec<Tag>, version: Version) -> Self {
+        Self::new_inner(data, identifier, tags, version)
+    }
+}
+
+impl NewEvent {
+    #[must_use]
+    pub fn data(&self) -> &Data {
+        &self.data
+    }
+
+    #[must_use]
+    pub fn identifier(&self) -> &Identifier {
+        &self.identifier
+    }
+
+    #[must_use]
+    pub fn tags(&self) -> &Vec<Tag> {
+        &self.tags
+    }
+
+    #[must_use]
+    pub fn version(&self) -> &Version {
+        &self.version
+    }
+}
+
+// Hash Ref
+
+#[derive(new, Debug)]
+#[new(const_fn)]
+pub struct NewEventHashRef<'a> {
+    pub data: &'a Data,
+    pub identifier: IdentifierHashRef<'a>,
+    pub tags: Vec<TagHashRef<'a>>,
+    pub version: Version,
+}
+
+impl<'a> From<&'a NewEvent> for NewEventHashRef<'a> {
+    fn from(event: &'a NewEvent) -> Self {
+        Self::new(
+            event.data(),
+            event.identifier().into(),
+            event.tags().iter().map(Into::into).collect(),
+            *event.version(),
         )
     }
 }

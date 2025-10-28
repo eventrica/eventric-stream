@@ -5,7 +5,7 @@ mod timestamps;
 use derive_more::Debug;
 use eventric_core_error::Error;
 use eventric_core_event::{
-    EventHashRef,
+    NewEventHashRef,
     position::Position,
     timestamp::Timestamp,
 };
@@ -81,7 +81,7 @@ impl Indices {
         &self,
         batch: &mut WriteBatch,
         at: Position,
-        event: &EventHashRef<'_>,
+        event: &NewEventHashRef<'_>,
         timestamp: Timestamp,
     ) {
         self.identifiers.put(batch, at, &event.identifier, event.version);

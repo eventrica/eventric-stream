@@ -30,14 +30,21 @@ impl Timestamp {
 }
 
 impl Timestamp {
-    /// NOTE: Important - this uses [`SystemTime`] which is not guaranteed to be
-    /// monotonic. In practice it's unlikely to be an issue, but this is
+    /// Constructs a new [`Timestamp`] instance with the underlying value
+    /// derived from the current system time.
+    ///
+    /// NOTE: This uses [`SystemTime`] which is not guaranteed to be monotonic.
+    /// In practice it's unlikely to be an issue, but this is
     /// worth monitoring/noting when using the generated timestamp values as
     /// part of event sequencing - there is a non-zero chance that timestamp
-    /// order may not match positional order (although this isn't likely).
+    /// order may not match positional order (although this isn't likely). Do
+    /// not rely on sorting by timestamp being identical to sorting by position
+    /// when working with events.
     ///
-    /// This should probably be replaced at some point with something like TAI
-    /// time.
+    /// # Errors
+    ///
+    /// Returns an error if the current system time is too late to be stored in
+    /// a `u64` number of nanoseconds. This will become an issue in C22.
     pub fn now() -> Result<Self, Error> {
         let duration = SystemTime::now()
             .duration_since(UNIX_EPOCH)

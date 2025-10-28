@@ -7,8 +7,8 @@ use bytes::{
 use derive_more::Debug;
 use eventric_core_error::Error;
 use eventric_core_event::{
-    EventHashRef,
-    SequencedEventHash,
+    EventHash,
+    NewEventHashRef,
     data::Data,
     identifier::IdentifierHash,
     position::Position,
@@ -55,7 +55,7 @@ impl Events {
 // Get/Put
 
 impl Events {
-    pub fn get(&self, at: Position) -> Result<Option<SequencedEventHash>, Error> {
+    pub fn get(&self, at: Position) -> Result<Option<EventHash>, Error> {
         let key = at.to_be_bytes();
         let value = self.keyspace.get(key)?;
 
@@ -66,7 +66,7 @@ impl Events {
         &self,
         batch: &mut WriteBatch,
         at: Position,
-        event: &EventHashRef<'_>,
+        event: &NewEventHashRef<'_>,
         timestamp: Timestamp,
     ) {
         let key = at.to_be_bytes();
@@ -141,7 +141,7 @@ impl From<UnitAndSlice> for Position {
 
 struct SliceAndPosition(Slice, Position);
 
-impl From<SliceAndPosition> for SequencedEventHash {
+impl From<SliceAndPosition> for EventHash {
     fn from(SliceAndPosition(value, position): SliceAndPosition) -> Self {
         let mut value = &value[..];
 
@@ -158,7 +158,7 @@ impl From<SliceAndPosition> for SequencedEventHash {
     }
 }
 
-struct EventAndTimestamp<'a>(&'a EventHashRef<'a>, Timestamp);
+struct EventAndTimestamp<'a>(&'a NewEventHashRef<'a>, Timestamp);
 
 impl From<EventAndTimestamp<'_>> for Vec<u8> {
     fn from(EventAndTimestamp(event, timestamp): EventAndTimestamp<'_>) -> Self {
@@ -186,11 +186,11 @@ impl From<EventAndTimestamp<'_>> for Vec<u8> {
 #[derive(new, Debug)]
 pub struct Iterator<'a> {
     #[debug("Iterator")]
-    iter: Box<dyn iter::Iterator<Item = Result<SequencedEventHash, Error>> + 'a>,
+    iter: Box<dyn iter::Iterator<Item = Result<EventHash, Error>> + 'a>,
 }
 
 impl iter::Iterator for Iterator<'_> {
-    type Item = Result<SequencedEventHash, Error>;
+    type Item = Result<EventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()

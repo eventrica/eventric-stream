@@ -1,6 +1,6 @@
 use eventric_core::event::{
     Data,
-    Event,
+    NewEvent,
     Identifier,
     Tag,
     Version,
@@ -11,8 +11,8 @@ use eventric_core::event::{
 // =================================================================================================
 
 #[must_use]
-pub fn event() -> Event {
-    Event::new(
+pub fn event() -> NewEvent {
+    NewEvent::new(
         Data::new("test_data").unwrap(),
         Identifier::new("test_identifier").unwrap(),
         Vec::from_iter([

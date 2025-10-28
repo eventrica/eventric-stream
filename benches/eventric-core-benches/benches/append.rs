@@ -8,8 +8,8 @@ use criterion::{
 use eventric_core::{
     event::{
         Data,
-        Event,
         Identifier,
+        NewEvent,
         Tag,
         Version,
     },
@@ -31,7 +31,7 @@ pub fn single_append(c: &mut Criterion) {
             .open()
             .unwrap();
 
-        let events = [Event::new(
+        let events = [NewEvent::new(
             Data::new("Hello World").unwrap(),
             Identifier::new("test_identifier").unwrap(),
             Vec::from_iter([
@@ -68,7 +68,7 @@ pub fn multiple_append(c: &mut Criterion) {
 
             let events = (0..10)
                 .map(|_| {
-                    Event::new(
+                    NewEvent::new(
                         Data::new("Hello World").unwrap(),
                         Identifier::new("test_identifier").unwrap(),
                         Vec::from_iter([

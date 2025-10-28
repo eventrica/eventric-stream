@@ -4,7 +4,7 @@ use eventric_core::{
     error::Error,
     event::{
         Data,
-        Event,
+        NewEvent,
         Identifier,
         Tag,
         Version,
@@ -22,7 +22,7 @@ pub fn main() -> Result<(), Error> {
         .temporary(true)
         .open()?;
 
-    let events = [Event::new(
+    let events = [NewEvent::new(
         Data::new("Hello World").unwrap(),
         Identifier::new("test_identifier").unwrap(),
         Vec::from_iter([

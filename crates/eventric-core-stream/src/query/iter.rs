@@ -6,8 +6,8 @@ use std::{
 use derive_more::Debug;
 use eventric_core_error::Error;
 use eventric_core_event::{
-    SequencedEventArc,
-    SequencedEventHash,
+    EventArc,
+    EventHash,
     identifier::{
         Identifier,
         IdentifierHash,
@@ -94,7 +94,7 @@ impl Iterator<'_> {
 }
 
 impl iter::Iterator for Iterator<'_> {
-    type Item = Result<SequencedEventArc, Error>;
+    type Item = Result<EventArc, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
@@ -105,9 +105,7 @@ impl iter::Iterator for Iterator<'_> {
                     self.get_identifier(&identifier)
                         .and_then(|identifier| self.get_tags(&tags).map(|tags| (identifier, tags)))
                         .map(|(identifier, tags)| {
-                            SequencedEventArc::new(
-                                data, identifier, position, tags, timestamp, version,
-                            )
+                            EventArc::new(data, identifier, position, tags, timestamp, version)
                         }),
                 )
             }
@@ -126,7 +124,7 @@ pub enum HashIterator<'a> {
 }
 
 impl iter::Iterator for HashIterator<'_> {
-    type Item = Result<SequencedEventHash, Error>;
+    type Item = Result<EventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -146,7 +144,7 @@ pub struct MappedHashIterator<'a> {
 }
 
 impl iter::Iterator for MappedHashIterator<'_> {
-    type Item = Result<SequencedEventHash, Error>;
+    type Item = Result<EventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {

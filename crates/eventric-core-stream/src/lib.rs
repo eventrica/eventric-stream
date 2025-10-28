@@ -3,6 +3,7 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::missing_safety_doc)]
 #![allow(missing_docs)]
+#![deny(unsafe_code)]
 #![doc = include_utils::include_md!("../NOTICE.md")]
 
 pub mod append;
@@ -126,7 +127,7 @@ where
     /// Sets whether or not the [`Stream`] should be temporary (temporary
     /// streams delete their underlying data storage when dropped, and are thus
     /// ephemeral - this is only generally required when developing/testing, and
-    /// should generally never be set for a production system).
+    /// should never be set for a production system).
     #[must_use]
     pub fn temporary(mut self, temporary: bool) -> Self {
         self.temporary = Some(temporary);
