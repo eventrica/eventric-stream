@@ -1,8 +1,7 @@
 pub mod string;
 pub mod vec;
 
-use fancy_constructor::new;
-use thiserror::Error;
+use std::fmt::Display;
 
 use crate::error::Error;
 
@@ -20,7 +19,7 @@ pub trait Validate
 where
     Self: Sized,
 {
-    fn validate(self) -> Result<Self, ValidationError>;
+    fn validate(self) -> Result<Self, Error>;
 }
 
 pub trait Validated {
@@ -37,39 +36,23 @@ where
     where
         Self: Validate + Sized,
     {
-        Ok(self.validate()?)
+        self.validate()
     }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Error
-
-#[derive(new, Debug, Error)]
-#[error("{name} validation error: {error}")]
-#[new(vis(pub(crate)))]
-pub struct ValidationError {
-    #[new(into)]
-    name: String,
-    #[new(into)]
-    error: String,
 }
 
 // -------------------------------------------------------------------------------------------------
 
 // Validation
 
-pub fn validate<T, N>(
-    value: &T,
-    name: N,
-    validators: &[&dyn Validator<T>],
-) -> Result<(), ValidationError>
+pub fn validate<T, N>(value: &T, name: N, validators: &[&dyn Validator<T>]) -> Result<(), Error>
 where
-    N: Into<String>,
+    N: Display,
 {
     for validator in validators {
         if let Some(error) = validator.validate(value) {
-            return Err(ValidationError::new(name, error));
+            return Err(Error::validation(format!(
+                "validation error: {name}: {error}"
+            )));
         }
     }
 

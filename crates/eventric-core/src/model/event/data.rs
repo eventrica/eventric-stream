@@ -4,9 +4,10 @@ use fancy_constructor::new;
 use crate::{
     error::Error,
     util::validation::{
+        self,
         Validate,
         Validated as _,
-        ValidationError,
+        vec,
     },
 };
 
@@ -33,7 +34,6 @@ impl Data {
     /// Returns an error on validation failure. Data must conform to the
     /// following constraints:
     /// - Min 1 byte (Non-Zero Length/Non-Empty)
-    /// - Max 4096 bytes
     pub fn new<D>(data: D) -> Result<Self, Error>
     where
         D: Into<Vec<u8>>,
@@ -43,14 +43,8 @@ impl Data {
 }
 
 impl Validate for Data {
-    fn validate(self) -> Result<Self, ValidationError> {
-        if self.data.is_empty() {
-            return Err(ValidationError::new("data", "empty"));
-        }
-
-        if self.data.len() > 4096 {
-            return Err(ValidationError::new("data", "maximum size exceeded"));
-        }
+    fn validate(self) -> Result<Self, Error> {
+        validation::validate(&self.data, "data", &[&vec::IsEmpty])?;
 
         Ok(self)
     }

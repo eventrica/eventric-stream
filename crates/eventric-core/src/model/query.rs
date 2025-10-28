@@ -24,7 +24,6 @@ use crate::{
         self,
         Validate,
         Validated,
-        ValidationError,
         vec,
     },
 };
@@ -58,7 +57,7 @@ impl From<Query> for Vec<QueryItem> {
 }
 
 impl Validate for Query {
-    fn validate(self) -> Result<Self, ValidationError> {
+    fn validate(self) -> Result<Self, Error> {
         validation::validate(&self.items, "items", &[&vec::IsEmpty])?;
 
         Ok(self)

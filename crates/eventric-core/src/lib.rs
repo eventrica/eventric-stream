@@ -57,8 +57,5 @@ pub use self::{
             QueryOptions,
         },
     },
-    util::{
-        temp_path,
-        validation::ValidationError,
-    },
+    util::temp_path,
 };

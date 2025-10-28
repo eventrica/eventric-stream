@@ -12,7 +12,6 @@ use crate::{
             self,
             Validate,
             Validated as _,
-            ValidationError,
             string,
             vec,
         },
@@ -61,7 +60,7 @@ impl Tag {
 }
 
 impl Validate for Tag {
-    fn validate(self) -> Result<Self, ValidationError> {
+    fn validate(self) -> Result<Self, Error> {
         validation::validate(&self.tag, "identifier", &[
             &string::IsEmpty,
             &string::PrecedingWhitespace,
@@ -166,7 +165,7 @@ impl<'a> From<&'a Tags> for Vec<TagHashRef<'a>> {
 }
 
 impl Validate for Tags {
-    fn validate(self) -> Result<Self, ValidationError> {
+    fn validate(self) -> Result<Self, Error> {
         validation::validate(&self.tags, "tags", &[&vec::IsEmpty])?;
 
         Ok(self)

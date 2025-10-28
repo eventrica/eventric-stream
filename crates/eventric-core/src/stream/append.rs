@@ -23,7 +23,7 @@ impl Stream {
         &mut self,
         events: E,
         condition: Option<&AppendCondition<'_>>,
-    ) -> Result<Position, AppendError>
+    ) -> Result<Position, Error>
     where
         E: IntoIterator<Item = &'a Event>,
     {
@@ -37,7 +37,7 @@ impl Stream {
     }
 
     #[rustfmt::skip]
-    fn append_check(&self, condition: &AppendCondition<'_>) -> Result<(), AppendError> {
+    fn append_check(&self, condition: &AppendCondition<'_>) -> Result<(), Error> {
         if let Some(after) = condition.after && after >= self.next {
             return Ok(());
         }
@@ -46,7 +46,7 @@ impl Stream {
         let from = condition.after.map(|after| after + 1);
 
         if self.data.indices.contains(&query, from) {
-            return Err(AppendError::Concurrency);
+            return Err(Error::Concurrency);
         }
 
         Ok(())

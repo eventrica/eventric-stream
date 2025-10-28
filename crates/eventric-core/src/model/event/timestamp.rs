@@ -42,10 +42,10 @@ impl Timestamp {
     pub(crate) fn now() -> Result<Self, Error> {
         let duration = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|err| Error::internal(format!("duration error: {err}")))?;
+            .map_err(|err| Error::data(format!("duration error: {err}")))?;
 
         let nanos = u64::try_from(duration.as_nanos())
-            .map_err(|_| Error::internal("duration size error: {err}"))?;
+            .map_err(|_| Error::data("duration size error: {err}"))?;
 
         Ok(Self(nanos))
     }

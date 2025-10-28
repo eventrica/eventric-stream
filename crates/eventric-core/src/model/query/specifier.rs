@@ -14,9 +14,10 @@ use crate::{
         version::Version,
     },
     util::validation::{
+        self,
         Validate,
         Validated as _,
-        ValidationError,
+        vec,
     },
 };
 
@@ -127,10 +128,8 @@ impl<'a> From<&'a Specifiers> for Vec<SpecifierHashRef<'a>> {
 }
 
 impl Validate for Specifiers {
-    fn validate(self) -> Result<Self, ValidationError> {
-        if self.specifiers.is_empty() {
-            return Err(ValidationError::new("specifiers", "empty"));
-        }
+    fn validate(self) -> Result<Self, Error> {
+        validation::validate(&self.specifiers, "specifiers", &[&vec::IsEmpty])?;
 
         Ok(self)
     }

@@ -12,7 +12,6 @@ use crate::{
             self,
             Validate,
             Validated,
-            ValidationError,
             string,
         },
     },
@@ -62,7 +61,7 @@ impl Identifier {
 }
 
 impl Validate for Identifier {
-    fn validate(self) -> Result<Self, ValidationError> {
+    fn validate(self) -> Result<Self, Error> {
         validation::validate(&self.identifier, "identifier", &[
             &string::IsEmpty,
             &string::PrecedingWhitespace,
