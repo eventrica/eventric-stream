@@ -100,18 +100,18 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.50"
+version = "4.5.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c2cfd7bf8a6017ddaa4e32ffe7403d547790db06bd171c1c53926faab501623"
+checksum = "4c26d721170e0295f191a69bd9a1f93efcdb0aff38684b61ab5750468972e5f5"
 dependencies = [
  "clap_builder",
 ]
 
 [[package]]
 name = "clap_builder"
-version = "4.5.50"
+version = "4.5.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a4c05b9e80c5ccd3a7ef080ad7b6ba7d6fc00a985b8b157197075677c82c7a0"
+checksum = "75835f0c7bf681bfd05abe44e965760fea999a5286c6eb2d59883634fd02011a"
 dependencies = [
  "anstyle",
  "clap_lex",
@@ -338,9 +338,9 @@ checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
 name = "fjall"
-version = "3.0.0-pre.2"
+version = "3.0.0-pre.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb121518257718f8d8af118a18263b584536d91782b207d2617e31b7ad992e41"
+checksum = "3e8417993056b3b3a5b2d991c0b1d435c0afcdeff36c5210a41137810c989fd4"
 dependencies = [
  "byteorder-lite",
  "byteview",
@@ -472,9 +472,9 @@ checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
 name = "lsm-tree"
-version = "3.0.0-pre.2"
+version = "3.0.0-pre.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "beca5855deb09f68aacaff0fa6b266b923e22ee384277579e7042796f74a9dc6"
+checksum = "3d2f74962cb60e9e5eefb5d07432606e06a636e93a741b08a83b6b4f809574b1"
 dependencies = [
  "byteorder-lite",
  "byteview",

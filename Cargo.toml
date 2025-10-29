@@ -16,7 +16,7 @@ dashmap           = { version = "6", features = ["inline"] }
 derive_more       = { version = "2", features = ["full"] }
 eventric-core     = { path = "crates/eventric-core" }
 fancy_constructor = { version = "2" }
-fjall             = { version = "=3.0.0-pre.2" }
+fjall             = { version = "=3.0.0-pre.3" }
 include-utils     = { version = "0.2" }
 rapidhash         = { version = "4" }
 thiserror         = { version = "2" }
