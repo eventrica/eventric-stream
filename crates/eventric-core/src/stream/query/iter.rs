@@ -1,5 +1,3 @@
-use std::iter;
-
 use derive_more::Debug;
 use fancy_constructor::new;
 
@@ -20,8 +18,8 @@ use crate::{
     stream::{
         data::{
             events::{
-                self,
                 Events,
+                PersistentEventHashIterator,
             },
             indices::SequentialIterator,
             references::References,
@@ -39,14 +37,14 @@ use crate::{
 
 #[derive(new, Debug)]
 #[new(const_fn, vis(pub(crate)))]
-pub struct Iterator<'a> {
+pub(crate) struct PersistentEventIterator<'a> {
     cache: &'a Cache,
-    iter: HashIterator<'a>,
+    iter: CombinedPersistentEventHashIterator<'a>,
     options: Option<Options>,
     references: &'a References,
 }
 
-impl Iterator<'_> {
+impl PersistentEventIterator<'_> {
     fn get_identifier(&self, identifier: &IdentifierHash) -> Result<Identifier, Error> {
         self.cache
             .identifiers
@@ -89,7 +87,7 @@ impl Iterator<'_> {
     }
 }
 
-impl iter::Iterator for Iterator<'_> {
+impl Iterator for PersistentEventIterator<'_> {
     type Item = Result<PersistentEvent, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -116,12 +114,12 @@ impl iter::Iterator for Iterator<'_> {
 // Hash Iterator
 
 #[derive(Debug)]
-pub(crate) enum HashIterator<'a> {
-    Direct(events::Iterator<'a>),
-    Mapped(MappedHashIterator<'a>),
+pub(crate) enum CombinedPersistentEventHashIterator<'a> {
+    Direct(PersistentEventHashIterator<'a>),
+    Mapped(MappedPersistentHashIterator<'a>),
 }
 
-impl iter::Iterator for HashIterator<'_> {
+impl Iterator for CombinedPersistentEventHashIterator<'_> {
     type Item = Result<PersistentEventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -136,12 +134,12 @@ impl iter::Iterator for HashIterator<'_> {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub(crate) struct MappedHashIterator<'a> {
+pub(crate) struct MappedPersistentHashIterator<'a> {
     events: &'a Events,
     iter: SequentialIterator<'a>,
 }
 
-impl iter::Iterator for MappedHashIterator<'_> {
+impl Iterator for MappedPersistentHashIterator<'_> {
     type Item = Result<PersistentEventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {

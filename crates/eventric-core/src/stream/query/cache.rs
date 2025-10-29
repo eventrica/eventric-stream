@@ -12,7 +12,7 @@ use crate::{
     },
     stream::query::{
         QueryHashRef,
-        QueryItemHashRef,
+        SelectorHashRef,
     },
 };
 
@@ -20,6 +20,19 @@ use crate::{
 // Cache
 // =================================================================================================
 
+/// The [`Cache`] type is used to make queries more efficient by caching
+/// [`Identifier`] and [`Tag`] values during a query. This avoids them being
+/// fetched from the underlying data storage multiple times, incurring a
+/// performance penalty.
+///
+/// Note that the cache is external to the query itself - the query holds a
+/// reference to the cache, but the cache is concurrent and can be
+/// shared/re-used across multiple queries, allowing for similar queries to take
+/// advantage of data already retrieved by previous queries.
+///
+/// Also note that the cache does not evict any values - a cache should not be
+/// maintained indefinitely as memory is only ever recovered when the cache is
+/// dropped.
 #[derive(Debug, Default)]
 pub struct Cache {
     pub(crate) identifiers: DashMap<u64, Identifier>,
@@ -28,14 +41,14 @@ pub struct Cache {
 
 impl Cache {
     pub(crate) fn populate(&self, query: &QueryHashRef<'_>) {
-        for item in query.as_ref() {
-            match item {
-                QueryItemHashRef::Specifiers(specifiers) => self.populate_identifiers(specifiers),
-                QueryItemHashRef::SpecifiersAndTags(specifiers, tags) => {
+        for selector in query.as_ref() {
+            match selector {
+                SelectorHashRef::Specifiers(specifiers) => self.populate_identifiers(specifiers),
+                SelectorHashRef::SpecifiersAndTags(specifiers, tags) => {
                     self.populate_identifiers(specifiers);
                     self.populate_tags(tags);
                 }
-                QueryItemHashRef::Tags(tags) => self.populate_tags(tags),
+                SelectorHashRef::Tags(tags) => self.populate_tags(tags),
             }
         }
     }

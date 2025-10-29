@@ -17,7 +17,7 @@ use eventric_core::{
             Condition,
             Options,
             Query,
-            QueryItem,
+            Selector,
             Specifiers,
             Tags,
         },
@@ -53,7 +53,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         None,
     )?;
 
-    let query = Query::new([QueryItem::SpecifiersAndTags(
+    let query = Query::new([Selector::SpecifiersAndTags(
         Specifiers::new([
             Specifier::new(Identifier::new("StudentSubscribedToCourse")?, None),
             Specifier::new(Identifier::new("CourseCapacityChanged")?, None),

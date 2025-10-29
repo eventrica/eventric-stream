@@ -19,6 +19,7 @@ use derive_more::{
 pub struct Position(u64);
 
 impl Position {
+    /// Constructs a new [`Position`] instance given a `u64` position value.
     #[must_use]
     pub const fn new(position: u64) -> Self {
         Self(position)

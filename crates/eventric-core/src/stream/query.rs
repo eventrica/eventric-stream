@@ -1,3 +1,8 @@
+//! The [`query`][self] module contains types and functionality related to the
+//! [`Stream::query`] operation, such as the [`Cache`], query-specific
+//! [`Condition`], and [`Options`] types, as well as the fundamental [`Query`]
+//! type and its components.
+
 pub(crate) mod cache;
 pub(crate) mod condition;
 pub(crate) mod iter;
@@ -12,6 +17,7 @@ use fancy_constructor::new;
 use crate::{
     error::Error,
     event::{
+        PersistentEvent,
         position::Position,
         specifier::{
             Specifier,
@@ -27,8 +33,9 @@ use crate::{
     stream::{
         Stream,
         query::iter::{
-            HashIterator,
-            MappedHashIterator,
+            CombinedPersistentEventHashIterator,
+            MappedPersistentHashIterator,
+            PersistentEventIterator,
         },
     },
     utils::validation::{
@@ -43,13 +50,12 @@ use crate::{
 // =================================================================================================
 
 impl Stream {
-    #[must_use]
     pub fn query<'a>(
         &'a self,
         condition: &Condition<'_>,
         cache: &'a Cache,
         options: Option<Options>,
-    ) -> Iterator<'a> {
+    ) -> impl Iterator<Item = Result<PersistentEvent, Error>> {
         let from = condition.from;
         let iter = match condition.matches {
             Some(query) => {
@@ -64,18 +70,24 @@ impl Stream {
             None => self.query_events(from),
         };
 
-        Iterator::new(cache, iter, options, &self.data.references)
+        PersistentEventIterator::new(cache, iter, options, &self.data.references)
     }
 
-    fn query_events(&self, from: Option<Position>) -> HashIterator<'_> {
-        HashIterator::Direct(self.data.events.iterate(from))
+    fn query_events(&self, from: Option<Position>) -> CombinedPersistentEventHashIterator<'_> {
+        let iter = self.data.events.iterate(from);
+
+        CombinedPersistentEventHashIterator::Direct(iter)
     }
 
-    fn query_indices(&self, query: &QueryHash, from: Option<Position>) -> HashIterator<'_> {
-        HashIterator::Mapped(MappedHashIterator::new(
-            &self.data.events,
-            self.data.indices.query(query, from),
-        ))
+    fn query_indices(
+        &self,
+        query: &QueryHash,
+        from: Option<Position>,
+    ) -> CombinedPersistentEventHashIterator<'_> {
+        let iter = self.data.indices.query(query, from);
+        let iter = MappedPersistentHashIterator::new(&self.data.events, iter);
+
+        CombinedPersistentEventHashIterator::Mapped(iter)
     }
 }
 
@@ -83,37 +95,57 @@ impl Stream {
 
 // Query
 
+/// The [`Query`] type is the primary type when interacting with a [`Stream`],
+/// being used both directly in query [`Condition`] to determine the events to
+/// return, but also as part of an [`append::Condition`][append] (where one is
+/// supplied) to ensure appropriate concurrency control during a conditional
+/// append operation.
+///
+/// A query is made up of one or more [`Selector`]s, where the events returned
+/// will be those that match **ANY** of the supplied selectors. For more
+/// information on how selectors are matched to events, see the documentation
+/// for the [`Selector`] type.
+///
+/// [append]: crate::stream::append::Condition
 #[derive(new, AsRef, Debug)]
-#[as_ref([QueryItem])]
+#[as_ref([Selector])]
 #[new(const_fn, name(new_inner), vis())]
 pub struct Query {
-    items: Vec<QueryItem>,
+    selectors: Vec<Selector>,
 }
 
 impl Query {
-    pub fn new<I>(items: I) -> Result<Self, Error>
+    /// Constructs a new [`Query`] given a value which can be converted into an
+    /// iterator of [`Selector`] instances.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error on validation failure. The supplied collection of
+    /// selectors must conform to the following constraints:
+    /// - Min 1 Selector (Non-Zero Length/Non-Empty)
+    pub fn new<S>(selectors: S) -> Result<Self, Error>
     where
-        I: Into<Vec<QueryItem>>,
+        S: IntoIterator<Item = Selector>,
     {
-        Self::new_unvalidated(items.into()).validate()
+        Self::new_unvalidated(selectors.into_iter().collect()).validate()
     }
 
     #[doc(hidden)]
     #[must_use]
-    pub fn new_unvalidated(items: Vec<QueryItem>) -> Self {
-        Self::new_inner(items)
+    pub fn new_unvalidated(selectors: Vec<Selector>) -> Self {
+        Self::new_inner(selectors)
     }
 }
 
-impl From<Query> for Vec<QueryItem> {
+impl From<Query> for Vec<Selector> {
     fn from(query: Query) -> Self {
-        query.items
+        query.selectors
     }
 }
 
 impl Validate for Query {
     fn validate(self) -> Result<Self, Error> {
-        validate(&self.items, "items", &[&vec::IsEmpty])?;
+        validate(&self.selectors, "selectors", &[&vec::IsEmpty])?;
 
         Ok(self)
     }
@@ -122,8 +154,8 @@ impl Validate for Query {
 // Hash
 
 #[derive(new, AsRef, Debug)]
-#[as_ref([QueryItemHash])]
-pub(crate) struct QueryHash(Vec<QueryItemHash>);
+#[as_ref([SelectorHash])]
+pub(crate) struct QueryHash(Vec<SelectorHash>);
 
 impl From<Query> for QueryHash {
     fn from(query: Query) -> Self {
@@ -152,8 +184,8 @@ impl From<&QueryHashRef<'_>> for QueryHash {
 // Hash Ref
 
 #[derive(new, AsRef, Debug)]
-#[as_ref([QueryItemHashRef<'a>])]
-pub(crate) struct QueryHashRef<'a>(Vec<QueryItemHashRef<'a>>);
+#[as_ref([SelectorHashRef<'a>])]
+pub(crate) struct QueryHashRef<'a>(Vec<SelectorHashRef<'a>>);
 
 impl<'a> From<&'a Query> for QueryHashRef<'a> {
     fn from(query: &'a Query) -> Self {
@@ -163,44 +195,44 @@ impl<'a> From<&'a Query> for QueryHashRef<'a> {
 
 // -------------------------------------------------------------------------------------------------
 
-// Query Item
+// Selector
 
 #[derive(Debug)]
-pub enum QueryItem {
+pub enum Selector {
     Specifiers(Specifiers),
     SpecifiersAndTags(Specifiers, Tags),
     Tags(Tags),
 }
 
 #[derive(Debug)]
-pub(crate) enum QueryItemHash {
+pub(crate) enum SelectorHash {
     Specifiers(Vec<SpecifierHash>),
     SpecifiersAndTags(Vec<SpecifierHash>, Vec<TagHash>),
     Tags(Vec<TagHash>),
 }
 
-impl From<&QueryItem> for QueryItemHash {
+impl From<&Selector> for SelectorHash {
     #[rustfmt::skip]
-    fn from(item: &QueryItem) -> Self {
-        match item {
-            QueryItem::Specifiers(specifiers) => Self::Specifiers(specifiers.into()),
-            QueryItem::SpecifiersAndTags(specifiers, tags) => Self::SpecifiersAndTags(specifiers.into(), tags.into()),
-            QueryItem::Tags(tags) => Self::Tags(tags.into()),
+    fn from(selector: &Selector) -> Self {
+        match selector {
+            Selector::Specifiers(specifiers) => Self::Specifiers(specifiers.into()),
+            Selector::SpecifiersAndTags(specifiers, tags) => Self::SpecifiersAndTags(specifiers.into(), tags.into()),
+            Selector::Tags(tags) => Self::Tags(tags.into()),
         }
     }
 }
 
-impl From<&QueryItemHashRef<'_>> for QueryItemHash {
+impl From<&SelectorHashRef<'_>> for SelectorHash {
     #[rustfmt::skip]
-    fn from(item: &QueryItemHashRef<'_>) -> Self {
-        match item {
-            QueryItemHashRef::Specifiers(specifiers) => {
+    fn from(selector: &SelectorHashRef<'_>) -> Self {
+        match selector {
+            SelectorHashRef::Specifiers(specifiers) => {
                 Self::Specifiers(specifiers.iter().map(Into::into).collect())
             }
-            QueryItemHashRef::SpecifiersAndTags(specifiers, tags) => {
+            SelectorHashRef::SpecifiersAndTags(specifiers, tags) => {
                 Self::SpecifiersAndTags(specifiers.iter().map(Into::into).collect(), tags.iter().map(Into::into).collect())
             }
-            QueryItemHashRef::Tags(tags) => {
+            SelectorHashRef::Tags(tags) => {
                 Self::Tags(tags.iter().map(Into::into).collect())
             }
         }
@@ -208,19 +240,19 @@ impl From<&QueryItemHashRef<'_>> for QueryItemHash {
 }
 
 #[derive(Debug)]
-pub(crate) enum QueryItemHashRef<'a> {
+pub(crate) enum SelectorHashRef<'a> {
     Specifiers(Vec<SpecifierHashRef<'a>>),
     SpecifiersAndTags(Vec<SpecifierHashRef<'a>>, Vec<TagHashRef<'a>>),
     Tags(Vec<TagHashRef<'a>>),
 }
 
-impl<'a> From<&'a QueryItem> for QueryItemHashRef<'a> {
+impl<'a> From<&'a Selector> for SelectorHashRef<'a> {
     #[rustfmt::skip]
-    fn from(item: &'a QueryItem) -> Self {
-        match item {
-            QueryItem::Specifiers(specifiers) => Self::Specifiers(specifiers.into()),
-            QueryItem::SpecifiersAndTags(specifiers, tags) => Self::SpecifiersAndTags(specifiers.into(), tags.into()),
-            QueryItem::Tags(tags) => Self::Tags(tags.into()),
+    fn from(selector: &'a Selector) -> Self {
+        match selector {
+            Selector::Specifiers(specifiers) => Self::Specifiers(specifiers.into()),
+            Selector::SpecifiersAndTags(specifiers, tags) => Self::SpecifiersAndTags(specifiers.into(), tags.into()),
+            Selector::Tags(tags) => Self::Tags(tags.into()),
         }
     }
 }
@@ -341,9 +373,8 @@ impl Validate for Tags {
 
 // Re-Export
 
-pub use crate::stream::query::{
+pub use self::{
     cache::Cache,
     condition::Condition,
-    iter::Iterator,
     options::Options,
 };

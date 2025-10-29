@@ -15,6 +15,14 @@ use crate::event::{
 // Specifier
 // =================================================================================================
 
+/// The [`Specifier`] type represents a specification of a logical *type* (or
+/// set of logical *types*), given the [`Identifier`] and [`Version`] properties
+/// of events. The [`Specifier`] determines the required [`Identifier`] and an
+/// optional range of [`Version`]s, to allow for specifying multiple versions of
+/// the same type.
+///
+/// Where no range is given, the meaning is **ALL** (or **ANY**)versions of the
+/// given type, rather than **NO** versions.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Specifier {
     identifier: Identifier,
@@ -22,6 +30,8 @@ pub struct Specifier {
 }
 
 impl Specifier {
+    /// Constructs a new [`Specifier`] instance given an [`Identifier`] and an
+    /// optional [`Version`] range.
     #[must_use]
     pub const fn new(identifier: Identifier, range: Option<Range<Version>>) -> Self {
         Self { identifier, range }
@@ -29,11 +39,14 @@ impl Specifier {
 }
 
 impl Specifier {
+    /// Returns a reference to the [`Identifier`] value of the specifier.
     #[must_use]
     pub fn identifier(&self) -> &Identifier {
         &self.identifier
     }
 
+    /// Returns an [`Option`] of a reference to the optional [`Version`] range
+    /// of the specifier.
     #[must_use]
     pub fn range(&self) -> Option<&Range<Version>> {
         self.range.as_ref()

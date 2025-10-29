@@ -1,3 +1,7 @@
+//! The [`append`][self] module contains types and functionality related to the
+//! [`Stream::append`] operation, such as the append-specific [`Condition`]
+//! type.
+
 pub(crate) mod condition;
 
 use crate::{
@@ -104,4 +108,4 @@ impl Stream {
 
 // Re-Exports
 
-pub use crate::stream::append::condition::Condition;
+pub use self::condition::Condition;

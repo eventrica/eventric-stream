@@ -83,15 +83,15 @@ impl Events {
 
 impl Events {
     #[must_use]
-    pub fn iterate(&self, from: Option<Position>) -> Iterator<'_> {
+    pub fn iterate(&self, from: Option<Position>) -> PersistentEventHashIterator<'_> {
         match from {
             Some(position) => self.iterate_from(position),
             None => self.iterate_all(),
         }
     }
 
-    fn iterate_all(&self) -> Iterator<'_> {
-        Iterator {
+    fn iterate_all(&self) -> PersistentEventHashIterator<'_> {
+        PersistentEventHashIterator {
             iter: Box::new(self.keyspace.iter().map(|guard| match guard.into_inner() {
                 Ok((key, value)) => {
                     Ok(SliceAndPosition(value, UnitAndSlice((), key).into()).into())
@@ -101,8 +101,8 @@ impl Events {
         }
     }
 
-    fn iterate_from(&self, from: Position) -> Iterator<'_> {
-        Iterator {
+    fn iterate_from(&self, from: Position) -> PersistentEventHashIterator<'_> {
+        PersistentEventHashIterator {
             iter: Box::new(self.keyspace.range(from.to_be_bytes()..).map(|guard| {
                 match guard.into_inner() {
                     Ok((key, value)) => {
@@ -187,12 +187,12 @@ impl From<EventAndTimestamp<'_>> for Vec<u8> {
 // Iterator
 
 #[derive(new, Debug)]
-pub(crate) struct Iterator<'a> {
+pub(crate) struct PersistentEventHashIterator<'a> {
     #[debug("Iterator")]
     iter: Box<dyn iter::Iterator<Item = Result<PersistentEventHash, Error>> + 'a>,
 }
 
-impl iter::Iterator for Iterator<'_> {
+impl iter::Iterator for PersistentEventHashIterator<'_> {
     type Item = Result<PersistentEventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {

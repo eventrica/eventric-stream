@@ -25,7 +25,7 @@ use crate::{
         },
         query::{
             QueryHash,
-            QueryItemHash,
+            SelectorHash,
         },
     },
     utils::iteration::{
@@ -97,15 +97,13 @@ impl Indices {
 impl Indices {
     #[must_use]
     pub fn query(&self, query: &QueryHash, from: Option<Position>) -> SequentialIterator<'_> {
-        SequentialOrIterator::combine(query.as_ref().iter().map(|item| match item {
-            QueryItemHash::Specifiers(specifiers) => {
-                self.identifiers.query(specifiers.iter(), from)
-            }
-            QueryItemHash::SpecifiersAndTags(specifiers, tags) => SequentialAndIterator::combine([
+        SequentialOrIterator::combine(query.as_ref().iter().map(|selector| match selector {
+            SelectorHash::Specifiers(specifiers) => self.identifiers.query(specifiers.iter(), from),
+            SelectorHash::SpecifiersAndTags(specifiers, tags) => SequentialAndIterator::combine([
                 self.identifiers.query(specifiers.iter(), from),
                 self.tags.query(tags.iter(), from),
             ]),
-            QueryItemHash::Tags(tags) => self.tags.query(tags.iter(), from),
+            SelectorHash::Tags(tags) => self.tags.query(tags.iter(), from),
         }))
     }
 }
