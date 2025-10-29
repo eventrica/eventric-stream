@@ -286,11 +286,14 @@ dependencies = [
 name = "eventric-core"
 version = "0.1.0"
 dependencies = [
- "eventric-core-error",
- "eventric-core-event",
- "eventric-core-stream",
- "eventric-core-utils",
+ "bytes",
+ "dashmap",
+ "derive_more",
+ "fancy_constructor",
+ "fjall",
  "include-utils",
+ "rapidhash",
+ "thiserror",
 ]
 
 [[package]]
@@ -299,26 +302,6 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "eventric-core",
-]
-
-[[package]]
-name = "eventric-core-error"
-version = "0.1.0"
-dependencies = [
- "fjall",
- "include-utils",
- "thiserror",
-]
-
-[[package]]
-name = "eventric-core-event"
-version = "0.1.0"
-dependencies = [
- "derive_more",
- "eventric-core-error",
- "eventric-core-utils",
- "fancy_constructor",
- "include-utils",
 ]
 
 [[package]]
@@ -333,32 +316,6 @@ name = "eventric-core-profiling-examples"
 version = "0.1.0"
 dependencies = [
  "eventric-core",
-]
-
-[[package]]
-name = "eventric-core-stream"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "dashmap",
- "derive_more",
- "eventric-core-error",
- "eventric-core-event",
- "eventric-core-utils",
- "fancy_constructor",
- "fjall",
- "include-utils",
-]
-
-[[package]]
-name = "eventric-core-utils"
-version = "0.1.0"
-dependencies = [
- "derive_more",
- "eventric-core-error",
- "fancy_constructor",
- "include-utils",
- "rapidhash",
 ]
 
 [[package]]
