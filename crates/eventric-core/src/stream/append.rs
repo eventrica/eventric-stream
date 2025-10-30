@@ -22,6 +22,10 @@ impl Stream {
     /// Appends new [`EphemeralEvent`]s to the [`Stream`], optionally performing
     /// a concurrency check based on a supplied [`Condition`].
     ///
+    /// If successful, returns the position of the last event appended, i.e. the
+    /// effective head of the stream. This position can be used in concurrency
+    /// checks as an "after" position.
+    ///
     /// TODO: [Full append documentation + examples][issue]
     ///
     /// # Errors

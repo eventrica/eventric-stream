@@ -118,10 +118,6 @@ impl Events {
 // Properties
 
 impl Events {
-    pub fn is_empty(&self) -> Result<bool, Error> {
-        self.len().map(|len| len == 0)
-    }
-
     pub fn len(&self) -> Result<u64, Error> {
         match self.keyspace.last_key_value()? {
             Some((key, _)) => Ok(key.as_ref().get_u64() + 1),
