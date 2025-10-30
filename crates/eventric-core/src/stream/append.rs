@@ -19,6 +19,17 @@ use crate::{
 // =================================================================================================
 
 impl Stream {
+    /// Appends new [`EphemeralEvent`]s to the [`Stream`], optionally performing
+    /// a concurrency check based on a supplied [`Condition`].
+    ///
+    /// TODO: [Full append documentation + examples][issue]
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the optional concurrency checks fails, or in the
+    /// case of underlying database/IO errors.
+    ///
+    /// [issue]: https://github.com/eventrica/eventric-core/issues/23
     pub fn append<'a, E>(
         &mut self,
         events: E,

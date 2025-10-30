@@ -50,6 +50,19 @@ use crate::{
 // =================================================================================================
 
 impl Stream {
+    /// Queries the [`Stream`] based on the supplied [`Condition`], using the
+    /// [`Cache`] to avoid re-fetching intermediate components such as
+    /// [`Identifier`][identifier]s and [`Tag`]s, and optionally configured by
+    /// [`Options`] to determine which event data is returned.
+    ///
+    /// TODO: [Full query documentation + examples][issue]
+    ///
+    /// # Errors
+    ///
+    /// Returns an error in the case of an underlying IO/database error.
+    ///
+    /// [identifier]: crate::event::Identifier
+    /// [issue]: https://github.com/eventrica/eventric-core/issues/21
     pub fn query<'a>(
         &'a self,
         condition: &Condition<'_>,
@@ -197,10 +210,23 @@ impl<'a> From<&'a Query> for QueryHashRef<'a> {
 
 // Selector
 
+/// The [`Selector`] type is the functional core of a [`Query`], which contains
+/// one or more [`Selector`] instances. A query will return all events matched
+/// by *any* of the [`Selector`] instances (they are effectively combined as a
+/// logical OR operation).
+///
+/// Each variant of the [`Selector`] has a different meaning.
 #[derive(Debug)]
 pub enum Selector {
+    /// A [`Selector`] based only on [`Specifier`]s, which will return all
+    /// events that match *any* of the supplied [`Specifier`]s.
     Specifiers(Specifiers),
+    /// A [`Selector`] which has both [`Specifier`]s and [`Tag`]s, which will
+    /// return all events that match match *any* of the supplied [`Specifier`]s
+    /// *AND* *all* of the supplied [`Tag`]s.
     SpecifiersAndTags(Specifiers, Tags),
+    /// A [`Selector`] based only on [`Tag`]s, which will return all events that
+    /// match *all* of the supplied [`Tag`]s.
     Tags(Tags),
 }
 
@@ -263,6 +289,11 @@ impl<'a> From<&'a Selector> for SelectorHashRef<'a> {
 
 /// The [`Specifiers`] type is a validating collection of [`Specifier`]
 /// instances, used to ensure that invariants are met when constructing queries.
+///
+/// When used within a [`Selector`] (of whatever variant), the [`Specifier`]
+/// instances within a [`Specifiers`] collection are always combined as a
+/// logical OR operation, so events that match *any* of the supplied
+/// [`Specifier`] instances will be returned.
 #[derive(new, AsRef, Debug)]
 #[as_ref([Specifier])]
 #[new(const_fn, name(new_inner), vis())]
@@ -319,6 +350,11 @@ impl Validate for Specifiers {
 
 /// The [`Tags`] type is a validating collection of [`Tag`] instances, used to
 /// ensure that invariants are met when constructing queries.
+///
+/// When used within a [`Selector`] (of whatever variant), the [`Tag`]
+/// instances within a [`Tags`] collection are always combined as a
+/// logical AND operation, so *only* events that match *all* of the supplied
+/// [`Tag`] instances will be returned.
 #[derive(new, AsRef, Debug)]
 #[as_ref([Tag])]
 #[new(const_fn, name(new_inner), vis())]
