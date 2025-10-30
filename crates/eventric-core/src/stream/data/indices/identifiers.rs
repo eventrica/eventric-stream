@@ -25,7 +25,7 @@ use crate::{
         HASH_LEN,
         ID_LEN,
         POSITION_LEN,
-        indices::SequentialIterator,
+        indices::PositionIterator,
     },
     utils::iteration::or::SequentialOrIterator,
 };
@@ -72,7 +72,7 @@ impl Identifiers {
 // Query
 
 impl Identifiers {
-    pub fn query<'a, S>(&self, specifiers: S, from: Option<Position>) -> SequentialIterator<'_>
+    pub fn query<'a, S>(&self, specifiers: S, from: Option<Position>) -> PositionIterator<'_>
     where
         S: Iterator<Item = &'a SpecifierHash>,
     {
@@ -85,7 +85,7 @@ impl Identifiers {
         &self,
         specifier: &SpecifierHash,
         from: Option<Position>,
-    ) -> SequentialIterator<'_> {
+    ) -> PositionIterator<'_> {
         let version_range = specifier
             .range
             .as_ref()
@@ -109,14 +109,14 @@ impl Identifiers {
         }
     }
 
-    fn query_specifier_prefix<F>(&self, identifier: &IdentifierHash, f: F) -> SequentialIterator<'_>
+    fn query_specifier_prefix<F>(&self, identifier: &IdentifierHash, f: F) -> PositionIterator<'_>
     where
         F: Fn(Slice, Slice) -> Option<Position> + 'static,
     {
         let hash = identifier.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
-        SequentialIterator::Boxed(Box::new(self.keyspace.prefix(prefix).filter_map(
+        PositionIterator::Boxed(Box::new(self.keyspace.prefix(prefix).filter_map(
             move |guard| match guard.into_inner() {
                 Ok((key, value)) => f(key, value).map(Ok),
                 Err(err) => Some(Err(Error::from(err))),
@@ -129,7 +129,7 @@ impl Identifiers {
         identifier: &IdentifierHash,
         from: Position,
         f: F,
-    ) -> SequentialIterator<'_>
+    ) -> PositionIterator<'_>
     where
         F: Fn(Slice, Slice) -> Option<Position> + 'static,
     {
@@ -137,7 +137,7 @@ impl Identifiers {
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
-        SequentialIterator::Boxed(Box::new(self.keyspace.range(lower..upper).filter_map(
+        PositionIterator::Boxed(Box::new(self.keyspace.range(lower..upper).filter_map(
             move |guard| match guard.into_inner() {
                 Ok((key, value)) => f(key, value).map(Ok),
                 Err(err) => Some(Err(Error::from(err))),

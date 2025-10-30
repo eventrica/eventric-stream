@@ -96,7 +96,7 @@ impl Indices {
 
 impl Indices {
     #[must_use]
-    pub fn query(&self, query: &QueryHash, from: Option<Position>) -> SequentialIterator<'_> {
+    pub fn query(&self, query: &QueryHash, from: Option<Position>) -> PositionIterator<'_> {
         SequentialOrIterator::combine(query.as_ref().iter().map(|selector| match selector {
             SelectorHash::Specifiers(specifiers) => self.identifiers.query(specifiers.iter(), from),
             SelectorHash::SpecifiersAndTags(specifiers, tags) => SequentialAndIterator::combine([
@@ -112,42 +112,53 @@ impl Indices {
 
 // Iterators
 
-// Sequential Iterator
+// Position Iterator
 
 #[derive(Debug)]
 #[rustfmt::skip]
-pub enum SequentialIterator<'a> {
-    And(SequentialAndIterator<SequentialIterator<'a>, Position>),
-    Or(SequentialOrIterator<SequentialIterator<'a>, Position>),
-    Boxed(#[debug("BoxedIterator")] Box<dyn Iterator<Item = Result<Position, Error>> + 'a>),
+pub enum PositionIterator<'a> {
+    And(SequentialAndIterator<PositionIterator<'a>, Position>),
+    Or(SequentialOrIterator<PositionIterator<'a>, Position>),
+    Boxed(#[debug("Boxed Position Iterator")] Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>),
 }
 
-impl Iterator for SequentialIterator<'_> {
+impl Iterator for PositionIterator<'_> {
     type Item = Result<Position, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            Self::And(iterator) => iterator.next(),
-            Self::Or(iterator) => iterator.next(),
-            Self::Boxed(iterator) => iterator.next(),
+            Self::And(iter) => iter.next(),
+            Self::Or(iter) => iter.next(),
+            Self::Boxed(iter) => iter.next(),
         }
     }
 }
 
-impl<'a> From<SequentialAndIterator<SequentialIterator<'a>, Position>> for SequentialIterator<'a> {
-    fn from(iter: SequentialAndIterator<SequentialIterator<'a>, Position>) -> Self {
+// impl DoubleEndedIterator for PositionIterator<'_> {
+//     fn next_back(&mut self) -> Option<Self::Item> {
+//         match self {
+//             Self::And(iter) => iter.next_back(),
+//             Self::Or(iter) => iter.next_back(),
+//             Self::Boxed(iter) => iter.next_back(),
+//         }
+//     }
+// }
+
+impl<'a> From<SequentialAndIterator<PositionIterator<'a>, Position>> for PositionIterator<'a> {
+    fn from(iter: SequentialAndIterator<PositionIterator<'a>, Position>) -> Self {
         Self::And(iter)
     }
 }
 
-impl<'a> From<SequentialOrIterator<SequentialIterator<'a>, Position>> for SequentialIterator<'a> {
-    fn from(iter: SequentialOrIterator<SequentialIterator<'a>, Position>) -> Self {
+impl<'a> From<SequentialOrIterator<PositionIterator<'a>, Position>> for PositionIterator<'a> {
+    fn from(iter: SequentialOrIterator<PositionIterator<'a>, Position>) -> Self {
         Self::Or(iter)
     }
 }
 
-impl<'a> From<Box<dyn Iterator<Item = Result<Position, Error>> + 'a>> for SequentialIterator<'a> {
-    fn from(iter: Box<dyn Iterator<Item = Result<Position, Error>> + 'a>) -> Self {
+#[rustfmt::skip]
+impl<'a> From<Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>> for PositionIterator<'a> {
+    fn from(iter: Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>) -> Self {
         Self::Boxed(iter)
     }
 }

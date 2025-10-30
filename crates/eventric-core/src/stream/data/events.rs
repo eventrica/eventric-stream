@@ -1,5 +1,3 @@
-use std::iter;
-
 use bytes::{
     Buf as _,
     BufMut as _,
@@ -185,13 +183,19 @@ impl From<EventAndTimestamp<'_>> for Vec<u8> {
 #[derive(new, Debug)]
 pub(crate) struct PersistentEventHashIterator<'a> {
     #[debug("Iterator")]
-    iter: Box<dyn iter::Iterator<Item = Result<PersistentEventHash, Error>> + 'a>,
+    iter: Box<dyn DoubleEndedIterator<Item = Result<PersistentEventHash, Error>> + 'a>,
 }
 
-impl iter::Iterator for PersistentEventHashIterator<'_> {
+impl Iterator for PersistentEventHashIterator<'_> {
     type Item = Result<PersistentEventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next()
+    }
+}
+
+impl DoubleEndedIterator for PersistentEventHashIterator<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.next_back()
     }
 }
