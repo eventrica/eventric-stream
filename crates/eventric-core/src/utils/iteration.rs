@@ -23,6 +23,10 @@ trait IteratorCached: Iterator {
     fn next_cached(&mut self) -> Option<<Self as Iterator>::Item>;
 }
 
+trait DoubleEndedIteratorCached: DoubleEndedIterator {
+    fn next_back_cached(&mut self) -> Option<<Self as Iterator>::Item>;
+}
+
 // -------------------------------------------------------------------------------------------------
 
 // Caching Iterator(s)
@@ -34,7 +38,7 @@ trait IteratorCached: Iterator {
 #[new(args(iterators: impl IntoIterator<Item = I>))]
 struct CachingIterators<I, T>
 where
-    I: Iterator<Item = Result<T, Error>>,
+    I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     #[new(default)]
@@ -42,28 +46,31 @@ where
     #[new(val(iterators.into_iter().map(CachingIterator::new).collect()))]
     iterators: Vec<CachingIterator<I, T>>,
     #[new(default)]
-    value: Option<T>,
+    next: Option<T>,
+    #[new(default)]
+    next_back: Option<T>,
 }
 
 impl<I, T> CachingIterators<I, T>
 where
-    I: Iterator<Item = Result<T, Error>>,
+    I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     #[allow(clippy::unnecessary_wraps)]
     fn return_err(&mut self, err: Error) -> Option<Result<T, Error>> {
         self.errored = true;
         self.iterators.clear();
-        self.value = None;
+        self.next = None;
+        self.next_back = None;
 
         Some(Err(err))
     }
 
     #[allow(clippy::unnecessary_wraps)]
-    fn return_ok_some(&mut self, value: T) -> Option<Result<T, Error>> {
+    fn return_ok_some_next(&mut self, value: T) -> Option<Result<T, Error>> {
         self.errored = false;
-        self.iterators.retain(|iter| iter.value.is_some());
-        self.value = Some(value);
+        self.iterators.retain(|iter| iter.next.is_some());
+        self.next = Some(value);
 
         Some(Ok(value))
     }
@@ -71,7 +78,8 @@ where
     fn return_ok_none(&mut self) -> Option<Result<T, Error>> {
         self.errored = false;
         self.iterators.clear();
-        self.value = None;
+        self.next = None;
+        self.next = None;
 
         None
     }
@@ -80,7 +88,7 @@ where
 impl<S, I, T> From<S> for CachingIterators<I, T>
 where
     S: IntoIterator<Item = I>,
-    I: Iterator<Item = Result<T, Error>>,
+    I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     fn from(iterators: S) -> Self {
@@ -96,19 +104,91 @@ where
 #[new(vis())]
 struct CachingIterator<I, T>
 where
-    I: Iterator<Item = Result<T, Error>>,
+    I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     #[new(default)]
     errored: bool,
     iterator: I,
     #[new(default)]
-    value: Option<T>,
+    next: Option<T>,
+    #[new(default)]
+    next_back: Option<T>,
+}
+
+impl<I, T> CachingIterator<I, T>
+where
+    I: DoubleEndedIterator<Item = Result<T, Error>>,
+    T: Copy + Debug + Ord + PartialOrd,
+{
+    #[allow(clippy::unnecessary_wraps)]
+    fn return_err(&mut self, err: Error) -> Option<Result<T, Error>> {
+        self.errored = true;
+        self.next = None;
+        self.next_back = None;
+
+        Some(Err(err))
+    }
+
+    #[allow(clippy::unnecessary_wraps)]
+    fn return_ok_some_next(&mut self, value: T) -> Option<Result<T, Error>> {
+        self.next = Some(value);
+
+        Some(Ok(value))
+    }
+
+    #[allow(clippy::unnecessary_wraps)]
+    fn return_ok_some_next_back(&mut self, value: T) -> Option<Result<T, Error>> {
+        self.next_back = Some(value);
+
+        Some(Ok(value))
+    }
+
+    fn return_ok_none(&mut self) -> Option<Result<T, Error>> {
+        self.next = None;
+        self.next_back = None;
+
+        None
+    }
+}
+
+impl<I, T> DoubleEndedIterator for CachingIterator<I, T>
+where
+    I: DoubleEndedIterator<Item = Result<T, Error>>,
+    T: Copy + Debug + Ord + PartialOrd,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.errored {
+            return None;
+        }
+
+        if let Some(result) = self.iterator.next_back() {
+            match result {
+                Ok(value) => self.return_ok_some_next_back(value),
+                Err(err) => self.return_err(err),
+            }
+        } else {
+            self.return_ok_none()
+        }
+    }
+}
+
+impl<I, T> DoubleEndedIteratorCached for CachingIterator<I, T>
+where
+    I: DoubleEndedIterator<Item = Result<T, Error>>,
+    T: Copy + Debug + Ord + PartialOrd,
+{
+    fn next_back_cached(&mut self) -> Option<<Self as Iterator>::Item> {
+        match self.next_back {
+            Some(value) => Some(Ok(value)),
+            _ => self.next_back(),
+        }
+    }
 }
 
 impl<I, T> Iterator for CachingIterator<I, T>
 where
-    I: Iterator<Item = Result<T, Error>>,
+    I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     type Item = Result<T, Error>;
@@ -120,36 +200,22 @@ where
 
         if let Some(result) = self.iterator.next() {
             match result {
-                Ok(value) => {
-                    self.value = Some(value);
-
-                    Some(Ok(value))
-                }
-                Err(err) => {
-                    self.errored = true;
-                    self.value = None;
-
-                    Some(Err(err))
-                }
+                Ok(value) => self.return_ok_some_next(value),
+                Err(err) => self.return_err(err),
             }
         } else {
-            self.value = None;
-
-            None
+            self.return_ok_none()
         }
     }
 }
 
 impl<I, T> IteratorCached for CachingIterator<I, T>
 where
-    I: Iterator<Item = Result<T, Error>>,
+    I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
-    /// Returns the cached item value if it's not [`None`], otherwise returns
-    /// (and caches) the value of [`Self::next`]. Note that if the underlying
-    /// iterator returns [`None`], this will return cache and return that value.
     fn next_cached(&mut self) -> Option<<Self as Iterator>::Item> {
-        match self.value {
+        match self.next {
             Some(value) => Some(Ok(value)),
             _ => self.next(),
         }
@@ -178,7 +244,11 @@ mod tests {
         And(SequentialAndIterator<TestIterator, u64>),
         Or(SequentialOrIterator<TestIterator, u64>),
         #[new]
-        Vec(#[new(default)] usize, #[new(into)] Vec<u64>),
+        Vec(
+            #[new(default)] usize,
+            #[new(default)] usize,
+            #[new(into)] Vec<u64>,
+        ),
     }
 
     impl From<SequentialAndIterator<TestIterator, u64>> for TestIterator {
@@ -195,7 +265,7 @@ mod tests {
 
     impl From<Vec<u64>> for TestIterator {
         fn from(vec: Vec<u64>) -> Self {
-            Self::Vec(0, vec)
+            Self::Vec(0, vec.len() - 1, vec)
         }
     }
 
@@ -206,13 +276,31 @@ mod tests {
             match self {
                 Self::And(iterator) => iterator.next(),
                 Self::Or(iterator) => iterator.next(),
-                Self::Vec(pos, values) => {
+                Self::Vec(pos, _, values) => {
                     if *pos >= values.len() {
                         None
                     } else {
                         *pos += 1;
 
                         Some(Ok(*values.get(*pos - 1).unwrap()))
+                    }
+                }
+            }
+        }
+    }
+
+    impl DoubleEndedIterator for TestIterator {
+        fn next_back(&mut self) -> Option<Self::Item> {
+            match self {
+                Self::And(iterator) => iterator.next_back(),
+                Self::Or(iterator) => iterator.next_back(),
+                Self::Vec(next_pos, next_back_pos, values) => {
+                    if *next_back_pos <= *next_pos {
+                        None
+                    } else {
+                        *next_back_pos -= 1;
+
+                        Some(Ok(*values.get(*next_back_pos + 1).unwrap()))
                     }
                 }
             }

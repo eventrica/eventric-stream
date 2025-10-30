@@ -13,7 +13,8 @@ use crate::{
     error::Error,
     utils::iteration::{
         CachingIterators,
-        IteratorCached,
+        DoubleEndedIteratorCached as _,
+        IteratorCached as _,
     },
 };
 
@@ -31,12 +32,12 @@ use crate::{
 #[new(const_fn, vis())]
 pub struct SequentialOrIterator<I, T>(CachingIterators<I, T>)
 where
-    I: Iterator<Item = Result<T, Error>>,
+    I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd;
 
 impl<I, T> SequentialOrIterator<I, T>
 where
-    I: Iterator<Item = Result<T, Error>> + From<SequentialOrIterator<I, T>>,
+    I: DoubleEndedIterator<Item = Result<T, Error>> + From<SequentialOrIterator<I, T>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     /// Take a an iterable value of iterators, and return an iterator of the
@@ -55,7 +56,7 @@ where
 
 impl<I, T> Iterator for SequentialOrIterator<I, T>
 where
-    I: Iterator<Item = Result<T, Error>>,
+    I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     type Item = Result<T, Error>;
@@ -71,7 +72,7 @@ where
                 for iter in iters.iter_mut() {
                     match (iter.next_cached(), current) {
                         (Some(Ok(iter_val)), Some(current_val)) => {
-                            let iter_val = match self.0.value {
+                            let iter_val = match self.0.next {
                                 Some(previous_val) if iter_val == previous_val => iter.next(),
                                 _ => Some(Ok(iter_val)),
                             };
@@ -85,7 +86,7 @@ where
                                 _ => {}
                             }
                         }
-                        (Some(Ok(iter_val)), None) => match self.0.value {
+                        (Some(Ok(iter_val)), None) => match self.0.next {
                             Some(previous_val) if iter_val == previous_val => match iter.next() {
                                 Some(Ok(iter_val)) => current = Some(iter_val),
                                 Some(Err(err)) => return self.0.return_err(err),
@@ -99,11 +100,21 @@ where
                 }
 
                 match current {
-                    Some(value) => self.0.return_ok_some(value),
+                    Some(value) => self.0.return_ok_some_next(value),
                     None => self.0.return_ok_none(),
                 }
             }
         }
+    }
+}
+
+impl<I, T> DoubleEndedIterator for SequentialOrIterator<I, T>
+where
+    I: DoubleEndedIterator<Item = Result<T, Error>>,
+    T: Copy + Debug + Ord + PartialOrd,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        todo!()
     }
 }
 

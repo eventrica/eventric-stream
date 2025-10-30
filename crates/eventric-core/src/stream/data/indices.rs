@@ -134,15 +134,15 @@ impl Iterator for PositionIterator<'_> {
     }
 }
 
-// impl DoubleEndedIterator for PositionIterator<'_> {
-//     fn next_back(&mut self) -> Option<Self::Item> {
-//         match self {
-//             Self::And(iter) => iter.next_back(),
-//             Self::Or(iter) => iter.next_back(),
-//             Self::Boxed(iter) => iter.next_back(),
-//         }
-//     }
-// }
+impl DoubleEndedIterator for PositionIterator<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::And(iter) => iter.next_back(),
+            Self::Or(iter) => iter.next_back(),
+            Self::Boxed(iter) => iter.next_back(),
+        }
+    }
+}
 
 impl<'a> From<SequentialAndIterator<PositionIterator<'a>, Position>> for PositionIterator<'a> {
     fn from(iter: SequentialAndIterator<PositionIterator<'a>, Position>) -> Self {
