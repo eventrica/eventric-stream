@@ -6,6 +6,7 @@ double-ended-peekable.workspace = true
 fancy_constructor.workspace     = true
 fjall.workspace                 = true
 include-utils.workspace         = true
+rand.workspace                  = true
 rapidhash.workspace             = true
 thiserror.workspace             = true
 

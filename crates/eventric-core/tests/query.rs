@@ -34,7 +34,7 @@ use eventric_core::{
 // =================================================================================================
 
 #[test]
-fn new() -> Result<(), Error> {
+fn default_empty() -> Result<(), Error> {
     let stream = stream(eventric_core::temp_path(), false)?;
     let cache = Cache::default();
 

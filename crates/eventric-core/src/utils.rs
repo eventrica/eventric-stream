@@ -2,15 +2,9 @@ pub(crate) mod hashing;
 pub(crate) mod iteration;
 pub(crate) mod validation;
 
-use std::{
-    path::{
-        Path,
-        PathBuf,
-    },
-    time::{
-        SystemTime,
-        UNIX_EPOCH,
-    },
+use std::path::{
+    Path,
+    PathBuf,
 };
 
 // =================================================================================================
@@ -23,10 +17,7 @@ use std::{
 #[must_use]
 pub fn temp_path() -> PathBuf {
     let temp_dir = std::env::temp_dir();
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
+    let random: u64 = rand::random();
 
-    Path::new(&temp_dir).join(nanos.to_string())
+    Path::new(&temp_dir).join(random.to_string())
 }

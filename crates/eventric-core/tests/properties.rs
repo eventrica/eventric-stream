@@ -1,3 +1,8 @@
+use std::{
+    path::Path,
+    sync::LazyLock,
+};
+
 use eventric_core::{
     error::Error,
     event::{
@@ -24,10 +29,8 @@ use eventric_core::{
 // =================================================================================================
 
 #[test]
-fn new() -> Result<(), Error> {
-    let stream = Stream::builder(eventric_core::temp_path())
-        .temporary(true)
-        .open()?;
+fn empty() -> Result<(), Error> {
+    let stream = stream(eventric_core::temp_path(), true)?;
 
     // Initial state of a new stream should be empty/zero-length
 
@@ -40,30 +43,10 @@ fn new() -> Result<(), Error> {
 }
 
 #[test]
-fn after_append() -> Result<(), Error> {
-    let mut stream = Stream::builder(eventric_core::temp_path())
-        .temporary(true)
-        .open()?;
+fn post_append() -> Result<(), Error> {
+    let mut stream = stream(eventric_core::temp_path(), true)?;
 
-    // Initial state of a new stream should be empty/zero-length
-
-    {
-        assert_eq!(0, stream.len());
-        assert!(stream.is_empty());
-    }
-
-    let events = (0..4)
-        .map(|_| {
-            let data = Data::new("data")?;
-            let identifier = Identifier::new("id")?;
-            let tags = [Tag::new("tag_a")?, Tag::new("tag_b")?];
-            let version = Version::new(0);
-
-            Ok(EphemeralEvent::new(data, identifier, tags, version))
-        })
-        .collect::<Result<Vec<_>, Error>>()?;
-
-    let position = stream.append(&events, None)?;
+    let position = stream.append(&*EVENTS, None)?;
 
     // Position after appending 4 events should be 3, with a stream length of 4, and
     // a non-empty stream
@@ -74,13 +57,22 @@ fn after_append() -> Result<(), Error> {
         assert!(!stream.is_empty());
     }
 
+    Ok(())
+}
+
+#[test]
+fn post_append_error() -> Result<(), Error> {
+    let mut stream = stream(eventric_core::temp_path(), true)?;
+
+    stream.append(&*EVENTS, None)?;
+
     let specifier = Specifier::new(Identifier::new("id")?, None);
     let specifiers = Specifiers::new([specifier])?;
     let selector = Selector::Specifiers(specifiers);
     let query = Query::new([selector])?;
     let condition = Condition::new(&query);
 
-    let result = stream.append(&events, Some(&condition));
+    let result = stream.append(&*EVENTS, Some(&condition));
 
     // Result should be a concurrency error after attempting an append with a
     // matching fail_if_matches query, and the length should not have changed.
@@ -95,11 +87,11 @@ fn after_append() -> Result<(), Error> {
 }
 
 #[test]
-fn after_drop_and_open() -> Result<(), Error> {
+fn post_reopen() -> Result<(), Error> {
     let path = eventric_core::temp_path();
 
     {
-        let mut stream = Stream::builder(path.clone()).temporary(false).open()?;
+        let mut stream = stream(path.clone(), false)?;
 
         // Initial state of a new stream should be empty/zero-length
 
@@ -108,18 +100,7 @@ fn after_drop_and_open() -> Result<(), Error> {
             assert!(stream.is_empty());
         }
 
-        let events = (0..4)
-            .map(|_| {
-                let data = Data::new("data")?;
-                let identifier = Identifier::new("id")?;
-                let tags = [Tag::new("tag_a")?, Tag::new("tag_b")?];
-                let version = Version::new(0);
-
-                Ok(EphemeralEvent::new(data, identifier, tags, version))
-            })
-            .collect::<Result<Vec<_>, Error>>()?;
-
-        let position = stream.append(&events, None)?;
+        let position = stream.append(&*EVENTS, None)?;
 
         // Position after appending 4 events should be 3, with a stream length of 4, and
         // a non-empty stream
@@ -133,7 +114,7 @@ fn after_drop_and_open() -> Result<(), Error> {
         drop(stream);
     }
 
-    let stream = Stream::builder(path).temporary(true).open()?;
+    let stream = stream(path, true)?;
 
     // Length should still be 3 when the stream is re-opened, and stream should
     // still be non-empty
@@ -144,4 +125,36 @@ fn after_drop_and_open() -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Test Events
+
+static EVENTS: LazyLock<Vec<EphemeralEvent>> = LazyLock::new(|| {
+    let events = || {
+        (0..4)
+            .map(|_| {
+                let data = Data::new("data")?;
+                let identifier = Identifier::new("id")?;
+                let tags = [Tag::new("tag_a")?, Tag::new("tag_b")?];
+                let version = Version::new(0);
+
+                Ok(EphemeralEvent::new(data, identifier, tags, version))
+            })
+            .collect::<Result<Vec<_>, Error>>()
+    };
+
+    events().unwrap()
+});
+
+// -------------------------------------------------------------------------------------------------
+
+// Test Stream
+
+fn stream<P>(path: P, temporary: bool) -> Result<Stream, Error>
+where
+    P: AsRef<Path>,
+{
+    Stream::builder(path).temporary(temporary).open()
 }
