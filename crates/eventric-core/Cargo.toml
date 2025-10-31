@@ -1,12 +1,13 @@
 [dependencies]
-bytes.workspace             = true
-dashmap.workspace           = true
-derive_more.workspace       = true
-fancy_constructor.workspace = true
-fjall.workspace             = true
-include-utils.workspace     = true
-rapidhash.workspace         = true
-thiserror.workspace         = true
+bytes.workspace                 = true
+dashmap.workspace               = true
+derive_more.workspace           = true
+double-ended-peekable.workspace = true
+fancy_constructor.workspace     = true
+fjall.workspace                 = true
+include-utils.workspace         = true
+rapidhash.workspace             = true
+thiserror.workspace             = true
 
 [lints]
 workspace = true

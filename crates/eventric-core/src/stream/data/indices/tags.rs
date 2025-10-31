@@ -24,7 +24,7 @@ use crate::{
         HASH_LEN,
         ID_LEN,
         POSITION_LEN,
-        indices::PositionIterator,
+        indices::SequentialPositionIterator,
     },
     utils::iteration::and::SequentialAndIterator,
 };
@@ -67,14 +67,14 @@ impl Tags {
 // Query
 
 impl Tags {
-    pub fn query<'a, T>(&self, tags: T, from: Option<Position>) -> PositionIterator<'_>
+    pub fn query<'a, T>(&self, tags: T, from: Option<Position>) -> SequentialPositionIterator<'_>
     where
         T: Iterator<Item = &'a TagHash>,
     {
         SequentialAndIterator::combine(tags.map(|tag| self.query_tag(tag, from)))
     }
 
-    fn query_tag(&self, tag: &TagHash, from: Option<Position>) -> PositionIterator<'_> {
+    fn query_tag(&self, tag: &TagHash, from: Option<Position>) -> SequentialPositionIterator<'_> {
         let map = |key: Result<Slice, fjall::Error>| match key {
             Ok(key) => {
                 let mut key = &key[..];
@@ -92,19 +92,19 @@ impl Tags {
         }
     }
 
-    fn query_tag_prefix<F>(&self, tag: &TagHash, f: F) -> PositionIterator<'_>
+    fn query_tag_prefix<F>(&self, tag: &TagHash, f: F) -> SequentialPositionIterator<'_>
     where
         F: Fn(Result<Slice, fjall::Error>) -> Result<Position, Error> + 'static,
     {
         let hash = tag.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
-        PositionIterator::Boxed(Box::new(
+        SequentialPositionIterator::Boxed(Box::new(
             self.keyspace.prefix(prefix).map(Guard::key).map(f),
         ))
     }
 
-    fn query_tag_range<F>(&self, tag: &TagHash, from: Position, f: F) -> PositionIterator<'_>
+    fn query_tag_range<F>(&self, tag: &TagHash, from: Position, f: F) -> SequentialPositionIterator<'_>
     where
         F: Fn(Result<Slice, fjall::Error>) -> Result<Position, Error> + 'static,
     {
@@ -112,7 +112,7 @@ impl Tags {
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
-        PositionIterator::Boxed(Box::new(
+        SequentialPositionIterator::Boxed(Box::new(
             self.keyspace.range(lower..upper).map(Guard::key).map(f),
         ))
     }

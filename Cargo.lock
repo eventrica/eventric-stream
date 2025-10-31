@@ -249,6 +249,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "double-ended-peekable"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c0d05e1c0dbad51b52c38bda7adceef61b9efc2baf04acfe8726a8c4630a6f57"
+
+[[package]]
 name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -289,6 +295,7 @@ dependencies = [
  "bytes",
  "dashmap",
  "derive_more",
+ "double-ended-peekable",
  "fancy_constructor",
  "fjall",
  "include-utils",

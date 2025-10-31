@@ -7,16 +7,13 @@
 use std::cmp::Ordering;
 
 use derive_more::with_trait::Debug;
+use double_ended_peekable::{
+    DoubleEndedPeekable,
+    DoubleEndedPeekableExt,
+};
 use fancy_constructor::new;
 
-use crate::{
-    error::Error,
-    utils::iteration::{
-        CachingIterators,
-        DoubleEndedIteratorCached as _,
-        IteratorCached as _,
-    },
-};
+use crate::error::Error;
 
 // =================================================================================================
 // And
@@ -30,7 +27,7 @@ use crate::{
 /// See local unit tests for simple examples.
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
-pub struct SequentialAndIterator<I, T>(CachingIterators<I, T>)
+pub struct SequentialAndIterator<I, T>(Vec<DoubleEndedPeekable<I>>)
 where
     I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd;
@@ -43,14 +40,55 @@ where
     /// Take a an iterable value of iterators, and return an iterator of the
     /// same type which will implement the boolean AND operation on the input
     /// iterators.
-    pub fn combine<S>(iterators: S) -> I
+    pub fn combine<S>(iters: S) -> I
     where
         S: IntoIterator<Item = I>,
     {
-        let iterators = iterators.into();
-        let iterator = SequentialAndIterator::new(iterators);
+        let iters = iters
+            .into_iter()
+            .map(DoubleEndedPeekableExt::double_ended_peekable)
+            .collect();
 
-        I::from(iterator)
+        I::from(SequentialAndIterator::new(iters))
+    }
+}
+
+impl<I, T> DoubleEndedIterator for SequentialAndIterator<I, T>
+where
+    I: DoubleEndedIterator<Item = Result<T, Error>>,
+    T: Copy + Debug + Ord + PartialOrd,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let mut current = None;
+
+        'seek: loop {
+            for iter in &mut self.0 {
+                match iter.peek_back() {
+                    Some(Ok(next)) => match &mut current {
+                        Some(current) => {
+                            match next.cmp(current) {
+                                Ordering::Greater => drop(iter.next_back()),
+                                Ordering::Less => *current = *next,
+                                Ordering::Equal => continue,
+                            }
+
+                            continue 'seek;
+                        }
+                        None => current = Some(*next),
+                    },
+                    Some(Err(_)) => return iter.next_back(),
+                    None => return None,
+                }
+            }
+
+            break 'seek;
+        }
+
+        current.map(Ok).inspect(|item| {
+            for iter in &mut self.0 {
+                iter.next_back_if_eq(item);
+            }
+        })
     }
 }
 
@@ -63,81 +101,36 @@ where
 
     #[allow(clippy::redundant_at_rest_pattern)]
     fn next(&mut self) -> Option<Self::Item> {
-        match &mut self.0.iterators[..] {
-            [] => None,
-            [iter] => iter.next(),
-            [iters @ ..] => {
-                let mut current: Option<T> = None;
+        let mut current = None;
 
-                'a: loop {
-                    'b: for iter in iters.iter_mut() {
-                        match (iter.next_cached()?, current) {
-                            (Ok(iter_val), Some(current_val)) => {
-                                let iter_val = match self.0.next {
-                                    Some(previous_val) if iter_val == previous_val => {
-                                        iter.next()?
-                                    }
-                                    _ => Ok(iter_val),
-                                };
+        'seek: loop {
+            for iter in &mut self.0 {
+                match iter.peek() {
+                    Some(Ok(next)) => match &mut current {
+                        Some(current) => {
+                            match next.cmp(current) {
+                                Ordering::Greater => *current = *next,
+                                Ordering::Less => drop(iter.next()),
+                                Ordering::Equal => continue,
+                            }
 
-                                match iter_val {
-                                    Ok(iter_val) => match iter_val.cmp(&current_val) {
-                                        Ordering::Less => loop {
-                                            match iter.next()? {
-                                                Ok(iter_val) => match iter_val.cmp(&current_val) {
-                                                    Ordering::Less => {}
-                                                    Ordering::Equal => continue 'b,
-                                                    Ordering::Greater => {
-                                                        current = Some(iter_val);
-                                                        continue 'a;
-                                                    }
-                                                },
-                                                Err(err) => return self.0.return_err(err),
-                                            }
-                                        },
-                                        Ordering::Equal => {}
-                                        Ordering::Greater => {
-                                            current = Some(iter_val);
-                                            continue 'a;
-                                        }
-                                    },
-                                    Err(err) => return self.0.return_err(err),
-                                }
-                            }
-                            (Ok(iter_val), _) => {
-                                current = Some(match self.0.next {
-                                    Some(previous_val) if iter_val == previous_val => {
-                                        match iter.next()? {
-                                            Ok(iter_val) => iter_val,
-                                            Err(err) => return self.0.return_err(err),
-                                        }
-                                    }
-                                    _ => iter_val,
-                                });
-                            }
-                            (Err(err), _) => return self.0.return_err(err),
+                            continue 'seek;
                         }
-                    }
-
-                    break 'a;
-                }
-
-                match current {
-                    Some(value) => self.0.return_ok_some_next(value),
-                    None => self.0.return_ok_none(),
+                        None => current = Some(*next),
+                    },
+                    Some(Err(_)) => return iter.next(),
+                    None => return None,
                 }
             }
-        }
-    }
-}
 
-impl<I, T> DoubleEndedIterator for SequentialAndIterator<I, T>
-where
-    I: DoubleEndedIterator<Item = Result<T, Error>>,
-    T: Copy + Debug + Ord + PartialOrd,
-{
-    fn next_back(&mut self) -> Option<Self::Item> {
-        todo!()
+            break 'seek;
+        }
+
+        current.map(Ok).inspect(|item| {
+            for iter in &mut self.0 {
+                iter.next_if_eq(item);
+            }
+        })
     }
 }
 
@@ -147,82 +140,160 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        error::Error,
-        utils::iteration::{
-            and::SequentialAndIterator,
-            tests::TestIterator,
-        },
+    use crate::utils::iteration::{
+        and::SequentialAndIterator,
+        tests::TestIterator,
     };
 
     #[test]
-    fn sequential_and_empty_iterators_combine_as_empty() {
-        let empty: Vec<Result<u64, Error>> = Vec::from_iter([]);
+    fn sequential_and_impl_iterator() {
+        // Empty
 
-        let a = TestIterator::new([]);
-        let b = TestIterator::new([]);
+        let a = TestIterator::from([]);
+        let b = TestIterator::from([]);
 
-        assert_eq!(
-            empty,
-            SequentialAndIterator::combine([a, b]).collect::<Vec<_>>()
-        );
+        let mut iter = SequentialAndIterator::combine([a, b]);
+
+        assert_eq!(None, iter.next());
+
+        let a = TestIterator::from([0, 1, 2, 3]);
+        let b = TestIterator::from([]);
+        let c = TestIterator::from([2, 3, 4, 5]);
+
+        let mut iter = SequentialAndIterator::combine([a, b, c]);
+
+        assert_eq!(None, iter.next());
+
+        // Single
+
+        let a = TestIterator::from([0, 1, 2, 3]);
+
+        let mut iter = SequentialAndIterator::combine([a]);
+
+        assert_eq!(Some(Ok(0)), iter.next());
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(None, iter.next());
+
+        // Matched Lengths
+
+        let a = TestIterator::from([0, 1, 2, 3]);
+        let b = TestIterator::from([1, 2, 3, 4]);
+        let c = TestIterator::from([2, 3, 4, 5]);
+
+        let mut iter = SequentialAndIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(None, iter.next());
+
+        // Variable Lengths
+
+        let a = TestIterator::from([2, 3]);
+        let b = TestIterator::from([1, 2, 3, 4]);
+        let c = TestIterator::from([2, 3, 4]);
+
+        let mut iter = SequentialAndIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(None, iter.next());
+
+        let a = TestIterator::from([1, 2, 3, 4]);
+        let b = TestIterator::from([2, 3]);
+        let c = TestIterator::from([2, 3, 4]);
+
+        let mut iter = SequentialAndIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(None, iter.next());
+
+        let a = TestIterator::from([2, 3, 4]);
+        let b = TestIterator::from([2, 3]);
+        let c = TestIterator::from([1, 2, 3, 4]);
+
+        let mut iter = SequentialAndIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(None, iter.next());
     }
 
     #[test]
-    fn sequential_and_iterators_combine_sequentially_same_lengths() {
-        let combined = Vec::from_iter([Ok(2), Ok(3)]);
+    fn sequential_and_impl_double_ended_iterator() {
+        // Empty
 
-        let a = TestIterator::new([0, 1, 2, 3]);
-        let b = TestIterator::new([1, 2, 3, 4]);
-        let c = TestIterator::new([2, 3, 4, 5]);
+        let a = TestIterator::from([]);
+        let b = TestIterator::from([]);
 
-        assert_eq!(
-            combined,
-            SequentialAndIterator::combine([a, b, c]).collect::<Vec<_>>()
-        );
-    }
+        let mut iter = SequentialAndIterator::combine([a, b]);
 
-    #[test]
-    fn sequential_and_iterators_combine_single_iterator() {
-        let combined = Vec::from_iter([Ok(0), Ok(1), Ok(2), Ok(3)]);
+        assert_eq!(None, iter.next_back());
 
-        let a = TestIterator::new([0, 1, 2, 3]);
+        let a = TestIterator::from([0, 1, 2, 3]);
+        let b = TestIterator::from([]);
+        let c = TestIterator::from([2, 3, 4, 5]);
 
-        assert_eq!(
-            combined,
-            SequentialAndIterator::combine([a]).collect::<Vec<_>>()
-        );
-    }
+        let mut iter = SequentialAndIterator::combine([a, b, c]);
 
-    #[test]
-    fn sequential_and_iterators_combine_sequentially_differing_lengths() {
-        let combined = Vec::from_iter([Ok(2), Ok(3)]);
+        assert_eq!(None, iter.next_back());
 
-        let a = TestIterator::new([2, 3]);
-        let b = TestIterator::new([1, 2, 3, 4]);
-        let c = TestIterator::new([2, 3, 4]);
+        // Single
 
-        assert_eq!(
-            combined,
-            SequentialAndIterator::combine([a, b, c]).collect::<Vec<_>>()
-        );
+        let a = TestIterator::from([0, 1, 2, 3]);
 
-        let a = TestIterator::new([1, 2, 3, 4]);
-        let b = TestIterator::new([2, 3]);
-        let c = TestIterator::new([2, 3, 4]);
+        let mut iter = SequentialAndIterator::combine([a]);
 
-        assert_eq!(
-            combined,
-            SequentialAndIterator::combine([a, b, c]).collect::<Vec<_>>()
-        );
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next_back());
+        assert_eq!(Some(Ok(1)), iter.next_back());
+        assert_eq!(Some(Ok(0)), iter.next_back());
+        assert_eq!(None, iter.next_back());
 
-        let a = TestIterator::new([2, 3, 4]);
-        let b = TestIterator::new([2, 3]);
-        let c = TestIterator::new([1, 2, 3, 4]);
+        // Matched Lengths
 
-        assert_eq!(
-            combined,
-            SequentialAndIterator::combine([a, b, c]).collect::<Vec<_>>()
-        );
+        let a = TestIterator::from([0, 1, 2, 3]);
+        let b = TestIterator::from([1, 2, 3, 4]);
+        let c = TestIterator::from([2, 3, 4, 5]);
+
+        let mut iter = SequentialAndIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next_back());
+        assert_eq!(None, iter.next_back());
+
+        // Variable Lengths
+
+        let a = TestIterator::from([2, 3]);
+        let b = TestIterator::from([1, 2, 3, 4]);
+        let c = TestIterator::from([2, 3, 4]);
+
+        let mut iter = SequentialAndIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next_back());
+        assert_eq!(None, iter.next_back());
+
+        let a = TestIterator::from([1, 2, 3, 4]);
+        let b = TestIterator::from([2, 3]);
+        let c = TestIterator::from([2, 3, 4]);
+
+        let mut iter = SequentialAndIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next_back());
+        assert_eq!(None, iter.next_back());
+
+        let a = TestIterator::from([2, 3, 4]);
+        let b = TestIterator::from([2, 3]);
+        let c = TestIterator::from([1, 2, 3, 4]);
+
+        let mut iter = SequentialAndIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next_back());
+        assert_eq!(None, iter.next_back());
     }
 }

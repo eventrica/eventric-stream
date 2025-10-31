@@ -6,6 +6,7 @@ use crate::{
     event::{
         PersistentEvent,
         PersistentEventHash,
+        Position,
         identifier::{
             Identifier,
             IdentifierHash,
@@ -21,7 +22,7 @@ use crate::{
                 Events,
                 PersistentEventHashIterator,
             },
-            indices::PositionIterator,
+            indices::SequentialPositionIterator,
             references::References,
         },
         query::{
@@ -87,27 +88,34 @@ impl PersistentEventIterator<'_> {
     }
 }
 
+impl PersistentEventIterator<'_> {
+    fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
+        match event {
+            Ok(event) => {
+                let (data, identifier, position, tags, timestamp, version) = event.take();
+
+                self.get_identifier(&identifier)
+                    .and_then(|identifier| self.get_tags(&tags).map(|tags| (identifier, tags)))
+                    .map(|(identifier, tags)| {
+                        PersistentEvent::new(data, identifier, position, tags, timestamp, version)
+                    })
+            }
+            Err(err) => Err(err),
+        }
+    }
+}
+
+impl DoubleEndedIterator for PersistentEventIterator<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.next_back().map(|event| self.map(event))
+    }
+}
+
 impl Iterator for PersistentEventIterator<'_> {
     type Item = Result<PersistentEvent, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.iter.next() {
-            Some(Ok(event)) => {
-                let (data, identifier, position, tags, timestamp, version) = event.take();
-
-                Some(
-                    self.get_identifier(&identifier)
-                        .and_then(|identifier| self.get_tags(&tags).map(|tags| (identifier, tags)))
-                        .map(|(identifier, tags)| {
-                            PersistentEvent::new(
-                                data, identifier, position, tags, timestamp, version,
-                            )
-                        }),
-                )
-            }
-            Some(Err(err)) => Some(Err(err)),
-            None => None,
-        }
+        self.iter.next().map(|event| self.map(event))
     }
 }
 
@@ -117,6 +125,15 @@ impl Iterator for PersistentEventIterator<'_> {
 pub(crate) enum CombinedPersistentEventHashIterator<'a> {
     Direct(PersistentEventHashIterator<'a>),
     Mapped(MappedPersistentHashIterator<'a>),
+}
+
+impl DoubleEndedIterator for CombinedPersistentEventHashIterator<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Direct(iter) => iter.next_back(),
+            Self::Mapped(iter) => iter.next_back(),
+        }
+    }
 }
 
 impl Iterator for CombinedPersistentEventHashIterator<'_> {
@@ -136,21 +153,34 @@ impl Iterator for CombinedPersistentEventHashIterator<'_> {
 #[new(const_fn)]
 pub(crate) struct MappedPersistentHashIterator<'a> {
     events: &'a Events,
-    iter: PositionIterator<'a>,
+    iter: SequentialPositionIterator<'a>,
+}
+
+impl MappedPersistentHashIterator<'_> {
+    fn map(&mut self, position: Result<Position, Error>) -> Option<<Self as Iterator>::Item> {
+        match position {
+            Ok(position) => match self.events.get(position) {
+                Ok(Some(event)) => Some(Ok(event)),
+                Ok(None) => None,
+                Err(err) => Some(Err(err)),
+            },
+            Err(err) => Some(Err(err)),
+        }
+    }
+}
+
+impl DoubleEndedIterator for MappedPersistentHashIterator<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter
+            .next_back()
+            .and_then(|position| self.map(position))
+    }
 }
 
 impl Iterator for MappedPersistentHashIterator<'_> {
     type Item = Result<PersistentEventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.iter.next() {
-            Some(Ok(position)) => match self.events.get(position) {
-                Ok(Some(event)) => Some(Ok(event)),
-                Ok(None) => None,
-                Err(err) => Some(Err(err)),
-            },
-            Some(Err(err)) => Some(Err(err)),
-            None => None,
-        }
+        self.iter.next().and_then(|position| self.map(position))
     }
 }

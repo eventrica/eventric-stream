@@ -4,19 +4,14 @@
 //!
 //! [or]: self]
 
-use std::cmp::Ordering;
-
 use derive_more::with_trait::Debug;
+use double_ended_peekable::{
+    DoubleEndedPeekable,
+    DoubleEndedPeekableExt,
+};
 use fancy_constructor::new;
 
-use crate::{
-    error::Error,
-    utils::iteration::{
-        CachingIterators,
-        DoubleEndedIteratorCached as _,
-        IteratorCached as _,
-    },
-};
+use crate::error::Error;
 
 // =================================================================================================
 // Or
@@ -30,7 +25,7 @@ use crate::{
 /// See local unit tests for simple examples.
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
-pub struct SequentialOrIterator<I, T>(CachingIterators<I, T>)
+pub struct SequentialOrIterator<I, T>(Vec<DoubleEndedPeekable<I>>)
 where
     I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd;
@@ -43,14 +38,43 @@ where
     /// Take a an iterable value of iterators, and return an iterator of the
     /// same type which will implement the boolean OR operation on the input
     /// iterators.
-    pub fn combine<S>(iterators: S) -> I
+    pub fn combine<S>(iters: S) -> I
     where
         S: IntoIterator<Item = I>,
     {
-        let iterators = iterators.into();
-        let iterator = SequentialOrIterator::new(iterators);
+        let iters = iters
+            .into_iter()
+            .map(DoubleEndedPeekableExt::double_ended_peekable)
+            .collect();
 
-        I::from(iterator)
+        I::from(SequentialOrIterator::new(iters))
+    }
+}
+
+impl<I, T> DoubleEndedIterator for SequentialOrIterator<I, T>
+where
+    I: DoubleEndedIterator<Item = Result<T, Error>>,
+    T: Copy + Debug + Ord + PartialOrd,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let mut current = None;
+
+        for iter in &mut self.0 {
+            match iter.peek_back() {
+                Some(Ok(next)) => match &mut current {
+                    Some(current) => *current = *next.max(current),
+                    None => current = Some(*next),
+                },
+                Some(Err(_)) => return iter.next_back(),
+                None => {}
+            }
+        }
+
+        current.map(Ok).inspect(|item| {
+            for iter in &mut self.0 {
+                iter.next_back_if_eq(item);
+            }
+        })
     }
 }
 
@@ -61,60 +85,25 @@ where
 {
     type Item = Result<T, Error>;
 
-    #[allow(clippy::redundant_at_rest_pattern)]
     fn next(&mut self) -> Option<Self::Item> {
-        match &mut self.0.iterators[..] {
-            [] => None,
-            [iter] => iter.next(),
-            [iters @ ..] => {
-                let mut current: Option<T> = None;
+        let mut current = None;
 
-                for iter in iters.iter_mut() {
-                    match (iter.next_cached(), current) {
-                        (Some(Ok(iter_val)), Some(current_val)) => {
-                            let iter_val = match self.0.next {
-                                Some(previous_val) if iter_val == previous_val => iter.next(),
-                                _ => Some(Ok(iter_val)),
-                            };
-
-                            match iter_val {
-                                Some(Ok(iter_val)) => match iter_val.cmp(&current_val) {
-                                    Ordering::Less => current = Some(iter_val),
-                                    Ordering::Equal | Ordering::Greater => {}
-                                },
-                                Some(Err(err)) => return self.0.return_err(err),
-                                _ => {}
-                            }
-                        }
-                        (Some(Ok(iter_val)), None) => match self.0.next {
-                            Some(previous_val) if iter_val == previous_val => match iter.next() {
-                                Some(Ok(iter_val)) => current = Some(iter_val),
-                                Some(Err(err)) => return self.0.return_err(err),
-                                None => current = None,
-                            },
-                            _ => current = Some(iter_val),
-                        },
-                        (Some(Err(err)), _) => return self.0.return_err(err),
-                        _ => {}
-                    }
-                }
-
-                match current {
-                    Some(value) => self.0.return_ok_some_next(value),
-                    None => self.0.return_ok_none(),
-                }
+        for iter in &mut self.0 {
+            match iter.peek() {
+                Some(Ok(next)) => match &mut current {
+                    Some(current) => *current = *next.min(current),
+                    None => current = Some(*next),
+                },
+                Some(Err(_)) => return iter.next(),
+                None => {}
             }
         }
-    }
-}
 
-impl<I, T> DoubleEndedIterator for SequentialOrIterator<I, T>
-where
-    I: DoubleEndedIterator<Item = Result<T, Error>>,
-    T: Copy + Debug + Ord + PartialOrd,
-{
-    fn next_back(&mut self) -> Option<Self::Item> {
-        todo!()
+        current.map(Ok).inspect(|item| {
+            for iter in &mut self.0 {
+                iter.next_if_eq(item);
+            }
+        })
     }
 }
 
@@ -124,52 +113,131 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        error::Error,
-        utils::iteration::{
-            or::SequentialOrIterator,
-            tests::TestIterator,
-        },
+    use crate::utils::iteration::{
+        or::SequentialOrIterator,
+        tests::TestIterator,
     };
 
     #[test]
-    fn empty_iterators_combine_as_empty() {
-        let empty: Vec<Result<u64, Error>> = Vec::new();
+    fn sequential_or_iterator_impl_iterator() {
+        // Empty
 
-        let a = TestIterator::new([]);
-        let b = TestIterator::new([]);
+        let a = TestIterator::from([]);
+        let b = TestIterator::from([]);
 
-        assert_eq!(
-            empty,
-            SequentialOrIterator::combine([a, b]).collect::<Vec<_>>()
-        );
+        let mut iter = SequentialOrIterator::combine([a, b]);
+
+        assert_eq!(None, iter.next());
+
+        // Matched Lengths
+
+        let a = TestIterator::from([0, 4]);
+        let b = TestIterator::from([1, 5]);
+        let c = TestIterator::from([2, 3]);
+
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(0)), iter.next());
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(Some(Ok(4)), iter.next());
+        assert_eq!(Some(Ok(5)), iter.next());
+        assert_eq!(None, iter.next());
+
+        // Variable Lengths
+
+        let a = TestIterator::from([0, 3, 4]);
+        let b = TestIterator::from([1, 2, 3]);
+        let c = TestIterator::from([0, 1, 4, 5]);
+
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(0)), iter.next());
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(Some(Ok(4)), iter.next());
+        assert_eq!(Some(Ok(5)), iter.next());
+        assert_eq!(None, iter.next());
     }
 
     #[test]
-    fn iterators_combine_sequentially() {
-        let combined = Vec::from_iter([Ok(0), Ok(1), Ok(2), Ok(3), Ok(4), Ok(5)]);
+    fn sequential_or_iterator_impl_double_ended_iterator() {
+        // Empty
 
-        let a = TestIterator::new([0, 4]);
-        let b = TestIterator::new([1, 5]);
-        let c = TestIterator::new([2, 3]);
+        let a = TestIterator::from([]);
+        let b = TestIterator::from([]);
 
-        assert_eq!(
-            combined,
-            SequentialOrIterator::combine([a, b, c]).collect::<Vec<_>>()
-        );
+        let mut iter = SequentialOrIterator::combine([a, b]);
+
+        assert_eq!(None, iter.next_back());
+
+        // Matched Lengths
+
+        let a = TestIterator::from([0, 4]);
+        let b = TestIterator::from([1, 5]);
+        let c = TestIterator::from([2, 3]);
+
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(5)), iter.next_back());
+        assert_eq!(Some(Ok(4)), iter.next_back());
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next_back());
+        assert_eq!(Some(Ok(1)), iter.next_back());
+        assert_eq!(Some(Ok(0)), iter.next_back());
+        assert_eq!(None, iter.next_back());
+
+        // Variable Lengths
+
+        let a = TestIterator::from([0, 3, 4]);
+        let b = TestIterator::from([1, 2, 3]);
+        let c = TestIterator::from([0, 1, 4, 5]);
+
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(5)), iter.next_back());
+        assert_eq!(Some(Ok(4)), iter.next_back());
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next_back());
+        assert_eq!(Some(Ok(1)), iter.next_back());
+        assert_eq!(Some(Ok(0)), iter.next_back());
+        assert_eq!(None, iter.next_back());
     }
 
     #[test]
-    fn iterators_combine_sequentially_without_duplication() {
-        let combined = Vec::from_iter([Ok(0), Ok(1), Ok(2), Ok(3), Ok(4), Ok(5)]);
+    fn sequential_or_iterator_impl_iterator_and_double_ended_iterator() {
+        // Matched Lengths
 
-        let a = TestIterator::new([0, 3, 4]);
-        let b = TestIterator::new([1, 2, 3]);
-        let c = TestIterator::new([0, 1, 4, 5]);
+        let a = TestIterator::from([0, 4]);
+        let b = TestIterator::from([1, 5]);
+        let c = TestIterator::from([2, 3]);
 
-        assert_eq!(
-            combined,
-            SequentialOrIterator::combine([a, b, c]).collect::<Vec<_>>()
-        );
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(0)), iter.next());
+        assert_eq!(Some(Ok(5)), iter.next_back());
+        assert_eq!(Some(Ok(4)), iter.next_back());
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(None, iter.next());
+
+        // Variable Lengths
+
+        let a = TestIterator::from([0, 3, 4]);
+        let b = TestIterator::from([1, 2, 3]);
+        let c = TestIterator::from([0, 1, 4, 5]);
+
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(5)), iter.next_back());
+        assert_eq!(Some(Ok(0)), iter.next());
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(4)), iter.next_back());
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(None, iter.next());
     }
 }

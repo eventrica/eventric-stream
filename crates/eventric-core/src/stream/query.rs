@@ -63,25 +63,24 @@ impl Stream {
     ///
     /// [identifier]: crate::event::Identifier
     /// [issue]: https://github.com/eventrica/eventric-core/issues/21
+    #[must_use]
     pub fn query<'a>(
         &'a self,
         condition: &Condition<'_>,
         cache: &'a Cache,
         options: Option<Options>,
-    ) -> impl Iterator<Item = Result<PersistentEvent, Error>> {
+    ) -> impl DoubleEndedIterator<Item = Result<PersistentEvent, Error>> {
         let from = condition.from;
-        let iter = match condition.matches {
-            Some(query) => {
-                let query = query.into();
+        let iter = condition.matches.map_or_else(
+            || self.query_events(from),
+            |query| {
+                let query_hash_ref: QueryHashRef<'_> = query.into();
+                let query_hash: QueryHash = (&query_hash_ref).into();
 
-                cache.populate(&query);
-
-                let query = query.into();
-
-                self.query_indices(&query, from)
-            }
-            None => self.query_events(from),
-        };
+                cache.populate(&query_hash_ref);
+                self.query_indices(&query_hash, from)
+            },
+        );
 
         PersistentEventIterator::new(cache, iter, options, &self.data.references)
     }

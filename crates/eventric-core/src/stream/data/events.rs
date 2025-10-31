@@ -88,24 +88,22 @@ impl Events {
         }
     }
 
+    #[rustfmt::skip]
     fn iterate_all(&self) -> PersistentEventHashIterator<'_> {
         PersistentEventHashIterator {
             iter: Box::new(self.keyspace.iter().map(|guard| match guard.into_inner() {
-                Ok((key, value)) => {
-                    Ok(SliceAndPosition(value, UnitAndSlice((), key).into()).into())
-                }
+                Ok((key, value)) => Ok(SliceAndPosition(value, UnitAndSlice((), key).into()).into()),
                 Err(err) => Err(Error::from(err)),
             })),
         }
     }
 
+    #[rustfmt::skip]
     fn iterate_from(&self, from: Position) -> PersistentEventHashIterator<'_> {
         PersistentEventHashIterator {
             iter: Box::new(self.keyspace.range(from.to_be_bytes()..).map(|guard| {
                 match guard.into_inner() {
-                    Ok((key, value)) => {
-                        Ok(SliceAndPosition(value, UnitAndSlice((), key).into()).into())
-                    }
+                    Ok((key, value)) => Ok(SliceAndPosition(value, UnitAndSlice((), key).into()).into()),
                     Err(err) => Err(Error::from(err)),
                 }
             })),

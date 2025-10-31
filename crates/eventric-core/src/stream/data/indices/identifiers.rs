@@ -25,7 +25,7 @@ use crate::{
         HASH_LEN,
         ID_LEN,
         POSITION_LEN,
-        indices::PositionIterator,
+        indices::SequentialPositionIterator,
     },
     utils::iteration::or::SequentialOrIterator,
 };
@@ -72,7 +72,7 @@ impl Identifiers {
 // Query
 
 impl Identifiers {
-    pub fn query<'a, S>(&self, specifiers: S, from: Option<Position>) -> PositionIterator<'_>
+    pub fn query<'a, S>(&self, specifiers: S, from: Option<Position>) -> SequentialPositionIterator<'_>
     where
         S: Iterator<Item = &'a SpecifierHash>,
     {
@@ -85,7 +85,7 @@ impl Identifiers {
         &self,
         specifier: &SpecifierHash,
         from: Option<Position>,
-    ) -> PositionIterator<'_> {
+    ) -> SequentialPositionIterator<'_> {
         let version_range = specifier
             .range
             .as_ref()
@@ -109,14 +109,14 @@ impl Identifiers {
         }
     }
 
-    fn query_specifier_prefix<F>(&self, identifier: &IdentifierHash, f: F) -> PositionIterator<'_>
+    fn query_specifier_prefix<F>(&self, identifier: &IdentifierHash, f: F) -> SequentialPositionIterator<'_>
     where
         F: Fn(Slice, Slice) -> Option<Position> + 'static,
     {
         let hash = identifier.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
-        PositionIterator::Boxed(Box::new(self.keyspace.prefix(prefix).filter_map(
+        SequentialPositionIterator::Boxed(Box::new(self.keyspace.prefix(prefix).filter_map(
             move |guard| match guard.into_inner() {
                 Ok((key, value)) => f(key, value).map(Ok),
                 Err(err) => Some(Err(Error::from(err))),
@@ -129,7 +129,7 @@ impl Identifiers {
         identifier: &IdentifierHash,
         from: Position,
         f: F,
-    ) -> PositionIterator<'_>
+    ) -> SequentialPositionIterator<'_>
     where
         F: Fn(Slice, Slice) -> Option<Position> + 'static,
     {
@@ -137,7 +137,7 @@ impl Identifiers {
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
-        PositionIterator::Boxed(Box::new(self.keyspace.range(lower..upper).filter_map(
+        SequentialPositionIterator::Boxed(Box::new(self.keyspace.range(lower..upper).filter_map(
             move |guard| match guard.into_inner() {
                 Ok((key, value)) => f(key, value).map(Ok),
                 Err(err) => Some(Err(Error::from(err))),
