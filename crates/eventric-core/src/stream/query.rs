@@ -229,6 +229,38 @@ pub enum Selector {
     Tags(Tags),
 }
 
+impl Selector {
+    /// Convenience function for creating a selector directly from a collection
+    /// of [`Specifier`]s without constructing an intermediate [`Specifiers`]
+    /// instance directly.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the implied [`Specifiers`] instance returns an error
+    /// on construction.
+    pub fn specifiers<S>(specifiers: S) -> Result<Self, Error>
+    where
+        S: Into<Vec<Specifier>>,
+    {
+        Ok(Self::Specifiers(Specifiers::new(specifiers)?))
+    }
+
+    /// Convenience function for creating a selector directly from a collection
+    /// of [`Tag`]s without constructing an intermediate [`Tags`]
+    /// instance directly.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the implied [`Tags`] instance returns an error
+    /// on construction.
+    pub fn tags<T>(tags: T) -> Result<Self, Error>
+    where
+        T: Into<Vec<Tag>>,
+    {
+        Ok(Self::Tags(Tags::new(tags)?))
+    }
+}
+
 #[derive(Debug)]
 pub(crate) enum SelectorHash {
     Specifiers(Vec<SpecifierHash>),
@@ -309,9 +341,9 @@ impl Specifiers {
     /// Returns an error on validation failure. Specifiers must conform to the
     /// following constraints:
     /// - Min 1 Specifier (Non-Zero Length/Non-Empty)
-    pub fn new<T>(specifiers: T) -> Result<Self, Error>
+    pub fn new<S>(specifiers: S) -> Result<Self, Error>
     where
-        T: Into<Vec<Specifier>>,
+        S: Into<Vec<Specifier>>,
     {
         Self::new_unvalidated(specifiers.into()).validate()
     }

@@ -72,7 +72,11 @@ impl Identifiers {
 // Query
 
 impl Identifiers {
-    pub fn query<'a, S>(&self, specifiers: S, from: Option<Position>) -> SequentialPositionIterator<'_>
+    pub fn query<'a, S>(
+        &self,
+        specifiers: S,
+        from: Option<Position>,
+    ) -> SequentialPositionIterator<'_>
     where
         S: Iterator<Item = &'a SpecifierHash>,
     {
@@ -109,7 +113,11 @@ impl Identifiers {
         }
     }
 
-    fn query_specifier_prefix<F>(&self, identifier: &IdentifierHash, f: F) -> SequentialPositionIterator<'_>
+    fn query_specifier_prefix<F>(
+        &self,
+        identifier: &IdentifierHash,
+        f: F,
+    ) -> SequentialPositionIterator<'_>
     where
         F: Fn(Slice, Slice) -> Option<Position> + 'static,
     {

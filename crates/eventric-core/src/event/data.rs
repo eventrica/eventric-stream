@@ -21,7 +21,7 @@ use crate::{
 /// immutable owned vector of bytes. Higher-level libraries may determine the
 /// meaning of the payload depending on the identifier and version of the event,
 /// but at core level it is opaque.
-#[derive(new, AsRef, Deref, Debug)]
+#[derive(new, AsRef, Deref, Debug, Eq, PartialEq)]
 #[as_ref([u8])]
 #[new(const_fn, name(new_inner), vis())]
 pub struct Data {

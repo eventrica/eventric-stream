@@ -9,6 +9,9 @@ include-utils.workspace         = true
 rapidhash.workspace             = true
 thiserror.workspace             = true
 
+[dev-dependencies]
+assertables.workspace = true
+
 [lints]
 workspace = true
 

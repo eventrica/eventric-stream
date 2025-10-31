@@ -21,3 +21,12 @@ impl Version {
         Self(version)
     }
 }
+
+impl Version {
+    /// Represents the maximum possible value of a [`Version`] (which is
+    /// effectively `u8::MAX` internally).
+    pub const MAX: Self = Self::new(u8::MAX);
+    /// Represents the minimum possible value of a [`Version`] (which is
+    /// `u8::MIN` internally).
+    pub const MIN: Self = Self::new(u8::MIN);
+}

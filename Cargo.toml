@@ -9,7 +9,7 @@ members  = ["benches/*", "crates/*", "examples/*"]
 resolver = "2"
 
 [workspace.dependencies]
-
+assertables           = { version = "9" }
 bytes                 = { version = "1" }
 criterion             = { version = "0.7" }
 dashmap               = { version = "6", features = ["inline"] }
