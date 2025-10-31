@@ -77,7 +77,7 @@ mod tests {
     }
 
     #[test]
-    fn test_iterator_returns_correct_next() {
+    fn impl_iterator() {
         let mut iter = TestIterator::from([0, 1, 2, 3]);
 
         assert_eq!(Some(Ok(0)), iter.next());
@@ -88,7 +88,7 @@ mod tests {
     }
 
     #[test]
-    fn test_iterator_returns_correct_next_back() {
+    fn impl_double_ended_iterator() {
         let mut iter = TestIterator::from([0, 1, 2, 3]);
 
         assert_eq!(Some(Ok(3)), iter.next_back());
@@ -99,7 +99,7 @@ mod tests {
     }
 
     #[test]
-    fn test_iterator_returns_correct_next_and_next_back() {
+    fn impl_both_iterator_and_double_ended_iterator() {
         let mut iter = TestIterator::from([0, 1, 2, 3]);
 
         assert_eq!(Some(Ok(0)), iter.next());

@@ -119,7 +119,7 @@ mod tests {
     };
 
     #[test]
-    fn sequential_or_iterator_impl_iterator() {
+    fn impl_iterator() {
         // Empty
 
         let a = TestIterator::from([]);
@@ -163,7 +163,7 @@ mod tests {
     }
 
     #[test]
-    fn sequential_or_iterator_impl_double_ended_iterator() {
+    fn impl_double_ended_iterator() {
         // Empty
 
         let a = TestIterator::from([]);
@@ -207,7 +207,7 @@ mod tests {
     }
 
     #[test]
-    fn sequential_or_iterator_impl_iterator_and_double_ended_iterator() {
+    fn impl_iterator_and_double_ended_iterator() {
         // Matched Lengths
 
         let a = TestIterator::from([0, 4]);

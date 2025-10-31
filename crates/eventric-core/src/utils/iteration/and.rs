@@ -146,7 +146,7 @@ mod tests {
     };
 
     #[test]
-    fn sequential_and_impl_iterator() {
+    fn impl_iterator() {
         // Empty
 
         let a = TestIterator::from([]);
@@ -222,7 +222,7 @@ mod tests {
     }
 
     #[test]
-    fn sequential_and_impl_double_ended_iterator() {
+    fn impl_double_ended_iterator() {
         // Empty
 
         let a = TestIterator::from([]);
