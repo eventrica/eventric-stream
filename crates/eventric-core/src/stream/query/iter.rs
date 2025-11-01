@@ -161,7 +161,7 @@ impl MappedPersistentHashIterator<'_> {
         match position {
             Ok(position) => match self.events.get(position) {
                 Ok(Some(event)) => Some(Ok(event)),
-                Ok(None) => None,
+                Ok(None) => None, // TODO: Should this be an error?
                 Err(err) => Some(Err(err)),
             },
             Err(err) => Some(Err(err)),

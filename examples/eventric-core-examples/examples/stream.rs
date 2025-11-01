@@ -55,8 +55,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
     let query = Query::new([Selector::SpecifiersAndTags(
         Specifiers::new([
-            Specifier::new(Identifier::new("StudentSubscribedToCourse")?, None),
-            Specifier::new(Identifier::new("CourseCapacityChanged")?, None),
+            Specifier::new(Identifier::new("StudentSubscribedToCourse")?),
+            Specifier::new(Identifier::new("CourseCapacityChanged")?),
         ])?,
         Tags::new([Tag::new("course:523")?])?,
     )])?;

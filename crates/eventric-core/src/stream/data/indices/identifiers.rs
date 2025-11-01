@@ -1,3 +1,4 @@
+use any_range::AnyRange;
 use bytes::{
     Buf,
     BufMut as _,
@@ -5,6 +6,7 @@ use bytes::{
 use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::{
+    Guard,
     Keyspace,
     Slice,
     WriteBatch,
@@ -90,67 +92,44 @@ impl Identifiers {
         specifier: &SpecifierHash,
         from: Option<Position>,
     ) -> SequentialPositionIterator<'_> {
-        let version_range = specifier
-            .range
-            .as_ref()
-            .map_or(u8::MIN..u8::MAX, |r| *r.start..*r.end);
-
-        let f = move |key: Slice, value: Slice| {
-            if !version_range.contains(&value.as_ref().get_u8()) {
-                return None;
-            }
-
-            let mut key = &key[..];
-
-            key.advance(ID_LEN + HASH_LEN);
-
-            Some(Position::new(key.get_u64()))
-        };
+        let range = specifier.range.clone();
 
         match from {
-            Some(position) => self.query_specifier_range(&specifier.identifier, position, f),
-            None => self.query_specifier_prefix(&specifier.identifier, f),
+            Some(position) => self.query_specifier_range(&specifier.identifier, position, range),
+            None => self.query_specifier_prefix(&specifier.identifier, range),
         }
     }
 
-    fn query_specifier_prefix<F>(
+    fn query_specifier_prefix(
         &self,
         identifier: &IdentifierHash,
-        f: F,
-    ) -> SequentialPositionIterator<'_>
-    where
-        F: Fn(Slice, Slice) -> Option<Position> + 'static,
-    {
+        range: Option<AnyRange<Version>>,
+    ) -> SequentialPositionIterator<'_> {
         let hash = identifier.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
+        let iter = IdentifierPositionIterator::new(
+            Box::new(self.keyspace.prefix(prefix).map(Guard::into_inner)),
+            range,
+        );
 
-        SequentialPositionIterator::Boxed(Box::new(self.keyspace.prefix(prefix).filter_map(
-            move |guard| match guard.into_inner() {
-                Ok((key, value)) => f(key, value).map(Ok),
-                Err(err) => Some(Err(Error::from(err))),
-            },
-        )))
+        SequentialPositionIterator::Identifier(iter)
     }
 
-    fn query_specifier_range<F>(
+    fn query_specifier_range(
         &self,
         identifier: &IdentifierHash,
         from: Position,
-        f: F,
-    ) -> SequentialPositionIterator<'_>
-    where
-        F: Fn(Slice, Slice) -> Option<Position> + 'static,
-    {
+        range: Option<AnyRange<Version>>,
+    ) -> SequentialPositionIterator<'_> {
         let hash = identifier.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
+        let iter = IdentifierPositionIterator::new(
+            Box::new(self.keyspace.range(lower..upper).map(Guard::into_inner)),
+            range,
+        );
 
-        SequentialPositionIterator::Boxed(Box::new(self.keyspace.range(lower..upper).filter_map(
-            move |guard| match guard.into_inner() {
-                Ok((key, value)) => f(key, value).map(Ok),
-                Err(err) => Some(Err(Error::from(err))),
-            },
-        )))
+        SequentialPositionIterator::Identifier(iter)
     }
 }
 
@@ -190,5 +169,67 @@ impl From<Hash> for [u8; PREFIX_LEN] {
         }
 
         prefix
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Iterators
+
+#[derive(new, Debug)]
+#[new(const_fn, vis())]
+pub(crate) struct IdentifierPositionIterator<'a> {
+    #[debug("BoxedIterator")]
+    iter: Box<dyn DoubleEndedIterator<Item = Result<(Slice, Slice), fjall::Error>> + 'a>,
+    range: Option<AnyRange<Version>>,
+}
+
+impl IdentifierPositionIterator<'_> {
+    fn filter(&mut self, key: &Slice, value: &Slice) -> Option<Position> {
+        if let Some(range) = &self.range {
+            let version = Version::new(value.as_ref().get_u8());
+
+            if !range.contains(&version) {
+                return None;
+            }
+        }
+
+        let mut key = &key[..];
+
+        key.advance(ID_LEN + HASH_LEN);
+
+        Some(Position::new(key.get_u64()))
+    }
+}
+
+impl DoubleEndedIterator for IdentifierPositionIterator<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.iter.next_back()? {
+                Ok((key, value)) => {
+                    if let Some(position) = self.filter(&key, &value) {
+                        return Some(Ok(position));
+                    }
+                }
+                Err(err) => return Some(Err(Error::from(err))),
+            }
+        }
+    }
+}
+
+impl Iterator for IdentifierPositionIterator<'_> {
+    type Item = Result<Position, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.iter.next()? {
+                Ok((key, value)) => {
+                    if let Some(position) = self.filter(&key, &value) {
+                        return Some(Ok(position));
+                    }
+                }
+                Err(err) => return Some(Err(Error::from(err))),
+            }
+        }
     }
 }

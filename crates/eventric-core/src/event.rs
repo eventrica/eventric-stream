@@ -230,7 +230,10 @@ pub use self::{
     data::Data,
     identifier::Identifier,
     position::Position,
-    specifier::Specifier,
+    specifier::{
+        AnyRange,
+        Specifier,
+    },
     tag::Tag,
     timestamp::Timestamp,
     version::Version,

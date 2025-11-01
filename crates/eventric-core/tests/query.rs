@@ -80,7 +80,7 @@ fn specifier() -> Result<(), Error> {
     let stream = stream(eventric_core::temp_path(), true)?;
     let cache = Cache::default();
 
-    let specifier = Specifier::new(EVENT_2.identifier().clone(), None);
+    let specifier = Specifier::new(EVENT_2.identifier().clone());
     let selector = Selector::specifiers([specifier])?;
     let query = Query::new([selector])?;
     let condition = Condition::default().matches(&query);
@@ -112,8 +112,11 @@ fn specifier_with_range() -> Result<(), Error> {
     let cache = Cache::default();
 
     let range = Version::new(1)..Version::MAX;
-    let specifier = Specifier::new(EVENT_2.identifier().clone(), Some(range));
+    let specifier = Specifier::new(EVENT_2.identifier().clone()).range(range);
     let selector = Selector::specifiers([specifier])?;
+
+    println!("selector: {selector:?}");
+
     let query = Query::new([selector])?;
     let condition = Condition::default().matches(&query);
 
@@ -139,8 +142,8 @@ fn multiple_specifiers() -> Result<(), Error> {
     let stream = stream(eventric_core::temp_path(), true)?;
     let cache = Cache::default();
 
-    let specifier_0 = Specifier::new(EVENT_0.identifier().clone(), None);
-    let specifier_1 = Specifier::new(EVENT_1.identifier().clone(), None);
+    let specifier_0 = Specifier::new(EVENT_0.identifier().clone());
+    let specifier_1 = Specifier::new(EVENT_1.identifier().clone());
     let selector = Selector::specifiers([specifier_0, specifier_1])?;
     let query = Query::new([selector])?;
     let condition = Condition::default().matches(&query);
@@ -171,9 +174,9 @@ fn multiple_specifiers_with_range() -> Result<(), Error> {
     let stream = stream(eventric_core::temp_path(), true)?;
     let cache = Cache::default();
 
-    let specifier_0 = Specifier::new(EVENT_0.identifier().clone(), None);
+    let specifier_0 = Specifier::new(EVENT_0.identifier().clone());
     let range = Version::new(1)..Version::MAX;
-    let specifier_1 = Specifier::new(EVENT_2.identifier().clone(), Some(range));
+    let specifier_1 = Specifier::new(EVENT_2.identifier().clone()).range(range);
     let selector = Selector::specifiers([specifier_0, specifier_1])?;
     let query = Query::new([selector])?;
     let condition = Condition::default().matches(&query);

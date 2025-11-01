@@ -9,6 +9,7 @@ members  = ["benches/*", "crates/*", "examples/*"]
 resolver = "2"
 
 [workspace.dependencies]
+any-range             = { version = "0.1" }
 assertables           = { version = "9" }
 bytes                 = { version = "1" }
 criterion             = { version = "0.7" }

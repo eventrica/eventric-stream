@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use fancy_constructor::new;
 
 use crate::event::{
@@ -23,33 +21,31 @@ use crate::event::{
 ///
 /// Where no range is given, the meaning is **ALL** (or **ANY**)versions of the
 /// given type, rather than **NO** versions.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(new, Debug, Eq, PartialEq)]
+#[new(name(new_inner), vis())]
 pub struct Specifier {
     identifier: Identifier,
-    range: Option<Range<Version>>,
+    #[new(default)]
+    range: Option<AnyRange<Version>>,
 }
 
 impl Specifier {
-    /// Constructs a new [`Specifier`] instance given an [`Identifier`] and an
-    /// optional [`Version`] range.
+    /// Constructs a new [`Specifier`] instance given an [`Identifier`].
     #[must_use]
-    pub const fn new(identifier: Identifier, range: Option<Range<Version>>) -> Self {
-        Self { identifier, range }
+    pub fn new(identifier: Identifier) -> Self {
+        Self::new_inner(identifier)
     }
 }
 
 impl Specifier {
-    /// Returns a reference to the [`Identifier`] value of the specifier.
+    /// Adds a version range to the specifier
     #[must_use]
-    pub fn identifier(&self) -> &Identifier {
-        &self.identifier
-    }
-
-    /// Returns an [`Option`] of a reference to the optional [`Version`] range
-    /// of the specifier.
-    #[must_use]
-    pub fn range(&self) -> Option<&Range<Version>> {
-        self.range.as_ref()
+    pub fn range<R>(mut self, range: R) -> Self
+    where
+        R: Into<AnyRange<Version>>,
+    {
+        self.range = Some(range.into());
+        self
     }
 }
 
@@ -59,13 +55,13 @@ impl Specifier {
 #[new(const_fn)]
 pub(crate) struct SpecifierHash {
     pub identifier: IdentifierHash,
-    pub range: Option<Range<Version>>,
+    pub range: Option<AnyRange<Version>>,
 }
 
 impl From<&Specifier> for SpecifierHash {
     fn from(specifier: &Specifier) -> Self {
-        let identifier = specifier.identifier().into();
-        let range = specifier.range().cloned();
+        let identifier = (&specifier.identifier).into();
+        let range = specifier.range.clone();
 
         Self::new(identifier, range)
     }
@@ -86,14 +82,20 @@ impl From<&SpecifierHashRef<'_>> for SpecifierHash {
 #[new(const_fn)]
 pub(crate) struct SpecifierHashRef<'a> {
     pub identifier: IdentifierHashRef<'a>,
-    pub range: Option<Range<Version>>,
+    pub range: Option<AnyRange<Version>>,
 }
 
 impl<'a> From<&'a Specifier> for SpecifierHashRef<'a> {
     fn from(specifier: &'a Specifier) -> Self {
-        let identifier = specifier.identifier().into();
-        let range = specifier.range().cloned();
+        let identifier = (&specifier.identifier).into();
+        let range = specifier.range.clone();
 
         Self::new(identifier, range)
     }
 }
+
+// -------------------------------------------------------------------------------------------------
+
+// Re-Exports
+
+pub use any_range::AnyRange;

@@ -66,7 +66,7 @@ fn post_append_error() -> Result<(), Error> {
 
     stream.append(&*EVENTS, None)?;
 
-    let specifier = Specifier::new(Identifier::new("id")?, None);
+    let specifier = Specifier::new(Identifier::new("id")?);
     let specifiers = Specifiers::new([specifier])?;
     let selector = Selector::Specifiers(specifiers);
     let query = Query::new([selector])?;

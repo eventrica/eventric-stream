@@ -19,7 +19,10 @@ use crate::{
     },
     stream::{
         data::indices::{
-            identifiers::Identifiers,
+            identifiers::{
+                IdentifierPositionIterator,
+                Identifiers,
+            },
             tags::Tags,
             timestamps::Timestamps,
         },
@@ -123,6 +126,7 @@ impl Indices {
 pub enum SequentialPositionIterator<'a> {
     And(SequentialAndIterator<SequentialPositionIterator<'a>, Position>),
     Or(SequentialOrIterator<SequentialPositionIterator<'a>, Position>),
+    Identifier(IdentifierPositionIterator<'a>),
     Boxed(#[debug("Boxed")] Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>),
 }
 
@@ -131,6 +135,7 @@ impl DoubleEndedIterator for SequentialPositionIterator<'_> {
         match self {
             Self::And(iter) => iter.next_back(),
             Self::Or(iter) => iter.next_back(),
+            Self::Identifier(iter) => iter.next_back(),
             Self::Boxed(iter) => iter.next_back(),
         }
     }
@@ -143,6 +148,7 @@ impl Iterator for SequentialPositionIterator<'_> {
         match self {
             Self::And(iter) => iter.next(),
             Self::Or(iter) => iter.next(),
+            Self::Identifier(iter) => iter.next(),
             Self::Boxed(iter) => iter.next(),
         }
     }
@@ -161,13 +167,5 @@ impl<'a> From<SequentialOrIterator<SequentialPositionIterator<'a>, Position>>
 {
     fn from(iter: SequentialOrIterator<SequentialPositionIterator<'a>, Position>) -> Self {
         Self::Or(iter)
-    }
-}
-
-impl<'a> From<Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>>
-    for SequentialPositionIterator<'a>
-{
-    fn from(iter: Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>) -> Self {
-        Self::Boxed(iter)
     }
 }
