@@ -23,7 +23,10 @@ use crate::{
                 IdentifierPositionIterator,
                 Identifiers,
             },
-            tags::Tags,
+            tags::{
+                TagPositionIterator,
+                Tags,
+            },
             timestamps::Timestamps,
         },
         query::{
@@ -99,11 +102,7 @@ impl Indices {
 
 impl Indices {
     #[must_use]
-    pub fn query(
-        &self,
-        query: &QueryHash,
-        from: Option<Position>,
-    ) -> SequentialPositionIterator<'_> {
+    pub fn query(&self, query: &QueryHash, from: Option<Position>) -> PositionIterator<'_> {
         SequentialOrIterator::combine(query.as_ref().iter().map(|selector| match selector {
             SelectorHash::Specifiers(specifiers) => self.identifiers.query(specifiers.iter(), from),
             SelectorHash::SpecifiersAndTags(specifiers, tags) => SequentialAndIterator::combine([
@@ -123,25 +122,25 @@ impl Indices {
 
 #[derive(Debug)]
 #[rustfmt::skip]
-pub enum SequentialPositionIterator<'a> {
-    And(SequentialAndIterator<SequentialPositionIterator<'a>, Position>),
-    Or(SequentialOrIterator<SequentialPositionIterator<'a>, Position>),
+pub enum PositionIterator<'a> {
+    And(SequentialAndIterator<PositionIterator<'a>, Position>),
+    Or(SequentialOrIterator<PositionIterator<'a>, Position>),
     Identifier(IdentifierPositionIterator<'a>),
-    Boxed(#[debug("Boxed")] Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>),
+    Tag(TagPositionIterator<'a>),
 }
 
-impl DoubleEndedIterator for SequentialPositionIterator<'_> {
+impl DoubleEndedIterator for PositionIterator<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
             Self::And(iter) => iter.next_back(),
             Self::Or(iter) => iter.next_back(),
             Self::Identifier(iter) => iter.next_back(),
-            Self::Boxed(iter) => iter.next_back(),
+            Self::Tag(iter) => iter.next_back(),
         }
     }
 }
 
-impl Iterator for SequentialPositionIterator<'_> {
+impl Iterator for PositionIterator<'_> {
     type Item = Result<Position, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -149,23 +148,19 @@ impl Iterator for SequentialPositionIterator<'_> {
             Self::And(iter) => iter.next(),
             Self::Or(iter) => iter.next(),
             Self::Identifier(iter) => iter.next(),
-            Self::Boxed(iter) => iter.next(),
+            Self::Tag(iter) => iter.next(),
         }
     }
 }
 
-impl<'a> From<SequentialAndIterator<SequentialPositionIterator<'a>, Position>>
-    for SequentialPositionIterator<'a>
-{
-    fn from(iter: SequentialAndIterator<SequentialPositionIterator<'a>, Position>) -> Self {
+impl<'a> From<SequentialAndIterator<PositionIterator<'a>, Position>> for PositionIterator<'a> {
+    fn from(iter: SequentialAndIterator<PositionIterator<'a>, Position>) -> Self {
         Self::And(iter)
     }
 }
 
-impl<'a> From<SequentialOrIterator<SequentialPositionIterator<'a>, Position>>
-    for SequentialPositionIterator<'a>
-{
-    fn from(iter: SequentialOrIterator<SequentialPositionIterator<'a>, Position>) -> Self {
+impl<'a> From<SequentialOrIterator<PositionIterator<'a>, Position>> for PositionIterator<'a> {
+    fn from(iter: SequentialOrIterator<PositionIterator<'a>, Position>) -> Self {
         Self::Or(iter)
     }
 }

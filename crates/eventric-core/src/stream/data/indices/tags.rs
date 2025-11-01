@@ -24,7 +24,7 @@ use crate::{
         HASH_LEN,
         ID_LEN,
         POSITION_LEN,
-        indices::SequentialPositionIterator,
+        indices::PositionIterator,
     },
     utils::iteration::and::SequentialAndIterator,
 };
@@ -67,54 +67,39 @@ impl Tags {
 // Query
 
 impl Tags {
-    pub fn query<'a, T>(&self, tags: T, from: Option<Position>) -> SequentialPositionIterator<'_>
+    pub fn query<'a, T>(&self, tags: T, from: Option<Position>) -> PositionIterator<'_>
     where
         T: Iterator<Item = &'a TagHash>,
     {
         SequentialAndIterator::combine(tags.map(|tag| self.query_tag(tag, from)))
     }
 
-    fn query_tag(&self, tag: &TagHash, from: Option<Position>) -> SequentialPositionIterator<'_> {
-        let map = |key: Result<Slice, fjall::Error>| match key {
-            Ok(key) => {
-                let mut key = &key[..];
-
-                key.advance(ID_LEN + HASH_LEN);
-
-                Ok(Position::new(key.get_u64()))
-            }
-            Err(err) => Err(Error::from(err)),
-        };
-
+    fn query_tag(&self, tag: &TagHash, from: Option<Position>) -> PositionIterator<'_> {
         match from {
-            Some(position) => self.query_tag_range(tag, position, map),
-            None => self.query_tag_prefix(tag, map),
+            Some(position) => self.query_tag_range(tag, position),
+            None => self.query_tag_prefix(tag),
         }
     }
 
-    fn query_tag_prefix<F>(&self, tag: &TagHash, f: F) -> SequentialPositionIterator<'_>
-    where
-        F: Fn(Result<Slice, fjall::Error>) -> Result<Position, Error> + 'static,
-    {
+    fn query_tag_prefix(&self, tag: &TagHash) -> PositionIterator<'_> {
         let hash = tag.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
-        SequentialPositionIterator::Boxed(Box::new(
-            self.keyspace.prefix(prefix).map(Guard::key).map(f),
-        ))
+        let iter = Box::new(self.keyspace.prefix(prefix).map(Guard::key));
+        let iter = TagPositionIterator::new(iter);
+
+        PositionIterator::Tag(iter)
     }
 
-    fn query_tag_range<F>(&self, tag: &TagHash, from: Position, f: F) -> SequentialPositionIterator<'_>
-    where
-        F: Fn(Result<Slice, fjall::Error>) -> Result<Position, Error> + 'static,
-    {
+    fn query_tag_range(&self, tag: &TagHash, from: Position) -> PositionIterator<'_> {
         let hash = tag.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
-        SequentialPositionIterator::Boxed(Box::new(
-            self.keyspace.range(lower..upper).map(Guard::key).map(f),
-        ))
+        let iter = Box::new(self.keyspace.range(lower..upper).map(Guard::key));
+        let iter = TagPositionIterator::new(iter);
+
+        PositionIterator::Tag(iter)
     }
 }
 
@@ -154,5 +139,46 @@ impl From<Hash> for [u8; PREFIX_LEN] {
         }
 
         prefix
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Iterators
+
+#[derive(new, Debug)]
+#[new(const_fn, vis())]
+pub(crate) struct TagPositionIterator<'a> {
+    #[debug("BoxedIterator")]
+    iter: Box<dyn DoubleEndedIterator<Item = Result<Slice, fjall::Error>> + 'a>,
+}
+
+impl TagPositionIterator<'_> {
+    fn map(key: &Slice) -> Position {
+        let mut key = &key[..];
+
+        key.advance(ID_LEN + HASH_LEN);
+
+        Position::new(key.get_u64())
+    }
+}
+
+impl DoubleEndedIterator for TagPositionIterator<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match self.iter.next()? {
+            Ok(key) => Some(Ok(Self::map(&key))),
+            Err(err) => Some(Err(Error::from(err))),
+        }
+    }
+}
+
+impl Iterator for TagPositionIterator<'_> {
+    type Item = Result<Position, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.iter.next()? {
+            Ok(key) => Some(Ok(Self::map(&key))),
+            Err(err) => Some(Err(Error::from(err))),
+        }
     }
 }

@@ -38,7 +38,7 @@ impl Specifier {
 }
 
 impl Specifier {
-    /// Adds a version range to the specifier
+    /// Adds a [`Version`] range to the [`Specifier`].
     #[must_use]
     pub fn range<R>(mut self, range: R) -> Self
     where

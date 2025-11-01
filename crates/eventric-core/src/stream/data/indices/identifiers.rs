@@ -27,7 +27,7 @@ use crate::{
         HASH_LEN,
         ID_LEN,
         POSITION_LEN,
-        indices::SequentialPositionIterator,
+        indices::PositionIterator,
     },
     utils::iteration::or::SequentialOrIterator,
 };
@@ -78,7 +78,7 @@ impl Identifiers {
         &self,
         specifiers: S,
         from: Option<Position>,
-    ) -> SequentialPositionIterator<'_>
+    ) -> PositionIterator<'_>
     where
         S: Iterator<Item = &'a SpecifierHash>,
     {
@@ -91,7 +91,7 @@ impl Identifiers {
         &self,
         specifier: &SpecifierHash,
         from: Option<Position>,
-    ) -> SequentialPositionIterator<'_> {
+    ) -> PositionIterator<'_> {
         let range = specifier.range.clone();
 
         match from {
@@ -104,15 +104,14 @@ impl Identifiers {
         &self,
         identifier: &IdentifierHash,
         range: Option<AnyRange<Version>>,
-    ) -> SequentialPositionIterator<'_> {
+    ) -> PositionIterator<'_> {
         let hash = identifier.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
-        let iter = IdentifierPositionIterator::new(
-            Box::new(self.keyspace.prefix(prefix).map(Guard::into_inner)),
-            range,
-        );
 
-        SequentialPositionIterator::Identifier(iter)
+        let iter = Box::new(self.keyspace.prefix(prefix).map(Guard::into_inner));
+        let iter = IdentifierPositionIterator::new(iter, range);
+
+        PositionIterator::Identifier(iter)
     }
 
     fn query_specifier_range(
@@ -120,16 +119,15 @@ impl Identifiers {
         identifier: &IdentifierHash,
         from: Position,
         range: Option<AnyRange<Version>>,
-    ) -> SequentialPositionIterator<'_> {
+    ) -> PositionIterator<'_> {
         let hash = identifier.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
-        let iter = IdentifierPositionIterator::new(
-            Box::new(self.keyspace.range(lower..upper).map(Guard::into_inner)),
-            range,
-        );
 
-        SequentialPositionIterator::Identifier(iter)
+        let iter = Box::new(self.keyspace.range(lower..upper).map(Guard::into_inner));
+        let iter = IdentifierPositionIterator::new(iter, range);
+
+        PositionIterator::Identifier(iter)
     }
 }
 

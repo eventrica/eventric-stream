@@ -22,7 +22,7 @@ use crate::{
                 Events,
                 PersistentEventHashIterator,
             },
-            indices::SequentialPositionIterator,
+            indices::PositionIterator,
             references::References,
         },
         query::{
@@ -153,7 +153,7 @@ impl Iterator for CombinedPersistentEventHashIterator<'_> {
 #[new(const_fn)]
 pub(crate) struct MappedPersistentHashIterator<'a> {
     events: &'a Events,
-    iter: SequentialPositionIterator<'a>,
+    iter: PositionIterator<'a>,
 }
 
 impl MappedPersistentHashIterator<'_> {
