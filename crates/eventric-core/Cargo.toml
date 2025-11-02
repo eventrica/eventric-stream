@@ -9,6 +9,7 @@ fjall.workspace                 = true
 include-utils.workspace         = true
 rand.workspace                  = true
 rapidhash.workspace             = true
+self_cell.workspace             = true
 thiserror.workspace             = true
 
 [dev-dependencies]

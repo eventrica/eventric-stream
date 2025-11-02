@@ -315,6 +315,7 @@ dependencies = [
  "include-utils",
  "rand",
  "rapidhash",
+ "self_cell",
  "thiserror",
 ]
 

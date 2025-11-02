@@ -8,6 +8,8 @@ pub(crate) mod condition;
 pub(crate) mod iter;
 pub(crate) mod options;
 
+use std::sync::Arc;
+
 use derive_more::{
     AsRef,
     Debug,
@@ -64,13 +66,15 @@ impl Stream {
     /// [identifier]: crate::event::Identifier
     /// [issue]: https://github.com/eventrica/eventric-core/issues/21
     #[must_use]
-    pub fn query<'a>(
-        &'a self,
+    pub fn query(
+        &self,
         condition: &Condition<'_>,
-        cache: &'a Cache,
+        cache: Arc<Cache>,
         options: Option<Options>,
     ) -> impl DoubleEndedIterator<Item = Result<PersistentEvent, Error>> {
         let from = condition.from;
+        let references = self.data.references.clone();
+
         let iter = condition.matches.map_or_else(
             || self.query_events(from),
             |query| {
@@ -82,10 +86,10 @@ impl Stream {
             },
         );
 
-        PersistentEventIterator::new(cache, iter, options, &self.data.references)
+        PersistentEventIterator::new(cache, iter, options, references)
     }
 
-    fn query_events(&self, from: Option<Position>) -> CombinedPersistentEventHashIterator<'_> {
+    fn query_events(&self, from: Option<Position>) -> CombinedPersistentEventHashIterator {
         let iter = self.data.events.iterate(from);
 
         CombinedPersistentEventHashIterator::Direct(iter)
@@ -95,9 +99,10 @@ impl Stream {
         &self,
         query: &QueryHash,
         from: Option<Position>,
-    ) -> CombinedPersistentEventHashIterator<'_> {
+    ) -> CombinedPersistentEventHashIterator {
+        let events = self.data.events.clone();
         let iter = self.data.indices.query(query, from);
-        let iter = MappedPersistentHashIterator::new(&self.data.events, iter);
+        let iter = MappedPersistentHashIterator::new(events, iter);
 
         CombinedPersistentEventHashIterator::Mapped(iter)
     }

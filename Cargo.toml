@@ -22,6 +22,7 @@ fjall                 = { version = "=3.0.0-pre.3" }
 include-utils         = { version = "0.2" }
 rand                  = { version = "0.9" }
 rapidhash             = { version = "4" }
+self_cell             = { version = "1" }
 thiserror             = { version = "2" }
 
 [workspace.lints.clippy]

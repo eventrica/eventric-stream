@@ -1,4 +1,7 @@
-use std::error::Error;
+use std::{
+    error::Error,
+    sync::Arc,
+};
 
 use eventric_core::{
     event::{
@@ -63,10 +66,10 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
     let condition = Condition::default().matches(&query).from(Position::MIN);
 
-    let cache = Cache::default();
+    let cache = Arc::new(Cache::default());
     let options = Options::default().retrieve_tags(false);
 
-    for event in stream.query(&condition, &cache, Some(options)) {
+    for event in stream.query(&condition, cache.clone(), Some(options)) {
         println!("event: {event:#?}");
     }
 

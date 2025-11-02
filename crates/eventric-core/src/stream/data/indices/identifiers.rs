@@ -13,6 +13,7 @@ use fjall::{
     Slice,
     WriteBatch,
 };
+use self_cell::self_cell;
 
 use crate::{
     error::Error,
@@ -76,7 +77,7 @@ impl Identifiers {
 // Query
 
 impl Identifiers {
-    pub fn query<'a, S>(&self, specifiers: S, from: Option<Position>) -> PositionIterator<'_>
+    pub fn query<'a, S>(&self, specifiers: S, from: Option<Position>) -> PositionIterator
     where
         S: Iterator<Item = &'a SpecifierHash>,
     {
@@ -89,7 +90,7 @@ impl Identifiers {
         &self,
         specifier: &SpecifierHash,
         from: Option<Position>,
-    ) -> PositionIterator<'_> {
+    ) -> PositionIterator {
         let range = specifier.range.clone();
 
         match from {
@@ -102,12 +103,23 @@ impl Identifiers {
         &self,
         identifier: &IdentifierHash,
         range: Option<AnyRange<Version>>,
-    ) -> PositionIterator<'_> {
+    ) -> PositionIterator {
         let hash = identifier.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
-        let iter = self.keyspace.prefix(prefix).map(Guard::into_inner);
-        let iter = IdentifierPositionIterator::new(iter, range);
+        let iter = IdentifierPositionIterator::new(
+            (self.keyspace.clone(), Arc::new(range)),
+            |(keyspace, range)| {
+                Box::new(
+                    keyspace
+                        .prefix(prefix)
+                        .map(Guard::into_inner)
+                        .filter_map(|result| {
+                            IdentifierPositionIterator::filter_map(result, range.as_ref().as_ref())
+                        }),
+                )
+            },
+        );
 
         PositionIterator::Identifier(iter)
     }
@@ -117,13 +129,24 @@ impl Identifiers {
         identifier: &IdentifierHash,
         from: Position,
         range: Option<AnyRange<Version>>,
-    ) -> PositionIterator<'_> {
+    ) -> PositionIterator {
         let hash = identifier.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
-        let iter = self.keyspace.range(lower..upper).map(Guard::into_inner);
-        let iter = IdentifierPositionIterator::new(iter, range);
+        let iter = IdentifierPositionIterator::new(
+            (self.keyspace.clone(), Arc::new(range)),
+            |(keyspace, range)| {
+                Box::new(
+                    keyspace
+                        .range(lower..upper)
+                        .map(Guard::into_inner)
+                        .filter_map(|result| {
+                            IdentifierPositionIterator::filter_map(result, range.as_ref().as_ref())
+                        }),
+                )
+            },
+        );
 
         PositionIterator::Identifier(iter)
     }
@@ -133,28 +156,18 @@ impl Identifiers {
 
 // Iterators
 
-#[derive(new, Debug)]
-#[new(const_fn, name(new_inner), vis())]
-pub(crate) struct IdentifierPositionIterator<'a> {
-    #[debug("Boxed Iterator")]
-    iter: Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>,
-}
+#[rustfmt::skip]
+type BoxedIdentifierPositionIterator<'a> = Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>;
 
-impl<'a> IdentifierPositionIterator<'a> {
-    fn new<I>(iter: I, range: Option<AnyRange<Version>>) -> Self
-    where
-        I: DoubleEndedIterator<Item = Result<(Slice, Slice), fjall::Error>> + 'a,
-    {
-        let range = Arc::new(range);
-
-        let iter = iter.filter_map(move |result| Self::filter_map(result, range.as_ref().as_ref()));
-        let iter = Box::new(iter);
-
-        Self::new_inner(iter)
+self_cell!(
+    pub(crate) struct IdentifierPositionIterator {
+        owner: (Keyspace, Arc<Option<AnyRange<Version>>>),
+        #[covariant]
+        dependent: BoxedIdentifierPositionIterator,
     }
-}
+);
 
-impl IdentifierPositionIterator<'_> {
+impl IdentifierPositionIterator {
     fn filter_map(
         result: Result<(Slice, Slice), fjall::Error>,
         range: Option<&AnyRange<Version>>,
@@ -176,17 +189,17 @@ impl IdentifierPositionIterator<'_> {
     }
 }
 
-impl DoubleEndedIterator for IdentifierPositionIterator<'_> {
+impl DoubleEndedIterator for IdentifierPositionIterator {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back()
+        self.with_dependent_mut(|_, iter| iter.next_back())
     }
 }
 
-impl Iterator for IdentifierPositionIterator<'_> {
+impl Iterator for IdentifierPositionIterator {
     type Item = Result<Position, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
+        self.with_dependent_mut(|_, iter| iter.next())
     }
 }
 
