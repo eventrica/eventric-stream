@@ -84,7 +84,6 @@ impl Tags {
     fn query_tag_prefix(&self, tag: &TagHash) -> PositionIterator<'_> {
         let hash = tag.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
-
         let iter = Box::new(self.keyspace.prefix(prefix).map(Guard::key));
         let iter = TagPositionIterator::new(iter);
 
@@ -95,7 +94,6 @@ impl Tags {
         let hash = tag.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
-
         let iter = Box::new(self.keyspace.range(lower..upper).map(Guard::key));
         let iter = TagPositionIterator::new(iter);
 

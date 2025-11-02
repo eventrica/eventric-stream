@@ -6,6 +6,7 @@ use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::{
     Database,
+    Guard,
     Keyspace,
     KeyspaceCreateOptions,
     Slice,
@@ -88,26 +89,17 @@ impl Events {
         }
     }
 
-    #[rustfmt::skip]
     fn iterate_all(&self) -> PersistentEventHashIterator<'_> {
-        PersistentEventHashIterator {
-            iter: Box::new(self.keyspace.iter().map(|guard| match guard.into_inner() {
-                Ok((key, value)) => Ok(SliceAndPosition(value, UnitAndSlice((), key).into()).into()),
-                Err(err) => Err(Error::from(err)),
-            })),
-        }
+        let iter = Box::new(self.keyspace.iter().map(Guard::into_inner));
+
+        PersistentEventHashIterator::new(iter)
     }
 
-    #[rustfmt::skip]
     fn iterate_from(&self, from: Position) -> PersistentEventHashIterator<'_> {
-        PersistentEventHashIterator {
-            iter: Box::new(self.keyspace.range(from.to_be_bytes()..).map(|guard| {
-                match guard.into_inner() {
-                    Ok((key, value)) => Ok(SliceAndPosition(value, UnitAndSlice((), key).into()).into()),
-                    Err(err) => Err(Error::from(err)),
-                }
-            })),
-        }
+        let range = from.to_be_bytes()..;
+        let iter = Box::new(self.keyspace.range(range).map(Guard::into_inner));
+
+        PersistentEventHashIterator::new(iter)
     }
 }
 
@@ -181,19 +173,30 @@ impl From<EventAndTimestamp<'_>> for Vec<u8> {
 #[derive(new, Debug)]
 pub(crate) struct PersistentEventHashIterator<'a> {
     #[debug("Iterator")]
-    iter: Box<dyn DoubleEndedIterator<Item = Result<PersistentEventHash, Error>> + 'a>,
+    iter: Box<dyn DoubleEndedIterator<Item = Result<(Slice, Slice), fjall::Error>> + 'a>,
+}
+
+impl PersistentEventHashIterator<'_> {
+    #[allow(clippy::unnecessary_wraps)]
+    #[rustfmt::skip]
+    fn map(result: Result<(Slice, Slice), fjall::Error>) -> Option<<Self as Iterator>::Item> {
+        match result {
+            Ok((key, value)) => Some(Ok(SliceAndPosition(value, UnitAndSlice((), key).into()).into())),
+            Err(err) => Some(Err(Error::from(err))),
+        }
+    }
 }
 
 impl Iterator for PersistentEventHashIterator<'_> {
     type Item = Result<PersistentEventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next()
+        self.iter.next().and_then(Self::map)
     }
 }
 
 impl DoubleEndedIterator for PersistentEventHashIterator<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back()
+        self.iter.next_back().and_then(Self::map)
     }
 }

@@ -74,11 +74,7 @@ impl Identifiers {
 // Query
 
 impl Identifiers {
-    pub fn query<'a, S>(
-        &self,
-        specifiers: S,
-        from: Option<Position>,
-    ) -> PositionIterator<'_>
+    pub fn query<'a, S>(&self, specifiers: S, from: Option<Position>) -> PositionIterator<'_>
     where
         S: Iterator<Item = &'a SpecifierHash>,
     {
@@ -107,7 +103,6 @@ impl Identifiers {
     ) -> PositionIterator<'_> {
         let hash = identifier.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
-
         let iter = Box::new(self.keyspace.prefix(prefix).map(Guard::into_inner));
         let iter = IdentifierPositionIterator::new(iter, range);
 
@@ -123,7 +118,6 @@ impl Identifiers {
         let hash = identifier.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
-
         let iter = Box::new(self.keyspace.range(lower..upper).map(Guard::into_inner));
         let iter = IdentifierPositionIterator::new(iter, range);
 
