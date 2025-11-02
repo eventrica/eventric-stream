@@ -1,4 +1,8 @@
+use std::sync::Arc;
+
 use fancy_constructor::new;
+
+use crate::stream::query::cache::Cache;
 
 // =================================================================================================
 // Options
@@ -9,9 +13,11 @@ use fancy_constructor::new;
 /// (such as what data is returned, etc.).
 ///
 /// [query]: crate::stream::Stream::query
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 #[new(name(new_inner), vis())]
 pub struct Options {
+    #[new(default)]
+    pub(crate) cache: Option<Arc<Cache>>,
     #[new(default)]
     pub(crate) retrieve_tags: bool,
 }
@@ -28,6 +34,16 @@ impl Options {
     #[must_use]
     pub fn retrieve_tags(mut self, retrieve_tags: bool) -> Self {
         self.retrieve_tags = retrieve_tags;
+        self
+    }
+
+    /// Sets whether queries should use a shared [`Cache`] instance as supplied.
+    /// This can reduce the requirement for fetching data from the underlying
+    /// databasse, particularly where multiple similar queries are executed in
+    /// close proximity.
+    #[must_use]
+    pub fn with_shared_cache(mut self, cache: Arc<Cache>) -> Self {
+        self.cache = Some(cache);
         self
     }
 }

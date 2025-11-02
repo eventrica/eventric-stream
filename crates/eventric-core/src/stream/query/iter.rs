@@ -8,7 +8,6 @@ use crate::{
     event::{
         PersistentEvent,
         PersistentEventHash,
-        Position,
         identifier::{
             Identifier,
             IdentifierHash,
@@ -20,11 +19,7 @@ use crate::{
     },
     stream::{
         data::{
-            events::{
-                Events,
-                PersistentEventHashIterator,
-            },
-            indices::PositionIterator,
+            events::PersistentEventHashIterator,
             references::References,
         },
         query::{
@@ -44,12 +39,10 @@ use crate::{
 #[new(const_fn, vis(pub(crate)))]
 pub(crate) struct PersistentEventIterator {
     cache: Arc<Cache>,
-    iter: CombinedPersistentEventHashIterator,
+    iter: PersistentEventHashIterator,
     options: Option<Options>,
     references: References,
 }
-
-// Identifier
 
 impl PersistentEventIterator {
     fn get_identifier(&self, identifier: &IdentifierHash) -> Result<Identifier, Error> {
@@ -66,8 +59,6 @@ impl PersistentEventIterator {
         })
     }
 }
-
-// Tags
 
 impl PersistentEventIterator {
     fn get_tags(&self, tags: &[TagHash]) -> Result<Vec<Tag>, Error> {
@@ -98,8 +89,6 @@ impl PersistentEventIterator {
     }
 }
 
-// Map
-
 impl PersistentEventIterator {
     fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
         match event {
@@ -128,73 +117,5 @@ impl Iterator for PersistentEventIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(|event| self.map(event))
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Combined
-
-#[derive(Debug)]
-pub(crate) enum CombinedPersistentEventHashIterator {
-    Direct(#[debug("Peristent Event Hash Iterator")] PersistentEventHashIterator),
-    Mapped(MappedPersistentHashIterator),
-}
-
-impl DoubleEndedIterator for CombinedPersistentEventHashIterator {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        match self {
-            Self::Direct(iter) => iter.next_back(),
-            Self::Mapped(iter) => iter.next_back(),
-        }
-    }
-}
-
-impl Iterator for CombinedPersistentEventHashIterator {
-    type Item = Result<PersistentEventHash, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            Self::Direct(iter) => iter.next(),
-            Self::Mapped(iter) => iter.next(),
-        }
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Mapped
-
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub(crate) struct MappedPersistentHashIterator {
-    events: Events,
-    iter: PositionIterator,
-}
-
-impl MappedPersistentHashIterator {
-    fn map(&mut self, position: Result<Position, Error>) -> <Self as Iterator>::Item {
-        match position {
-            Ok(position) => match self.events.get(position) {
-                Ok(Some(event)) => Ok(event),
-                Ok(None) => Err(Error::data("event not found")),
-                Err(err) => Err(err),
-            },
-            Err(err) => Err(err),
-        }
-    }
-}
-
-impl DoubleEndedIterator for MappedPersistentHashIterator {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back().map(|position| self.map(position))
-    }
-}
-
-impl Iterator for MappedPersistentHashIterator {
-    type Item = Result<PersistentEventHash, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|position| self.map(position))
     }
 }

@@ -67,9 +67,11 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     let condition = Condition::default().matches(&query).from(Position::MIN);
 
     let cache = Arc::new(Cache::default());
-    let options = Options::default().retrieve_tags(false);
+    let options = Options::default()
+        .retrieve_tags(false)
+        .with_shared_cache(cache.clone());
 
-    for event in stream.query(&condition, cache.clone(), Some(options)) {
+    for event in stream.query(&condition, Some(options)) {
         println!("event: {event:#?}");
     }
 

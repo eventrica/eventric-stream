@@ -1,9 +1,6 @@
 use std::{
     path::Path,
-    sync::{
-        Arc,
-        LazyLock,
-    },
+    sync::LazyLock,
 };
 
 use assertables::{
@@ -24,7 +21,6 @@ use eventric_core::{
     stream::{
         Stream,
         query::{
-            Cache,
             Condition,
             Query,
             Selector,
@@ -39,11 +35,10 @@ use eventric_core::{
 #[test]
 fn default_empty() -> Result<(), Error> {
     let stream = stream(eventric_core::temp_path(), false)?;
-    let cache = Arc::new(Cache::default());
 
     let condition = Condition::default();
 
-    let mut events = stream.query(&condition, cache, None);
+    let mut events = stream.query(&condition, None);
 
     // Query on an empty stream should always return an empty iterator
 
@@ -57,11 +52,10 @@ fn default_empty() -> Result<(), Error> {
 #[test]
 fn default() -> Result<(), Error> {
     let stream = stream(eventric_core::temp_path(), true)?;
-    let cache = Arc::new(Cache::default());
 
     let condition = Condition::default();
 
-    let mut events = stream.query(&condition, cache, None);
+    let mut events = stream.query(&condition, None);
 
     // A query with default (empty) conditions should return all of the events in
     // the stream
@@ -81,14 +75,13 @@ fn default() -> Result<(), Error> {
 #[test]
 fn specifier() -> Result<(), Error> {
     let stream = stream(eventric_core::temp_path(), true)?;
-    let cache = Arc::new(Cache::default());
 
     let specifier = Specifier::new(EVENT_2.identifier().clone());
     let selector = Selector::specifiers([specifier])?;
     let query = Query::new([selector])?;
     let condition = Condition::default().matches(&query);
 
-    let mut events = stream.query(&condition, cache, None);
+    let mut events = stream.query(&condition, None);
 
     // A query with a single specifier with no version range should return any
     // events with a specific identifier, regardless of version, in this case 2
@@ -112,7 +105,6 @@ fn specifier() -> Result<(), Error> {
 #[test]
 fn specifier_with_range() -> Result<(), Error> {
     let stream = stream(eventric_core::temp_path(), true)?;
-    let cache = Arc::new(Cache::default());
 
     let range = Version::new(1)..Version::MAX;
     let specifier = Specifier::new(EVENT_2.identifier().clone()).range(range);
@@ -123,7 +115,7 @@ fn specifier_with_range() -> Result<(), Error> {
     let query = Query::new([selector])?;
     let condition = Condition::default().matches(&query);
 
-    let mut events = stream.query(&condition, cache, None);
+    let mut events = stream.query(&condition, None);
 
     // A query with a single specifier with a version range should only return
     // events matching both the specifier and the range, in this case the single
@@ -143,7 +135,6 @@ fn specifier_with_range() -> Result<(), Error> {
 #[test]
 fn multiple_specifiers() -> Result<(), Error> {
     let stream = stream(eventric_core::temp_path(), true)?;
-    let cache = Arc::new(Cache::default());
 
     let specifier_0 = Specifier::new(EVENT_0.identifier().clone());
     let specifier_1 = Specifier::new(EVENT_1.identifier().clone());
@@ -151,7 +142,7 @@ fn multiple_specifiers() -> Result<(), Error> {
     let query = Query::new([selector])?;
     let condition = Condition::default().matches(&query);
 
-    let mut events = stream.query(&condition, cache, None);
+    let mut events = stream.query(&condition, None);
 
     // A query with multiple specifiers (without version ranges in this case) should
     // return events which match any of the specifiers, in this case the two events
@@ -175,7 +166,6 @@ fn multiple_specifiers() -> Result<(), Error> {
 #[test]
 fn multiple_specifiers_with_range() -> Result<(), Error> {
     let stream = stream(eventric_core::temp_path(), true)?;
-    let cache = Arc::new(Cache::default());
 
     let specifier_0 = Specifier::new(EVENT_0.identifier().clone());
     let range = Version::new(1)..Version::MAX;
@@ -184,7 +174,7 @@ fn multiple_specifiers_with_range() -> Result<(), Error> {
     let query = Query::new([selector])?;
     let condition = Condition::default().matches(&query);
 
-    let mut events = stream.query(&condition, cache, None);
+    let mut events = stream.query(&condition, None);
 
     // A query with multiple specifiers (some of which have version ranges) should
     // again return events matching any of the specifiers
@@ -207,14 +197,13 @@ fn multiple_specifiers_with_range() -> Result<(), Error> {
 #[test]
 fn tag() -> Result<(), Error> {
     let stream = stream(eventric_core::temp_path(), true)?;
-    let cache = Arc::new(Cache::default());
 
     let tag_1 = EVENT_0.tags()[0].clone();
     let selector = Selector::tags([tag_1])?;
     let query = Query::new([selector])?;
     let condition = Condition::default().matches(&query);
 
-    let mut events = stream.query(&condition, cache, None);
+    let mut events = stream.query(&condition, None);
 
     // A query with a single tag should return only events matching that tag, in
     // this case the first event
@@ -233,7 +222,6 @@ fn tag() -> Result<(), Error> {
 #[test]
 fn multiple_tags() -> Result<(), Error> {
     let stream = stream(eventric_core::temp_path(), true)?;
-    let cache = Arc::new(Cache::default());
 
     let tag_4 = EVENT_3.tags()[0].clone();
     let tag_5 = EVENT_3.tags()[1].clone();
@@ -241,7 +229,7 @@ fn multiple_tags() -> Result<(), Error> {
     let query = Query::new([selector])?;
     let condition = Condition::default().matches(&query);
 
-    let mut events = stream.query(&condition, cache, None);
+    let mut events = stream.query(&condition, None);
 
     // A query with multiple tags should return only events matching all tags, in
     // this case the last 2 events

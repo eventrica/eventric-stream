@@ -8,8 +8,6 @@ pub(crate) mod condition;
 pub(crate) mod iter;
 pub(crate) mod options;
 
-use std::sync::Arc;
-
 use derive_more::{
     AsRef,
     Debug,
@@ -34,11 +32,11 @@ use crate::{
     },
     stream::{
         Stream,
-        query::iter::{
-            CombinedPersistentEventHashIterator,
-            MappedPersistentHashIterator,
-            PersistentEventIterator,
+        data::events::{
+            MappedPersistentEventHashIterator,
+            PersistentEventHashIterator,
         },
+        query::iter::PersistentEventIterator,
     },
     utils::validation::{
         Validate,
@@ -69,11 +67,17 @@ impl Stream {
     pub fn query(
         &self,
         condition: &Condition<'_>,
-        cache: Arc<Cache>,
         options: Option<Options>,
     ) -> impl DoubleEndedIterator<Item = Result<PersistentEvent, Error>> {
         let from = condition.from;
         let references = self.data.references.clone();
+
+        let cache = options
+            .as_ref()
+            .map(|options| options.cache.as_ref())
+            .and_then(|cache| cache)
+            .map(ToOwned::to_owned)
+            .unwrap_or_default();
 
         let iter = condition.matches.map_or_else(
             || self.query_events(from),
@@ -89,22 +93,22 @@ impl Stream {
         PersistentEventIterator::new(cache, iter, options, references)
     }
 
-    fn query_events(&self, from: Option<Position>) -> CombinedPersistentEventHashIterator {
+    fn query_events(&self, from: Option<Position>) -> PersistentEventHashIterator {
         let iter = self.data.events.iterate(from);
 
-        CombinedPersistentEventHashIterator::Direct(iter)
+        PersistentEventHashIterator::Direct(iter)
     }
 
     fn query_indices(
         &self,
         query: &QueryHash,
         from: Option<Position>,
-    ) -> CombinedPersistentEventHashIterator {
+    ) -> PersistentEventHashIterator {
         let events = self.data.events.clone();
         let iter = self.data.indices.query(query, from);
-        let iter = MappedPersistentHashIterator::new(events, iter);
+        let iter = MappedPersistentEventHashIterator::new(events, iter);
 
-        CombinedPersistentEventHashIterator::Mapped(iter)
+        PersistentEventHashIterator::Mapped(iter)
     }
 }
 
