@@ -18,7 +18,7 @@ derive_more           = { version = "2", features = ["full"] }
 double-ended-peekable = { version = "0.1.0" }
 eventric-core         = { path = "crates/eventric-core" }
 fancy_constructor     = { version = "2" }
-fjall                 = { version = "=3.0.0-pre.3" }
+fjall                 = { version = "=3.0.0-pre.4" }
 include-utils         = { version = "0.2" }
 rand                  = { version = "0.9" }
 rapidhash             = { version = "4" }

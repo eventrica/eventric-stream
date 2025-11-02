@@ -35,16 +35,20 @@ use crate::{
 
 // Iterator
 
+/// The [`QueryIterator`] type provides an [`Iterator`]/[`DoubleEndedIterator`]
+/// over query results for a [`Stream`][stream].
+///
+/// [stream]: crate::stream::Stream
 #[derive(new, Debug)]
 #[new(const_fn, vis(pub(crate)))]
-pub(crate) struct PersistentEventIterator {
+pub struct QueryIterator {
     cache: Arc<Cache>,
     iter: PersistentEventHashIterator,
     options: Option<Options>,
     references: References,
 }
 
-impl PersistentEventIterator {
+impl QueryIterator {
     fn get_identifier(&self, identifier: &IdentifierHash) -> Result<Identifier, Error> {
         self.cache
             .identifiers
@@ -60,7 +64,7 @@ impl PersistentEventIterator {
     }
 }
 
-impl PersistentEventIterator {
+impl QueryIterator {
     fn get_tags(&self, tags: &[TagHash]) -> Result<Vec<Tag>, Error> {
         tags.iter().filter_map(|tag| self.get_tag(tag)).collect()
     }
@@ -89,7 +93,7 @@ impl PersistentEventIterator {
     }
 }
 
-impl PersistentEventIterator {
+impl QueryIterator {
     fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
         match event {
             Ok(event) => {
@@ -106,13 +110,13 @@ impl PersistentEventIterator {
     }
 }
 
-impl DoubleEndedIterator for PersistentEventIterator {
+impl DoubleEndedIterator for QueryIterator {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.next_back().map(|event| self.map(event))
     }
 }
 
-impl Iterator for PersistentEventIterator {
+impl Iterator for QueryIterator {
     type Item = Result<PersistentEvent, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {

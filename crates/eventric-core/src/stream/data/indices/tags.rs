@@ -121,7 +121,7 @@ impl Tags {
 // Iterators
 
 #[rustfmt::skip]
-type BoxedTagPositionIterator<'a> = Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>;
+type BoxedTagPositionIterator<'a> = Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + Send + 'a>;
 
 self_cell!(
     pub(crate) struct TagPositionIterator {
@@ -153,6 +153,9 @@ impl Iterator for TagPositionIterator {
         self.with_dependent_mut(|_, iter| iter.next())
     }
 }
+
+#[allow(unsafe_code)]
+unsafe impl Sync for TagPositionIterator {}
 
 // -------------------------------------------------------------------------------------------------
 

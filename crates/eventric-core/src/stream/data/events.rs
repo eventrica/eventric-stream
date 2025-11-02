@@ -160,7 +160,7 @@ impl Iterator for PersistentEventHashIterator {
 // Direct
 
 #[rustfmt::skip]
-type BoxedPersistentEventHashIterator<'a> = Box<dyn DoubleEndedIterator<Item = Result<PersistentEventHash, Error>> + 'a>;
+type BoxedPersistentEventHashIterator<'a> = Box<dyn DoubleEndedIterator<Item = Result<PersistentEventHash, Error>> + Send + 'a>;
 
 self_cell!(
     pub(crate) struct DirectPersistentEventHashIterator {
@@ -192,6 +192,9 @@ impl Iterator for DirectPersistentEventHashIterator {
         self.with_dependent_mut(|_, iter| iter.next())
     }
 }
+
+#[allow(unsafe_code)]
+unsafe impl Sync for DirectPersistentEventHashIterator {}
 
 // Mapped
 

@@ -157,7 +157,7 @@ impl Identifiers {
 // Iterators
 
 #[rustfmt::skip]
-type BoxedIdentifierPositionIterator<'a> = Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>;
+type BoxedIdentifierPositionIterator<'a> = Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + Send + 'a>;
 
 self_cell!(
     pub(crate) struct IdentifierPositionIterator {
@@ -202,6 +202,9 @@ impl Iterator for IdentifierPositionIterator {
         self.with_dependent_mut(|_, iter| iter.next())
     }
 }
+
+#[allow(unsafe_code)]
+unsafe impl Sync for IdentifierPositionIterator {}
 
 // -------------------------------------------------------------------------------------------------
 

@@ -17,7 +17,6 @@ use fancy_constructor::new;
 use crate::{
     error::Error,
     event::{
-        PersistentEvent,
         position::Position,
         specifier::{
             Specifier,
@@ -36,7 +35,6 @@ use crate::{
             MappedPersistentEventHashIterator,
             PersistentEventHashIterator,
         },
-        query::iter::PersistentEventIterator,
     },
     utils::validation::{
         Validate,
@@ -64,11 +62,7 @@ impl Stream {
     /// [identifier]: crate::event::Identifier
     /// [issue]: https://github.com/eventrica/eventric-core/issues/21
     #[must_use]
-    pub fn query(
-        &self,
-        condition: &Condition<'_>,
-        options: Option<Options>,
-    ) -> impl DoubleEndedIterator<Item = Result<PersistentEvent, Error>> {
+    pub fn query(&self, condition: &Condition<'_>, options: Option<Options>) -> QueryIterator {
         let from = condition.from;
         let references = self.data.references.clone();
 
@@ -90,7 +84,7 @@ impl Stream {
             },
         );
 
-        PersistentEventIterator::new(cache, iter, options, references)
+        QueryIterator::new(cache, iter, options, references)
     }
 
     fn query_events(&self, from: Option<Position>) -> PersistentEventHashIterator {
@@ -452,5 +446,6 @@ impl Validate for Tags {
 pub use self::{
     cache::Cache,
     condition::Condition,
+    iter::QueryIterator,
     options::Options,
 };
