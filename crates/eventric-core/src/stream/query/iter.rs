@@ -169,7 +169,7 @@ impl Iterator for CombinedPersistentEventHashIterator<'_> {
 #[new(const_fn)]
 pub(crate) struct MappedPersistentHashIterator<'a> {
     events: &'a Events,
-    iter: PositionIterator<'a>,
+    iter: PositionIterator,
 }
 
 impl MappedPersistentHashIterator<'_> {
