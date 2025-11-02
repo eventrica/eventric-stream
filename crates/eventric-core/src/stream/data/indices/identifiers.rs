@@ -146,6 +146,7 @@ impl<'a> IdentifierPositionIterator<'a> {
         I: DoubleEndedIterator<Item = Result<(Slice, Slice), fjall::Error>> + 'a,
     {
         let range = Arc::new(range);
+
         let iter = iter.filter_map(move |result| Self::filter_map(result, range.as_ref().as_ref()));
         let iter = Box::new(iter);
 
