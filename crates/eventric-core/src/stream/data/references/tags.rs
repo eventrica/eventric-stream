@@ -68,6 +68,8 @@ impl Tags {
 
 // Conversions
 
+// Hash -> Key Byte Array
+
 struct Hash(u64);
 
 impl From<Hash> for [u8; KEY_LEN] {

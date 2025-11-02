@@ -51,6 +51,8 @@ impl Timestamps {
 
 // Conversions
 
+// Unit (Marker). & Timestamp -> Key Byte Array
+
 struct UnitAndTimestamp((), Timestamp);
 
 impl From<UnitAndTimestamp> for [u8; KEY_LEN] {

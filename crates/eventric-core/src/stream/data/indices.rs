@@ -118,8 +118,6 @@ impl Indices {
 
 // Iterators
 
-// Position Iterator
-
 #[derive(Debug)]
 #[rustfmt::skip]
 pub enum PositionIterator<'a> {

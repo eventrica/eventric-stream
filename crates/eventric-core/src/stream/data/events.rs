@@ -90,14 +90,26 @@ impl Events {
     }
 
     fn iterate_all(&self) -> PersistentEventHashIterator<'_> {
-        let iter = Box::new(self.keyspace.iter().map(Guard::into_inner));
+        let iter = self
+            .keyspace
+            .iter()
+            .map(Guard::into_inner)
+            .map(PersistentEventHashIterator::map);
+
+        let iter = Box::new(iter);
 
         PersistentEventHashIterator::new(iter)
     }
 
     fn iterate_from(&self, from: Position) -> PersistentEventHashIterator<'_> {
         let range = from.to_be_bytes()..;
-        let iter = Box::new(self.keyspace.range(range).map(Guard::into_inner));
+        let iter = self
+            .keyspace
+            .range(range)
+            .map(Guard::into_inner)
+            .map(PersistentEventHashIterator::map);
+
+        let iter = Box::new(iter);
 
         PersistentEventHashIterator::new(iter)
     }
@@ -118,13 +130,17 @@ impl Events {
 
 // Conversions
 
-struct UnitAndSlice((), Slice);
+// Key (Slice) -> Position
 
-impl From<UnitAndSlice> for Position {
-    fn from(UnitAndSlice((), slice): UnitAndSlice) -> Self {
+struct Key(Slice);
+
+impl From<Key> for Position {
+    fn from(Key(slice): Key) -> Self {
         Self::new(slice.as_ref().get_u64())
     }
 }
+
+// Slice & Position -> PersistentEventHash
 
 struct SliceAndPosition(Slice, Position);
 
@@ -144,6 +160,8 @@ impl From<SliceAndPosition> for PersistentEventHash {
         Self::new(data, identifier, position, tags, timestamp, version)
     }
 }
+
+// Event & Timestamp -> Value Byte Vector
 
 struct EventAndTimestamp<'a>(&'a EphemeralEventHashRef<'a>, Timestamp);
 
@@ -168,22 +186,26 @@ impl From<EventAndTimestamp<'_>> for Vec<u8> {
 
 // -------------------------------------------------------------------------------------------------
 
-// Iterator
+// Iterators
 
 #[derive(new, Debug)]
 pub(crate) struct PersistentEventHashIterator<'a> {
     #[debug("Iterator")]
-    iter: Box<dyn DoubleEndedIterator<Item = Result<(Slice, Slice), fjall::Error>> + 'a>,
+    iter: Box<dyn DoubleEndedIterator<Item = Result<PersistentEventHash, Error>> + 'a>,
 }
 
 impl PersistentEventHashIterator<'_> {
-    #[allow(clippy::unnecessary_wraps)]
-    #[rustfmt::skip]
-    fn map(result: Result<(Slice, Slice), fjall::Error>) -> Option<<Self as Iterator>::Item> {
+    fn map(result: Result<(Slice, Slice), fjall::Error>) -> <Self as Iterator>::Item {
         match result {
-            Ok((key, value)) => Some(Ok(SliceAndPosition(value, UnitAndSlice((), key).into()).into())),
-            Err(err) => Some(Err(Error::from(err))),
+            Ok((key, value)) => Ok(SliceAndPosition(value, Key(key).into()).into()),
+            Err(err) => Err(Error::from(err)),
         }
+    }
+}
+
+impl DoubleEndedIterator for PersistentEventHashIterator<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.next_back()
     }
 }
 
@@ -191,12 +213,6 @@ impl Iterator for PersistentEventHashIterator<'_> {
     type Item = Result<PersistentEventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().and_then(Self::map)
-    }
-}
-
-impl DoubleEndedIterator for PersistentEventHashIterator<'_> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back().and_then(Self::map)
+        self.iter.next()
     }
 }

@@ -32,7 +32,9 @@ use crate::{
     },
 };
 
-// -------------------------------------------------------------------------------------------------
+// =================================================================================================
+// Iterator
+// =================================================================================================
 
 // Iterator
 
@@ -44,6 +46,8 @@ pub(crate) struct PersistentEventIterator<'a> {
     options: Option<Options>,
     references: &'a References,
 }
+
+// Identifier
 
 impl PersistentEventIterator<'_> {
     fn get_identifier(&self, identifier: &IdentifierHash) -> Result<Identifier, Error> {
@@ -59,7 +63,11 @@ impl PersistentEventIterator<'_> {
             identifier.ok_or_else(|| Error::data(format!("identifier not found: {hash}")))
         })
     }
+}
 
+// Tags
+
+impl PersistentEventIterator<'_> {
     fn get_tags(&self, tags: &[TagHash]) -> Result<Vec<Tag>, Error> {
         tags.iter().filter_map(|tag| self.get_tag(tag)).collect()
     }
@@ -87,6 +95,8 @@ impl PersistentEventIterator<'_> {
             .and_then(|tag| tag.ok_or_else(|| Error::data(format!("tag not found: {hash}"))))
     }
 }
+
+// Map
 
 impl PersistentEventIterator<'_> {
     fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
@@ -119,7 +129,9 @@ impl Iterator for PersistentEventIterator<'_> {
     }
 }
 
-// Hash Iterator
+// -------------------------------------------------------------------------------------------------
+
+// Combined
 
 #[derive(Debug)]
 pub(crate) enum CombinedPersistentEventHashIterator<'a> {
@@ -147,7 +159,9 @@ impl Iterator for CombinedPersistentEventHashIterator<'_> {
     }
 }
 
-// Mapped Hash Iterator
+// -------------------------------------------------------------------------------------------------
+
+// Mapped
 
 #[derive(new, Debug)]
 #[new(const_fn)]

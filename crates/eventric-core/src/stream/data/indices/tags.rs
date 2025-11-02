@@ -84,7 +84,14 @@ impl Tags {
     fn query_tag_prefix(&self, tag: &TagHash) -> PositionIterator<'_> {
         let hash = tag.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
-        let iter = Box::new(self.keyspace.prefix(prefix).map(Guard::key));
+
+        let iter = self
+            .keyspace
+            .prefix(prefix)
+            .map(Guard::key)
+            .map(TagPositionIterator::map);
+
+        let iter = Box::new(iter);
         let iter = TagPositionIterator::new(iter);
 
         PositionIterator::Tag(iter)
@@ -94,7 +101,14 @@ impl Tags {
         let hash = tag.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
-        let iter = Box::new(self.keyspace.range(lower..upper).map(Guard::key));
+
+        let iter = self
+            .keyspace
+            .range(lower..upper)
+            .map(Guard::key)
+            .map(TagPositionIterator::map);
+
+        let iter = Box::new(iter);
         let iter = TagPositionIterator::new(iter);
 
         PositionIterator::Tag(iter)
@@ -103,25 +117,43 @@ impl Tags {
 
 // -------------------------------------------------------------------------------------------------
 
-// Conversions
+// Iterators
 
-struct PositionAndHash(Position, u64);
+#[derive(new, Debug)]
+#[new(const_fn, vis())]
+pub(crate) struct TagPositionIterator<'a> {
+    #[debug("BoxedIterator")]
+    iter: Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>,
+}
 
-impl From<PositionAndHash> for [u8; KEY_LEN] {
-    fn from(PositionAndHash(position, hash): PositionAndHash) -> Self {
-        let mut key = [0u8; KEY_LEN];
-
-        {
-            let mut key = &mut key[..];
-
-            key.put_u8(INDEX_ID);
-            key.put_u64(hash);
-            key.put_u64(*position);
+impl TagPositionIterator<'_> {
+    fn map(result: Result<Slice, fjall::Error>) -> <Self as Iterator>::Item {
+        match result {
+            Ok(key) => Ok(Key(key).into()),
+            Err(err) => Err(Error::from(err)),
         }
-
-        key
     }
 }
+
+impl DoubleEndedIterator for TagPositionIterator<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.next_back()
+    }
+}
+
+impl Iterator for TagPositionIterator<'_> {
+    type Item = Result<Position, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Conversions
+
+// Hash -> Prefix Byte Array
 
 struct Hash(u64);
 
@@ -140,43 +172,36 @@ impl From<Hash> for [u8; PREFIX_LEN] {
     }
 }
 
-// -------------------------------------------------------------------------------------------------
+// Key (Slice) -> Position
 
-// Iterators
+struct Key(Slice);
 
-#[derive(new, Debug)]
-#[new(const_fn, vis())]
-pub(crate) struct TagPositionIterator<'a> {
-    #[debug("BoxedIterator")]
-    iter: Box<dyn DoubleEndedIterator<Item = Result<Slice, fjall::Error>> + 'a>,
-}
+impl From<Key> for Position {
+    fn from(Key(slice): Key) -> Self {
+        let mut slice = &slice[..];
 
-impl TagPositionIterator<'_> {
-    fn map(key: &Slice) -> Position {
-        let mut key = &key[..];
+        slice.advance(ID_LEN + HASH_LEN);
 
-        key.advance(ID_LEN + HASH_LEN);
-
-        Position::new(key.get_u64())
+        Position::new(slice.get_u64())
     }
 }
 
-impl DoubleEndedIterator for TagPositionIterator<'_> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        match self.iter.next()? {
-            Ok(key) => Some(Ok(Self::map(&key))),
-            Err(err) => Some(Err(Error::from(err))),
-        }
-    }
-}
+// Position & Hash -> Key Byte Array
 
-impl Iterator for TagPositionIterator<'_> {
-    type Item = Result<Position, Error>;
+struct PositionAndHash(Position, u64);
 
-    fn next(&mut self) -> Option<Self::Item> {
-        match self.iter.next()? {
-            Ok(key) => Some(Ok(Self::map(&key))),
-            Err(err) => Some(Err(Error::from(err))),
+impl From<PositionAndHash> for [u8; KEY_LEN] {
+    fn from(PositionAndHash(position, hash): PositionAndHash) -> Self {
+        let mut key = [0u8; KEY_LEN];
+
+        {
+            let mut key = &mut key[..];
+
+            key.put_u8(INDEX_ID);
+            key.put_u64(hash);
+            key.put_u64(*position);
         }
+
+        key
     }
 }

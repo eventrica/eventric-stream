@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use any_range::AnyRange;
 use bytes::{
     Buf,
@@ -103,8 +105,18 @@ impl Identifiers {
     ) -> PositionIterator<'_> {
         let hash = identifier.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
-        let iter = Box::new(self.keyspace.prefix(prefix).map(Guard::into_inner));
-        let iter = IdentifierPositionIterator::new(iter, range);
+
+        let range = Arc::new(range);
+        let iter = self
+            .keyspace
+            .prefix(prefix)
+            .map(Guard::into_inner)
+            .filter_map(move |result| {
+                IdentifierPositionIterator::filter_map(result, range.as_ref().as_ref())
+            });
+
+        let iter = Box::new(iter);
+        let iter = IdentifierPositionIterator::new(iter);
 
         PositionIterator::Identifier(iter)
     }
@@ -118,8 +130,18 @@ impl Identifiers {
         let hash = identifier.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
-        let iter = Box::new(self.keyspace.range(lower..upper).map(Guard::into_inner));
-        let iter = IdentifierPositionIterator::new(iter, range);
+
+        let range = Arc::new(range);
+        let iter = self
+            .keyspace
+            .range(lower..upper)
+            .map(Guard::into_inner)
+            .filter_map(move |result| {
+                IdentifierPositionIterator::filter_map(result, range.as_ref().as_ref())
+            });
+
+        let iter = Box::new(iter);
+        let iter = IdentifierPositionIterator::new(iter);
 
         PositionIterator::Identifier(iter)
     }
@@ -127,7 +149,89 @@ impl Identifiers {
 
 // -------------------------------------------------------------------------------------------------
 
+// Iterators
+
+#[derive(new, Debug)]
+#[new(const_fn, vis())]
+pub(crate) struct IdentifierPositionIterator<'a> {
+    #[debug("Boxed Iterator")]
+    iter: Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>,
+}
+
+impl IdentifierPositionIterator<'_> {
+    fn filter_map(
+        result: Result<(Slice, Slice), fjall::Error>,
+        range: Option<&AnyRange<Version>>,
+    ) -> Option<<Self as Iterator>::Item> {
+        match result {
+            Ok((key, value)) => {
+                if let Some(range) = range {
+                    let version = Value(value).into();
+
+                    if !range.contains(&version) {
+                        return None;
+                    }
+                }
+
+                Some(Ok(Key(key).into()))
+            }
+            Err(err) => Some(Err(Error::from(err))),
+        }
+    }
+}
+
+impl DoubleEndedIterator for IdentifierPositionIterator<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.next_back()
+    }
+}
+
+impl Iterator for IdentifierPositionIterator<'_> {
+    type Item = Result<Position, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next()
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
 // Conversions
+
+// Hash -> Prefix Byte Array
+
+struct Hash(u64);
+
+impl From<Hash> for [u8; PREFIX_LEN] {
+    fn from(Hash(hash): Hash) -> Self {
+        let mut prefix = [0u8; PREFIX_LEN];
+
+        {
+            let mut prefix = &mut prefix[..];
+
+            prefix.put_u8(INDEX_ID);
+            prefix.put_u64(hash);
+        }
+
+        prefix
+    }
+}
+
+// Key (Slice) -> Position
+
+struct Key(Slice);
+
+impl From<Key> for Position {
+    fn from(Key(slice): Key) -> Self {
+        let mut slice = &slice[..];
+
+        slice.advance(ID_LEN + HASH_LEN);
+
+        Position::new(slice.get_u64())
+    }
+}
+
+// Position & Hash -> Key Byte Array
 
 struct PositionAndHash(Position, u64);
 
@@ -147,81 +251,12 @@ impl From<PositionAndHash> for [u8; KEY_LEN] {
     }
 }
 
-struct Hash(u64);
+// Value (Slice) -> Version
 
-impl From<Hash> for [u8; PREFIX_LEN] {
-    fn from(Hash(hash): Hash) -> Self {
-        let mut prefix = [0u8; PREFIX_LEN];
+struct Value(Slice);
 
-        {
-            let mut prefix = &mut prefix[..];
-
-            prefix.put_u8(INDEX_ID);
-            prefix.put_u64(hash);
-        }
-
-        prefix
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Iterators
-
-#[derive(new, Debug)]
-#[new(const_fn, vis())]
-pub(crate) struct IdentifierPositionIterator<'a> {
-    #[debug("BoxedIterator")]
-    iter: Box<dyn DoubleEndedIterator<Item = Result<(Slice, Slice), fjall::Error>> + 'a>,
-    range: Option<AnyRange<Version>>,
-}
-
-impl IdentifierPositionIterator<'_> {
-    fn filter(&mut self, key: &Slice, value: &Slice) -> Option<Position> {
-        if let Some(range) = &self.range {
-            let version = Version::new(value.as_ref().get_u8());
-
-            if !range.contains(&version) {
-                return None;
-            }
-        }
-
-        let mut key = &key[..];
-
-        key.advance(ID_LEN + HASH_LEN);
-
-        Some(Position::new(key.get_u64()))
-    }
-}
-
-impl DoubleEndedIterator for IdentifierPositionIterator<'_> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.iter.next_back()? {
-                Ok((key, value)) => {
-                    if let Some(position) = self.filter(&key, &value) {
-                        return Some(Ok(position));
-                    }
-                }
-                Err(err) => return Some(Err(Error::from(err))),
-            }
-        }
-    }
-}
-
-impl Iterator for IdentifierPositionIterator<'_> {
-    type Item = Result<Position, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.iter.next()? {
-                Ok((key, value)) => {
-                    if let Some(position) = self.filter(&key, &value) {
-                        return Some(Ok(position));
-                    }
-                }
-                Err(err) => return Some(Err(Error::from(err))),
-            }
-        }
+impl From<Value> for Version {
+    fn from(Value(slice): Value) -> Self {
+        Version::new(slice.as_ref().get_u8())
     }
 }
