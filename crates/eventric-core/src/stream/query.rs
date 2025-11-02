@@ -65,29 +65,23 @@ impl Stream {
     /// [issue]: https://github.com/eventrica/eventric-core/issues/21
     #[must_use]
     pub fn query(&self, condition: &Condition<'_>, options: Option<Options>) -> QueryIterator {
-        let from = condition.from;
+        let options = options.unwrap_or_default();
         let references = self.data.references.clone();
 
-        let cache = options
-            .as_ref()
-            .map(|options| options.cache.as_ref())
-            .and_then(|cache| cache)
-            .map(ToOwned::to_owned)
-            .unwrap_or_default();
-
         let iter = condition.matches.map_or_else(
-            || self.query_events(from),
+            || self.query_events(condition.from),
             |query| {
                 let query_hash_ref: QueryHashRef<'_> = query.into();
                 let query_hash: QueryHash = (&query_hash_ref).into();
 
-                cache.populate(&query_hash_ref);
-                self.query_indices(&query_hash, from)
+                options.cache.populate(&query_hash_ref);
+
+                self.query_indices(&query_hash, condition.from)
             },
         );
         let iter = Exclusive::new(iter);
 
-        QueryIterator::new(cache, iter, options, references)
+        QueryIterator::new(iter, options, references)
     }
 
     fn query_events(&self, from: Option<Position>) -> PersistentEventHashIterator {

@@ -1,7 +1,4 @@
-use std::sync::{
-    Arc,
-    Exclusive,
-};
+use std::sync::Exclusive;
 
 use derive_more::Debug;
 use fancy_constructor::new;
@@ -25,10 +22,7 @@ use crate::{
             events::PersistentEventHashIterator,
             references::References,
         },
-        query::{
-            Cache,
-            Options,
-        },
+        query::Options,
     },
 };
 
@@ -45,15 +39,15 @@ use crate::{
 #[derive(new, Debug)]
 #[new(const_fn, vis(pub(crate)))]
 pub struct QueryIterator {
-    cache: Arc<Cache>,
     iter: Exclusive<PersistentEventHashIterator>,
-    options: Option<Options>,
+    options: Options,
     references: References,
 }
 
 impl QueryIterator {
     fn get_identifier(&self, identifier: &IdentifierHash) -> Result<Identifier, Error> {
-        self.cache
+        self.options
+            .cache
             .identifiers
             .entry(identifier.hash())
             .or_try_insert_with(|| self.get_identifier_from_references(identifier.hash()))
@@ -72,21 +66,20 @@ impl QueryIterator {
         tags.iter().filter_map(|tag| self.get_tag(tag)).collect()
     }
 
+    #[allow(clippy::obfuscated_if_else)]
     fn get_tag(&self, tag: &TagHash) -> Option<Result<Tag, Error>> {
-        match &self.options {
-            Some(options) if options.retrieve_tags => Some(
-                self.cache
-                    .tags
-                    .entry(tag.hash())
-                    .or_try_insert_with(|| self.get_tag_from_references(tag.hash()))
-                    .map(|entry| entry.value().clone()),
-            ),
-            _ => self
-                .cache
-                .tags
-                .get(&tag.hash())
-                .map(|key_value| Ok(key_value.value().clone())),
-        }
+        let tags = &self.options.cache.tags;
+
+        self.options
+            .retrieve_tags
+            .then(|| {
+                Some(
+                    tags.entry(tag.hash())
+                        .or_try_insert_with(|| self.get_tag_from_references(tag.hash()))
+                        .map(|entry| entry.value().clone()),
+                )
+            })
+            .unwrap_or_else(|| tags.get(&tag.hash()).map(|entry| Ok(entry.value().clone())))
     }
 
     fn get_tag_from_references(&self, hash: u64) -> Result<Tag, Error> {

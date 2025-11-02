@@ -17,7 +17,7 @@ use crate::stream::query::cache::Cache;
 #[new(name(new_inner), vis())]
 pub struct Options {
     #[new(default)]
-    pub(crate) cache: Option<Arc<Cache>>,
+    pub(crate) cache: Arc<Cache>,
     #[new(default)]
     pub(crate) retrieve_tags: bool,
 }
@@ -43,7 +43,7 @@ impl Options {
     /// close proximity.
     #[must_use]
     pub fn with_shared_cache(mut self, cache: Arc<Cache>) -> Self {
-        self.cache = Some(cache);
+        self.cache = cache;
         self
     }
 }
