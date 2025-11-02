@@ -203,9 +203,6 @@ impl Iterator for IdentifierPositionIterator {
     }
 }
 
-#[allow(unsafe_code)]
-unsafe impl Sync for IdentifierPositionIterator {}
-
 // -------------------------------------------------------------------------------------------------
 
 // Conversions

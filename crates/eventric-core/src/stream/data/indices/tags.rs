@@ -154,9 +154,6 @@ impl Iterator for TagPositionIterator {
     }
 }
 
-#[allow(unsafe_code)]
-unsafe impl Sync for TagPositionIterator {}
-
 // -------------------------------------------------------------------------------------------------
 
 // Conversions

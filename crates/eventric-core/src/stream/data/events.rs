@@ -193,9 +193,6 @@ impl Iterator for DirectPersistentEventHashIterator {
     }
 }
 
-#[allow(unsafe_code)]
-unsafe impl Sync for DirectPersistentEventHashIterator {}
-
 // Mapped
 
 #[derive(new, Debug)]

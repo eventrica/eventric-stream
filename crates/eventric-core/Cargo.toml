@@ -10,6 +10,7 @@ include-utils.workspace         = true
 rand.workspace                  = true
 rapidhash.workspace             = true
 self_cell.workspace             = true
+sync_wrapper                    = "1"
 thiserror.workspace             = true
 
 [dev-dependencies]

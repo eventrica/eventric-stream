@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    Exclusive,
+};
 
 use derive_more::Debug;
 use fancy_constructor::new;
@@ -43,7 +46,7 @@ use crate::{
 #[new(const_fn, vis(pub(crate)))]
 pub struct QueryIterator {
     cache: Arc<Cache>,
-    iter: PersistentEventHashIterator,
+    iter: Exclusive<PersistentEventHashIterator>,
     options: Option<Options>,
     references: References,
 }
@@ -112,7 +115,7 @@ impl QueryIterator {
 
 impl DoubleEndedIterator for QueryIterator {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back().map(|event| self.map(event))
+        self.iter.get_mut().next_back().map(|event| self.map(event))
     }
 }
 
@@ -120,6 +123,6 @@ impl Iterator for QueryIterator {
     type Item = Result<PersistentEvent, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|event| self.map(event))
+        self.iter.get_mut().next().map(|event| self.map(event))
     }
 }

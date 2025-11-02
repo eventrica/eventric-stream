@@ -5,6 +5,7 @@
 #![deny(missing_docs)]
 #![deny(unsafe_code)]
 #![doc = include_utils::include_md!("README.md:overview")]
+#![feature(exclusive_wrapper)]
 
 pub mod error;
 pub mod event;

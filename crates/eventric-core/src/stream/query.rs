@@ -8,6 +8,8 @@ pub(crate) mod condition;
 pub(crate) mod iter;
 pub(crate) mod options;
 
+use std::sync::Exclusive;
+
 use derive_more::{
     AsRef,
     Debug,
@@ -83,6 +85,7 @@ impl Stream {
                 self.query_indices(&query_hash, from)
             },
         );
+        let iter = Exclusive::new(iter);
 
         QueryIterator::new(cache, iter, options, references)
     }
