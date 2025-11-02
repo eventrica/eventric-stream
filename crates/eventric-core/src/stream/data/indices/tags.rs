@@ -85,13 +85,7 @@ impl Tags {
         let hash = tag.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
-        let iter = self
-            .keyspace
-            .prefix(prefix)
-            .map(Guard::key)
-            .map(TagPositionIterator::map);
-
-        let iter = Box::new(iter);
+        let iter = self.keyspace.prefix(prefix).map(Guard::key);
         let iter = TagPositionIterator::new(iter);
 
         PositionIterator::Tag(iter)
@@ -102,13 +96,7 @@ impl Tags {
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
-        let iter = self
-            .keyspace
-            .range(lower..upper)
-            .map(Guard::key)
-            .map(TagPositionIterator::map);
-
-        let iter = Box::new(iter);
+        let iter = self.keyspace.range(lower..upper).map(Guard::key);
         let iter = TagPositionIterator::new(iter);
 
         PositionIterator::Tag(iter)
@@ -120,10 +108,22 @@ impl Tags {
 // Iterators
 
 #[derive(new, Debug)]
-#[new(const_fn, vis())]
+#[new(const_fn, name(new_inner), vis())]
 pub(crate) struct TagPositionIterator<'a> {
     #[debug("BoxedIterator")]
     iter: Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>,
+}
+
+impl<'a> TagPositionIterator<'a> {
+    fn new<I>(iter: I) -> Self
+    where
+        I: DoubleEndedIterator<Item = Result<Slice, fjall::Error>> + 'a,
+    {
+        let iter = iter.map(Self::map);
+        let iter = Box::new(iter);
+
+        Self::new_inner(iter)
+    }
 }
 
 impl TagPositionIterator<'_> {

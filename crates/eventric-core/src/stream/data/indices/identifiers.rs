@@ -106,17 +106,8 @@ impl Identifiers {
         let hash = identifier.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
-        let range = Arc::new(range);
-        let iter = self
-            .keyspace
-            .prefix(prefix)
-            .map(Guard::into_inner)
-            .filter_map(move |result| {
-                IdentifierPositionIterator::filter_map(result, range.as_ref().as_ref())
-            });
-
-        let iter = Box::new(iter);
-        let iter = IdentifierPositionIterator::new(iter);
+        let iter = self.keyspace.prefix(prefix).map(Guard::into_inner);
+        let iter = IdentifierPositionIterator::new(iter, range);
 
         PositionIterator::Identifier(iter)
     }
@@ -131,17 +122,8 @@ impl Identifiers {
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
-        let range = Arc::new(range);
-        let iter = self
-            .keyspace
-            .range(lower..upper)
-            .map(Guard::into_inner)
-            .filter_map(move |result| {
-                IdentifierPositionIterator::filter_map(result, range.as_ref().as_ref())
-            });
-
-        let iter = Box::new(iter);
-        let iter = IdentifierPositionIterator::new(iter);
+        let iter = self.keyspace.range(lower..upper).map(Guard::into_inner);
+        let iter = IdentifierPositionIterator::new(iter, range);
 
         PositionIterator::Identifier(iter)
     }
@@ -152,10 +134,23 @@ impl Identifiers {
 // Iterators
 
 #[derive(new, Debug)]
-#[new(const_fn, vis())]
+#[new(const_fn, name(new_inner), vis())]
 pub(crate) struct IdentifierPositionIterator<'a> {
     #[debug("Boxed Iterator")]
     iter: Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + 'a>,
+}
+
+impl<'a> IdentifierPositionIterator<'a> {
+    fn new<I>(iter: I, range: Option<AnyRange<Version>>) -> Self
+    where
+        I: DoubleEndedIterator<Item = Result<(Slice, Slice), fjall::Error>> + 'a,
+    {
+        let range = Arc::new(range);
+        let iter = iter.filter_map(move |result| Self::filter_map(result, range.as_ref().as_ref()));
+        let iter = Box::new(iter);
+
+        Self::new_inner(iter)
+    }
 }
 
 impl IdentifierPositionIterator<'_> {
