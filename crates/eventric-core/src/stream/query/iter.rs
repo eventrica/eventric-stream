@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use derive_more::Debug;
 use fancy_constructor::new;
 
@@ -41,7 +43,7 @@ use crate::{
 #[derive(new, Debug)]
 #[new(const_fn, vis(pub(crate)))]
 pub(crate) struct PersistentEventIterator<'a> {
-    cache: &'a Cache,
+    cache: Arc<Cache>,
     iter: CombinedPersistentEventHashIterator<'a>,
     options: Option<Options>,
     references: &'a References,

@@ -8,6 +8,8 @@ pub(crate) mod condition;
 pub(crate) mod iter;
 pub(crate) mod options;
 
+use std::sync::Arc;
+
 use derive_more::{
     AsRef,
     Debug,
@@ -64,10 +66,10 @@ impl Stream {
     /// [identifier]: crate::event::Identifier
     /// [issue]: https://github.com/eventrica/eventric-core/issues/21
     #[must_use]
-    pub fn query<'a>(
-        &'a self,
+    pub fn query(
+        &self,
         condition: &Condition<'_>,
-        cache: &'a Cache,
+        cache: Arc<Cache>,
         options: Option<Options>,
     ) -> impl DoubleEndedIterator<Item = Result<PersistentEvent, Error>> {
         let from = condition.from;
