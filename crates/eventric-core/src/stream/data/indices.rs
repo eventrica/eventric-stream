@@ -122,8 +122,8 @@ impl Indices {
 pub enum PositionIterator {
     And(SequentialAndIterator<PositionIterator, Position>),
     Or(SequentialOrIterator<PositionIterator, Position>),
-    Identifier(#[debug("Identifier Position DoubleEndedIterator")] IdentifierPositionIterator),
-    Tag(#[debug("Tag Position DoubleEndedIterator")] TagPositionIterator),
+    Identifier(#[debug("Identifier Position Iterator")] IdentifierPositionIterator),
+    Tag(#[debug("Tag Position Iterator")] TagPositionIterator),
 }
 
 impl DoubleEndedIterator for PositionIterator {
