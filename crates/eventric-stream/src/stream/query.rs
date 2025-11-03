@@ -62,7 +62,7 @@ impl Stream {
     /// Returns an error in the case of an underlying IO/database error.
     ///
     /// [identifier]: crate::event::Identifier
-    /// [issue]: https://github.com/eventrica/eventric-core/issues/21
+    /// [issue]: https://github.com/eventrica/eventric-stream/issues/21
     #[must_use]
     pub fn query(&self, condition: &Condition<'_>, options: Option<Options>) -> QueryIterator {
         let options = options.unwrap_or_default();

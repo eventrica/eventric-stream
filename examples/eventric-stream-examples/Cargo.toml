@@ -1,5 +1,5 @@
 [dependencies]
-eventric-core.workspace = true
+eventric-stream.workspace = true
 
 [lints]
 workspace = true
@@ -7,11 +7,11 @@ workspace = true
 [package]
 authors.workspace    = true
 categories.workspace = true
-description          = "Eventric Core Profiling Examples"
+description          = "Eventric Stream Examples"
 edition.workspace    = true
 keywords.workspace   = true
 license.workspace    = true
-name                 = "eventric-core-profiling-examples"
+name                 = "eventric-stream-examples"
 readme.workspace     = true
 repository.workspace = true
 version.workspace    = true

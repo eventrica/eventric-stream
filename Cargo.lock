@@ -301,7 +301,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "eventric-core"
+name = "eventric-stream"
 version = "0.1.0"
 dependencies = [
  "any-range",
@@ -321,25 +321,25 @@ dependencies = [
 ]
 
 [[package]]
-name = "eventric-core-benches"
+name = "eventric-stream-benches"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "eventric-core",
+ "eventric-stream",
 ]
 
 [[package]]
-name = "eventric-core-examples"
+name = "eventric-stream-examples"
 version = "0.1.0"
 dependencies = [
- "eventric-core",
+ "eventric-stream",
 ]
 
 [[package]]
-name = "eventric-core-profiling-examples"
+name = "eventric-stream-profiling-examples"
 version = "0.1.0"
 dependencies = [
- "eventric-core",
+ "eventric-stream",
 ]
 
 [[package]]

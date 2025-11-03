@@ -33,7 +33,7 @@ impl Stream {
     /// Returns an error if the optional concurrency checks fails, or in the
     /// case of underlying database/IO errors.
     ///
-    /// [issue]: https://github.com/eventrica/eventric-core/issues/23
+    /// [issue]: https://github.com/eventrica/eventric-stream/issues/23
     pub fn append<'a, E>(
         &mut self,
         events: E,

@@ -21,10 +21,10 @@ use crate::{
 };
 
 // =================================================================================================
-// Eventric Core Stream
+// Stream
 // =================================================================================================
 
-/// The [`Stream`] type is the central element of Eventric Core. All
+/// The [`Stream`] type is the central element of Eventric Stream. All
 /// interactions happen relative to a [`Stream`] instance, whether appending new
 /// events or querying existing events, and any higher-level libraries are built
 /// on this underlying abstraction.

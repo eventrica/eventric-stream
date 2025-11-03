@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use eventric_core::{
+use eventric_stream::{
     event::{
         Data,
         EphemeralEvent,
@@ -28,7 +28,7 @@ use eventric_core::{
 };
 
 pub fn main() -> Result<(), Box<dyn Error>> {
-    let mut stream = Stream::builder(eventric_core::temp_path())
+    let mut stream = Stream::builder(eventric_stream::temp_path())
         .temporary(true)
         .open()?;
 

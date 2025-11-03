@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use eventric_core::{
+use eventric_stream::{
     error::Error,
     event::{
         Data,
@@ -13,31 +13,26 @@ use eventric_core::{
 };
 
 // =================================================================================================
-// Multiple Append
+// Single Append
 // =================================================================================================
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 pub fn main() -> Result<(), Error> {
-    let mut stream = Stream::builder(eventric_core::temp_path())
+    let mut stream = Stream::builder(eventric_stream::temp_path())
         .temporary(true)
         .open()?;
 
-    let count = 10f64;
-    let events = (0..count as u64)
-        .map(|_| {
-            EphemeralEvent::new(
-                Data::new("Hello World").unwrap(),
-                Identifier::new("test_identifier").unwrap(),
-                Vec::from_iter([
-                    Tag::new("test_tag_a").unwrap(),
-                    Tag::new("test_tag_b").unwrap(),
-                ]),
-                Version::new(0),
-            )
-        })
-        .collect::<Vec<_>>();
+    let events = [EphemeralEvent::new(
+        Data::new("Hello World").unwrap(),
+        Identifier::new("test_identifier").unwrap(),
+        Vec::from_iter([
+            Tag::new("test_tag_a").unwrap(),
+            Tag::new("test_tag_b").unwrap(),
+        ]),
+        Version::new(0),
+    )];
 
-    let iterations = 100_000f64;
+    let iterations = 1_000_000f64;
     let start = Instant::now();
 
     for _ in 0..iterations as u64 {
@@ -45,7 +40,7 @@ pub fn main() -> Result<(), Error> {
     }
 
     let duration = Instant::now().duration_since(start);
-    let events_per_sec = ((iterations * count) / duration.as_secs_f64()) as u64;
+    let events_per_sec = (iterations / duration.as_secs_f64()) as u64;
 
     println!("time: {duration:?} ({events_per_sec} events/sec)",);
 

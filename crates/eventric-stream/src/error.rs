@@ -1,15 +1,15 @@
 //! The [`error`][self] module contains the common [`Error`][error] type used
-//! throughout `eventric-core`.
+//! throughout `eventric-stream`.
 //!
 //! [error]: enum@crate::error::Error
 
 use thiserror::Error;
 
 // =================================================================================================
-// Eventric Core Error
+// Error
 // =================================================================================================
 
-/// The core error type for `eventric-core`, returned by any [`Result`]
+/// The core error type for `eventric-stream`, returned by any [`Result`]
 /// returning function.
 #[derive(Debug, Error)]
 pub enum Error {

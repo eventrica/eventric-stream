@@ -1,8 +1,8 @@
-# Eventric Core
+# Eventric Stream
 
 <!-- ANCHOR: overview -->
 
-Eventric Core provides the lowest-level Event Stream abstraction as part of the
+Eventric Stream provides the low-level Event Stream abstraction as part of the
 Eventrica ecosystem. It consists of a Stream with append/query functionality which
 is consistent with the intent behind [Dynamic Consistency Boundaries][dcb] (DCB).
 

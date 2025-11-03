@@ -15,6 +15,6 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build
-      run: cargo build -p eventric-core --verbose
+      run: cargo build -p eventric-stream --verbose
     - name: Test
-      run: cargo test -p eventric-core --verbose
+      run: cargo test -p eventric-stream --verbose

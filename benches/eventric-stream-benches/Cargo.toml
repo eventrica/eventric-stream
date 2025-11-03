@@ -1,5 +1,15 @@
+[[bench]]
+harness = false
+name    = "append"
+
 [dependencies]
-eventric-core.workspace = true
+
+[dev-dependencies]
+criterion.workspace       = true
+eventric-stream.workspace = true
+
+[lib]
+bench = false
 
 [lints]
 workspace = true
@@ -7,11 +17,11 @@ workspace = true
 [package]
 authors.workspace    = true
 categories.workspace = true
-description          = "Eventric Core Examples"
+description          = "Eventric Stream Benches"
 edition.workspace    = true
 keywords.workspace   = true
 license.workspace    = true
-name                 = "eventric-core-examples"
+name                 = "eventric-stream-benches"
 readme.workspace     = true
 repository.workspace = true
 version.workspace    = true

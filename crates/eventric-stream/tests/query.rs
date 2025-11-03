@@ -8,7 +8,7 @@ use assertables::{
     assert_some,
     assert_some_as_result,
 };
-use eventric_core::{
+use eventric_stream::{
     error::Error,
     event::{
         Data,
@@ -34,7 +34,7 @@ use eventric_core::{
 
 #[test]
 fn default_empty() -> Result<(), Error> {
-    let stream = stream(eventric_core::temp_path(), false)?;
+    let stream = stream(eventric_stream::temp_path(), false)?;
 
     let condition = Condition::default();
 
@@ -51,7 +51,7 @@ fn default_empty() -> Result<(), Error> {
 
 #[test]
 fn default() -> Result<(), Error> {
-    let stream = stream(eventric_core::temp_path(), true)?;
+    let stream = stream(eventric_stream::temp_path(), true)?;
 
     let condition = Condition::default();
 
@@ -74,7 +74,7 @@ fn default() -> Result<(), Error> {
 
 #[test]
 fn specifier() -> Result<(), Error> {
-    let stream = stream(eventric_core::temp_path(), true)?;
+    let stream = stream(eventric_stream::temp_path(), true)?;
 
     let specifier = Specifier::new(EVENT_2.identifier().clone());
     let selector = Selector::specifiers([specifier])?;
@@ -104,7 +104,7 @@ fn specifier() -> Result<(), Error> {
 
 #[test]
 fn specifier_with_range() -> Result<(), Error> {
-    let stream = stream(eventric_core::temp_path(), true)?;
+    let stream = stream(eventric_stream::temp_path(), true)?;
 
     let range = Version::new(1)..Version::MAX;
     let specifier = Specifier::new(EVENT_2.identifier().clone()).range(range);
@@ -134,7 +134,7 @@ fn specifier_with_range() -> Result<(), Error> {
 
 #[test]
 fn multiple_specifiers() -> Result<(), Error> {
-    let stream = stream(eventric_core::temp_path(), true)?;
+    let stream = stream(eventric_stream::temp_path(), true)?;
 
     let specifier_0 = Specifier::new(EVENT_0.identifier().clone());
     let specifier_1 = Specifier::new(EVENT_1.identifier().clone());
@@ -165,7 +165,7 @@ fn multiple_specifiers() -> Result<(), Error> {
 
 #[test]
 fn multiple_specifiers_with_range() -> Result<(), Error> {
-    let stream = stream(eventric_core::temp_path(), true)?;
+    let stream = stream(eventric_stream::temp_path(), true)?;
 
     let specifier_0 = Specifier::new(EVENT_0.identifier().clone());
     let range = Version::new(1)..Version::MAX;
@@ -196,7 +196,7 @@ fn multiple_specifiers_with_range() -> Result<(), Error> {
 
 #[test]
 fn tag() -> Result<(), Error> {
-    let stream = stream(eventric_core::temp_path(), true)?;
+    let stream = stream(eventric_stream::temp_path(), true)?;
 
     let tag_1 = EVENT_0.tags()[0].clone();
     let selector = Selector::tags([tag_1])?;
@@ -221,7 +221,7 @@ fn tag() -> Result<(), Error> {
 
 #[test]
 fn multiple_tags() -> Result<(), Error> {
-    let stream = stream(eventric_core::temp_path(), true)?;
+    let stream = stream(eventric_stream::temp_path(), true)?;
 
     let tag_4 = EVENT_3.tags()[0].clone();
     let tag_5 = EVENT_3.tags()[1].clone();
