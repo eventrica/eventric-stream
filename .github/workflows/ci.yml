@@ -14,7 +14,45 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+
+    - name: Cache Registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry/index/
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache Git
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git/db/
+        key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache Build
+      uses: actions/cache@v3
+      with:
+        path: target/
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Check Formatting
+      run: cargo fmt --check
+
+    - name: Check Lints
+      run: cargo clippy --workspace --all-targets -- -D warnings
+
     - name: Build
-      run: cargo build -p eventric-stream --verbose
+      run: cargo build --workspace --verbose
+
     - name: Test
-      run: cargo test -p eventric-stream --verbose
+      run: cargo test --workspace --verbose
+
+    - name: Test Documentation
+      run: cargo test --doc --workspace
+
+    - name: Build Examples
+      run: cargo build --examples --workspace
+
+    # - name: Install Audit
+    #   run: cargo install --locked cargo-audit
+
+    # - name: Audit
+    #   run: cargo audit
