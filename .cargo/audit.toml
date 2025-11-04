@@ -2,34 +2,10 @@
 # See: https://github.com/rustsec/rustsec/blob/main/cargo-audit/audit.toml.example
 
 [advisories]
-# Ignore advisories for specific IDs (e.g., "RUSTSEC-2019-0001")
-ignore = []
-
-# Warn for unmaintained crates
-unmaintained = "warn"
-
-# Warn for crates with security notices
-notice = "warn"
-
-# Deny crates with vulnerabilities
-vulnerability = "deny"
-
-# Warn for yanked crates
-yanked = "warn"
-
-[licenses]
-# Warn if a dependency's license is not on the allow list
-# Uncomment and configure if you want to enforce license compliance
-# deny = []
-# allow = ["AGPL-3.0", "MIT", "Apache-2.0", "BSD-3-Clause"]
-
-[sources]
-# Warn for crates from unknown sources
-unknown-registry = "warn"
-unknown-git = "warn"
+ignore                 = []               # advisory IDs to ignore e.g. ["RUSTSEC-2019-0001", ...]
+informational_warnings = ["unmaintained"] # warn for categories of informational advisories
+severity_threshold     = "low"            # CVSS severity ("none", "low", "medium", "high", "critical")
 
 [output]
-# Deny if any warnings are found (set to false to allow warnings)
-deny = ["unmaintained", "yanked"]
-# Format output (options: "json", "toml")
-# format = "json"
+deny  = ["unmaintained", "yanked"]
+quiet = false
