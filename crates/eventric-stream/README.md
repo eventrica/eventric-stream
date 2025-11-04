@@ -1,5 +1,7 @@
 # Eventric Stream
 
+[![Coverage Status](https://coveralls.io/repos/github/eventrica/eventric-stream/badge.svg?branch=main)](https://coveralls.io/github/eventrica/eventric-stream?branch=main)
+
 <!-- ANCHOR: overview -->
 
 Eventric Stream provides the low-level Event Stream abstraction as part of the
