@@ -1,5 +1,6 @@
 # Eventric Stream
 
+[![Continuous Integration](https://github.com/eventrica/eventric-stream/actions/workflows/ci.yml/badge.svg)](https://github.com/eventrica/eventric-stream/actions/workflows/ci.yml)
 [![Coverage Status](https://coveralls.io/repos/github/eventrica/eventric-stream/badge.svg?branch=main)](https://coveralls.io/github/eventrica/eventric-stream?branch=main)
 
 <!-- ANCHOR: overview -->
