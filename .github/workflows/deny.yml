@@ -1,4 +1,4 @@
-name: Audit
+name: CI
 on:
   push:
     paths: 
@@ -13,10 +13,8 @@ on:
   schedule:
     - cron: '0 0 * * *'
 jobs:
-  audit:
+  deny:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: rustsec/audit-check@v2.0.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/checkout@v4
+    - uses: EmbarkStudios/cargo-deny-action@v2
