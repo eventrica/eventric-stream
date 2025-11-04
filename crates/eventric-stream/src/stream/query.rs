@@ -246,6 +246,25 @@ impl Selector {
     }
 
     /// Convenience function for creating a selector directly from a collection
+    /// of [`Specifier`]s and a collection of [`Tag`]s without constructing
+    /// intermediate instances of [`Specifiers`] and [`Tags`] directly.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the implied [`Specifiers`] or [`Tags`] instances
+    /// return an error on construction.
+    pub fn specifiers_and_tags<S, T>(specifiers: S, tags: T) -> Result<Self, Error>
+    where
+        S: Into<Vec<Specifier>>,
+        T: Into<Vec<Tag>>,
+    {
+        Ok(Self::SpecifiersAndTags(
+            Specifiers::new(specifiers)?,
+            Tags::new(tags)?,
+        ))
+    }
+
+    /// Convenience function for creating a selector directly from a collection
     /// of [`Tag`]s without constructing an intermediate [`Tags`]
     /// instance directly.
     ///
