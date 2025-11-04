@@ -16,6 +16,7 @@ criterion             = { version = "0.7" }
 dashmap               = { version = "6", features = ["inline"] }
 derive_more           = { version = "2", features = ["full"] }
 double-ended-peekable = { version = "0.1.0" }
+eventric-core         = { git = "https://github.com/eventrica/eventric-core.git" }
 eventric-stream       = { path = "crates/eventric-stream" }
 fancy_constructor     = { version = "2" }
 fjall                 = { version = "=3.0.0-pre.4" }

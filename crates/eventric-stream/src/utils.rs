@@ -1,6 +1,5 @@
 pub(crate) mod hashing;
 pub(crate) mod iteration;
-pub(crate) mod validation;
 
 use std::path::{
     Path,

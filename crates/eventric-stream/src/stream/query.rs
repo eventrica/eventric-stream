@@ -14,6 +14,11 @@ use derive_more::{
     AsRef,
     Debug,
 };
+use eventric_core::validation::{
+    Validate,
+    validate,
+    vec,
+};
 use fancy_constructor::new;
 
 use crate::{
@@ -37,11 +42,6 @@ use crate::{
             MappedPersistentEventHashIterator,
             PersistentEventHashIterator,
         },
-    },
-    utils::validation::{
-        Validate,
-        validate,
-        vec,
     },
 };
 
@@ -156,7 +156,9 @@ impl From<Query> for Vec<Selector> {
 }
 
 impl Validate for Query {
-    fn validate(self) -> Result<Self, Error> {
+    type Err = Error;
+
+    fn validate(self) -> Result<Self, Self::Err> {
         validate(&self.selectors, "selectors", &[&vec::IsEmpty])?;
 
         Ok(self)
@@ -387,7 +389,9 @@ impl<'a> From<&'a Specifiers> for Vec<SpecifierHashRef<'a>> {
 }
 
 impl Validate for Specifiers {
-    fn validate(self) -> Result<Self, Error> {
+    type Err = Error;
+
+    fn validate(self) -> Result<Self, Self::Err> {
         validate(&self.specifiers, "specifiers", &[&vec::IsEmpty])?;
 
         Ok(self)
@@ -448,7 +452,9 @@ impl<'a> From<&'a Tags> for Vec<TagHashRef<'a>> {
 }
 
 impl Validate for Tags {
-    fn validate(self) -> Result<Self, Error> {
+    type Err = Error;
+
+    fn validate(self) -> Result<Self, Self::Err> {
         validate(&self.tags, "tags", &[&vec::IsEmpty])?;
 
         Ok(self)

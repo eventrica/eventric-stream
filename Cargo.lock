@@ -301,6 +301,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "eventric-core"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
 name = "eventric-stream"
 version = "0.1.0"
 dependencies = [
@@ -310,13 +317,13 @@ dependencies = [
  "dashmap",
  "derive_more",
  "double-ended-peekable",
+ "eventric-core",
  "fancy_constructor",
  "fjall",
  "include-utils",
  "rand",
  "rapidhash",
  "self_cell",
- "sync_wrapper",
  "thiserror",
 ]
 
@@ -950,12 +957,6 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
-
-[[package]]
-name = "sync_wrapper"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0bf256ce5efdfa370213c1dabab5935a12e49f2c58d15e9eac2870d3b4f27263"
 
 [[package]]
 name = "tempfile"

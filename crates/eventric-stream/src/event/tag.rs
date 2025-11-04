@@ -2,18 +2,16 @@ use derive_more::{
     AsRef,
     Deref,
 };
+use eventric_core::validation::{
+    Validate,
+    string,
+    validate,
+};
 use fancy_constructor::new;
 
 use crate::{
     error::Error,
-    utils::{
-        hashing::hash,
-        validation::{
-            Validate,
-            string,
-            validate,
-        },
-    },
+    utils::hashing::hash,
 };
 
 // =================================================================================================
@@ -65,7 +63,9 @@ impl Tag {
 }
 
 impl Validate for Tag {
-    fn validate(self) -> Result<Self, Error> {
+    type Err = Error;
+
+    fn validate(self) -> Result<Self, Self::Err> {
         validate(&self.tag, "identifier", &[
             &string::IsEmpty,
             &string::PrecedingWhitespace,

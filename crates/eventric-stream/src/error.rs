@@ -3,6 +3,7 @@
 //!
 //! [error]: enum@crate::error::Error
 
+use eventric_core::validation;
 use thiserror::Error;
 
 // =================================================================================================
@@ -30,8 +31,8 @@ pub enum Error {
     /// construction of some instance which has structural or data validation
     /// properties. This will be detailed in the documentation of any relevant
     /// constructor function (generally `new`).
-    #[error("Validation Error: {0}")]
-    Validation(String),
+    #[error(transparent)]
+    Validation(#[from] validation::Error),
 }
 
 impl Error {
@@ -42,16 +43,6 @@ impl Error {
         M: Into<String>,
     {
         Self::Data(message.into())
-    }
-
-    /// A convenience function to create a new instance of the
-    /// [`Error::Validation`] case with a value which can be converted into
-    /// a message string.
-    pub fn validation<M>(message: M) -> Self
-    where
-        M: Into<String>,
-    {
-        Self::Validation(message.into())
     }
 }
 

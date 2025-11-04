@@ -2,16 +2,14 @@ use derive_more::{
     AsRef,
     Deref,
 };
+use eventric_core::validation::{
+    Validate,
+    validate,
+    vec,
+};
 use fancy_constructor::new;
 
-use crate::{
-    error::Error,
-    utils::validation::{
-        Validate,
-        validate,
-        vec,
-    },
-};
+use crate::error::Error;
 
 // =================================================================================================
 // Data
@@ -53,7 +51,9 @@ impl Data {
 }
 
 impl Validate for Data {
-    fn validate(self) -> Result<Self, Error> {
+    type Err = Error;
+
+    fn validate(self) -> Result<Self, Self::Err> {
         validate(&self.data, "data", &[&vec::IsEmpty])?;
 
         Ok(self)

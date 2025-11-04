@@ -4,13 +4,13 @@ bytes.workspace                 = true
 dashmap.workspace               = true
 derive_more.workspace           = true
 double-ended-peekable.workspace = true
+eventric-core.workspace         = true
 fancy_constructor.workspace     = true
 fjall.workspace                 = true
 include-utils.workspace         = true
 rand.workspace                  = true
 rapidhash.workspace             = true
 self_cell.workspace             = true
-sync_wrapper                    = "1"
 thiserror.workspace             = true
 
 [dev-dependencies]
