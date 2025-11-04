@@ -203,21 +203,23 @@ pub(crate) struct MappedPersistentEventHashIterator {
 }
 
 impl MappedPersistentEventHashIterator {
-    fn map(&mut self, position: Result<Position, Error>) -> <Self as Iterator>::Item {
+    fn map(&mut self, position: Result<Position, Error>) -> Option<<Self as Iterator>::Item> {
         match position {
             Ok(position) => match self.events.get(position) {
-                Ok(Some(event)) => Ok(event),
-                Ok(None) => Err(Error::data("event not found")),
-                Err(err) => Err(err),
+                Ok(Some(event)) => Some(Ok(event)),
+                Ok(None) => None,
+                Err(err) => Some(Err(err)),
             },
-            Err(err) => Err(err),
+            Err(err) => Some(Err(err)),
         }
     }
 }
 
 impl DoubleEndedIterator for MappedPersistentEventHashIterator {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back().map(|position| self.map(position))
+        self.iter
+            .next_back()
+            .and_then(|position| self.map(position))
     }
 }
 
@@ -225,7 +227,7 @@ impl Iterator for MappedPersistentEventHashIterator {
     type Item = Result<PersistentEventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|position| self.map(position))
+        self.iter.next().and_then(|position| self.map(position))
     }
 }
 
