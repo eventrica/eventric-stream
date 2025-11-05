@@ -1,0 +1,12 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  call_shared:
+    uses: eventrica/.github/.github/workflows/continuous_integration.yml@main
+    secrets: inherit
