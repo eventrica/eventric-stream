@@ -1,7 +1,4 @@
-use std::{
-    path::Path,
-    sync::LazyLock,
-};
+use std::path::Path;
 
 use assertables::{
     assert_none,
@@ -656,63 +653,7 @@ fn complex_multi_selector_with_ranges() -> Result<(), Error> {
 
 // -------------------------------------------------------------------------------------------------
 
-// Test Events
-
-static EVENT_0: LazyLock<EphemeralEvent> = LazyLock::new(|| {
-    let event = || {
-        Ok::<EphemeralEvent, Error>(EphemeralEvent::new(
-            Data::new("data_0")?,
-            Identifier::new("id_0")?,
-            [Tag::new("tag_1")?, Tag::new("tag_2")?, Tag::new("tag_3")?],
-            Version::new(0),
-        ))
-    };
-
-    event().unwrap()
-});
-
-static EVENT_1: LazyLock<EphemeralEvent> = LazyLock::new(|| {
-    let event = || {
-        Ok::<EphemeralEvent, Error>(EphemeralEvent::new(
-            Data::new("data_1")?,
-            Identifier::new("id_1")?,
-            [Tag::new("tag_2")?, Tag::new("tag_3")?, Tag::new("tag_4")?],
-            Version::new(1),
-        ))
-    };
-
-    event().unwrap()
-});
-
-static EVENT_2: LazyLock<EphemeralEvent> = LazyLock::new(|| {
-    let event = || {
-        Ok::<EphemeralEvent, Error>(EphemeralEvent::new(
-            Data::new("data_2")?,
-            Identifier::new("id_2")?,
-            [Tag::new("tag_3")?, Tag::new("tag_4")?, Tag::new("tag_5")?],
-            Version::new(0),
-        ))
-    };
-
-    event().unwrap()
-});
-
-static EVENT_3: LazyLock<EphemeralEvent> = LazyLock::new(|| {
-    let event = || {
-        Ok::<EphemeralEvent, Error>(EphemeralEvent::new(
-            Data::new("data_3")?,
-            Identifier::new("id_2")?,
-            [Tag::new("tag_4")?, Tag::new("tag_5")?, Tag::new("tag_6")?],
-            Version::new(1),
-        ))
-    };
-
-    event().unwrap()
-});
-
-// -------------------------------------------------------------------------------------------------
-
-// Test Stream
+// Test Data
 
 fn stream<P>(path: P, populate: bool) -> Result<Stream, Error>
 where
@@ -721,7 +662,35 @@ where
     let mut stream = Stream::builder(path).temporary(true).open()?;
 
     if populate {
-        stream.append([&*EVENT_0, &*EVENT_1, &*EVENT_2, &*EVENT_3], None)?;
+        stream.append(
+            [
+                &EphemeralEvent::new(
+                    Data::new("data_0")?,
+                    Identifier::new("id_0")?,
+                    [Tag::new("tag_1")?, Tag::new("tag_2")?, Tag::new("tag_3")?],
+                    Version::new(0),
+                ),
+                &EphemeralEvent::new(
+                    Data::new("data_1")?,
+                    Identifier::new("id_1")?,
+                    [Tag::new("tag_2")?, Tag::new("tag_3")?, Tag::new("tag_4")?],
+                    Version::new(1),
+                ),
+                &EphemeralEvent::new(
+                    Data::new("data_2")?,
+                    Identifier::new("id_2")?,
+                    [Tag::new("tag_3")?, Tag::new("tag_4")?, Tag::new("tag_5")?],
+                    Version::new(0),
+                ),
+                &EphemeralEvent::new(
+                    Data::new("data_3")?,
+                    Identifier::new("id_2")?,
+                    [Tag::new("tag_4")?, Tag::new("tag_5")?, Tag::new("tag_6")?],
+                    Version::new(1),
+                ),
+            ],
+            None,
+        )?;
     }
 
     Ok(stream)
