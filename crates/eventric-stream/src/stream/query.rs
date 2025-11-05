@@ -471,3 +471,295 @@ pub use self::{
     iter::QueryIterator,
     options::Options,
 };
+
+// -------------------------------------------------------------------------------------------------
+
+// Tests
+
+#[cfg(test)]
+mod tests {
+    mod query_tests {
+        use assertables::{
+            assert_err,
+            assert_ok,
+        };
+
+        use crate::{
+            error::Error,
+            event::{
+                identifier::Identifier,
+                specifier::Specifier,
+                tag::Tag,
+            },
+            stream::query::{
+                Query,
+                Selector,
+            },
+        };
+
+        #[test]
+        fn new_valid_query_succeeds() -> Result<(), Error> {
+            let sel_0 = Selector::specifiers(vec![Specifier::new(Identifier::new("Event1")?)])?;
+
+            assert_ok!(Query::new(vec![sel_0]));
+
+            Ok(())
+        }
+
+        #[test]
+        fn new_with_multiple_selectors_succeeds() -> Result<(), Error> {
+            let sel_0 = Selector::specifiers(vec![Specifier::new(Identifier::new("Event1")?)])?;
+            let sel_1 = Selector::tags(vec![Tag::new("tag1")?])?;
+
+            assert_ok!(Query::new(vec![sel_0, sel_1]));
+
+            Ok(())
+        }
+
+        #[test]
+        fn new_with_mixed_selector_types_succeeds() -> Result<(), Error> {
+            let sel_0 = Selector::specifiers(vec![Specifier::new(Identifier::new("Event1")?)])?;
+            let sel_1 = Selector::tags(vec![Tag::new("tag1")?])?;
+            let sel_2 = Selector::specifiers_and_tags(
+                vec![Specifier::new(Identifier::new("Event2")?)],
+                vec![Tag::new("tag2")?],
+            )?;
+
+            assert_ok!(Query::new(vec![sel_0, sel_1, sel_2]));
+
+            Ok(())
+        }
+
+        #[test]
+        fn new_empty_query_fails() {
+            assert_err!(Query::new(vec![]));
+            assert_err!(Query::new(Vec::<Selector>::new()));
+        }
+    }
+
+    mod specifiers_tests {
+        use assertables::{
+            assert_err,
+            assert_ok,
+        };
+
+        use crate::{
+            error::Error,
+            event::{
+                identifier::Identifier,
+                specifier::Specifier,
+                version::Version,
+            },
+            stream::query::Specifiers,
+        };
+
+        #[test]
+        fn new_valid_specifiers_succeeds() -> Result<(), Error> {
+            let spec_0 = Specifier::new(Identifier::new("Event1")?);
+
+            assert_ok!(Specifiers::new(vec![spec_0]));
+
+            Ok(())
+        }
+
+        #[test]
+        fn new_with_multiple_specifiers_succeeds() -> Result<(), Error> {
+            let spec_0 = Specifier::new(Identifier::new("Event1")?);
+            let spec_1 = Specifier::new(Identifier::new("Event2")?);
+
+            assert_ok!(Specifiers::new(vec![spec_0, spec_1]));
+
+            Ok(())
+        }
+
+        #[test]
+        #[rustfmt::skip]
+        fn new_with_versioned_specifiers_succeeds() -> Result<(), Error> {
+            let spec_0 = Specifier::new(Identifier::new("Event1")?).range(Version::new(1)..=Version::new(5));
+
+            assert_ok!(Specifiers::new(vec![spec_0]));
+
+            Ok(())
+        }
+
+        #[test]
+        #[rustfmt::skip]
+        fn new_with_mixed_versioned_and_unversioned_succeeds() -> Result<(), Error> {
+            let spec_0 = Specifier::new(Identifier::new("Event1")?);
+            let spec_1 = Specifier::new(Identifier::new("Event2")?).range(Version::new(1)..=Version::new(5));
+            let spec_2 = Specifier::new(Identifier::new("Event3")?).range(Version::new(10)..);
+
+            assert_ok!(Specifiers::new(vec![spec_0, spec_1, spec_2]));
+
+            Ok(())
+        }
+
+        #[test]
+        fn new_empty_specifiers_fails() {
+            assert_err!(Specifiers::new(vec![]));
+            assert_err!(Specifiers::new(Vec::<Specifier>::new()));
+        }
+    }
+
+    mod tags_tests {
+        use assertables::{
+            assert_err,
+            assert_ok,
+        };
+
+        use crate::{
+            error::Error,
+            event::tag::Tag,
+            stream::query::Tags,
+        };
+
+        #[test]
+        fn new_valid_tags_succeeds() -> Result<(), Error> {
+            let tag_0 = Tag::new("tag1")?;
+
+            assert_ok!(Tags::new(vec![tag_0]));
+
+            Ok(())
+        }
+
+        #[test]
+        fn new_with_multiple_tags_succeeds() -> Result<(), Error> {
+            let tag_0 = Tag::new("tag1")?;
+            let tag_1 = Tag::new("tag2")?;
+
+            assert_ok!(Tags::new(vec![tag_0, tag_1]));
+
+            Ok(())
+        }
+
+        #[test]
+        fn new_with_complex_tags_succeeds() -> Result<(), Error> {
+            let tag_0 = Tag::new("student:123")?;
+            let tag_1 = Tag::new("course:456")?;
+            let tag_2 = Tag::new("organization:789")?;
+
+            assert_ok!(Tags::new(vec![tag_0, tag_1, tag_2]));
+
+            Ok(())
+        }
+
+        #[test]
+        fn new_empty_tags_fails() {
+            assert_err!(Tags::new(vec![]));
+            assert_err!(Tags::new(Vec::<Tag>::new()));
+        }
+    }
+
+    mod selector_tests {
+        use assertables::{
+            assert_err,
+            assert_ok,
+        };
+
+        use crate::{
+            error::Error,
+            event::{
+                identifier::Identifier,
+                specifier::Specifier,
+                tag::Tag,
+            },
+            stream::query::Selector,
+        };
+
+        #[test]
+        fn selector_specifiers_convenience_method() -> Result<(), Error> {
+            let spec_0 = Specifier::new(Identifier::new("Event1")?);
+
+            assert_ok!(Selector::specifiers(vec![spec_0]));
+
+            Ok(())
+        }
+
+        #[test]
+        fn selector_specifiers_empty_fails() {
+            assert_err!(Selector::specifiers(vec![]));
+        }
+
+        #[test]
+        fn selector_tags_convenience_method() -> Result<(), Error> {
+            let tag_0 = Tag::new("tag1")?;
+
+            assert_ok!(Selector::tags(vec![tag_0]));
+
+            Ok(())
+        }
+
+        #[test]
+        fn selector_tags_empty_fails() {
+            assert_err!(Selector::tags(vec![]));
+        }
+
+        #[test]
+        fn selector_specifiers_and_tags_convenience_method() -> Result<(), Error> {
+            let spec_0 = Specifier::new(Identifier::new("Event1")?);
+            let tag_0 = Tag::new("tag1")?;
+
+            assert_ok!(Selector::specifiers_and_tags(vec![spec_0], vec![tag_0]));
+
+            Ok(())
+        }
+
+        #[test]
+        fn selector_specifiers_and_tags_empty_specifiers_fails() -> Result<(), Error> {
+            let tag_0 = Tag::new("tag1")?;
+
+            assert_err!(Selector::specifiers_and_tags(vec![], vec![tag_0]));
+
+            Ok(())
+        }
+
+        #[test]
+        fn selector_specifiers_and_tags_empty_tags_fails() -> Result<(), Error> {
+            let spec_0 = Specifier::new(Identifier::new("Event1")?);
+
+            assert_err!(Selector::specifiers_and_tags(vec![spec_0], vec![]));
+
+            Ok(())
+        }
+
+        #[test]
+        fn selector_specifiers_and_tags_both_empty_fails() {
+            assert_err!(Selector::specifiers_and_tags(vec![], vec![]));
+        }
+
+        #[test]
+        fn selector_with_multiple_specifiers() -> Result<(), Error> {
+            let spec_0 = Specifier::new(Identifier::new("Event1")?);
+            let spec_1 = Specifier::new(Identifier::new("Event2")?);
+            let spec_2 = Specifier::new(Identifier::new("Event3")?);
+
+            assert_ok!(Selector::specifiers(vec![spec_0, spec_1, spec_2]));
+
+            Ok(())
+        }
+
+        #[test]
+        fn selector_with_multiple_tags() -> Result<(), Error> {
+            let tag_0 = Tag::new("tag1")?;
+            let tag_1 = Tag::new("tag2")?;
+            let tag_2 = Tag::new("tag3")?;
+
+            assert_ok!(Selector::tags(vec![tag_0, tag_1, tag_2]));
+
+            Ok(())
+        }
+
+        #[test]
+        #[rustfmt::skip]
+        fn selector_specifiers_and_tags_with_multiple_each() -> Result<(), Error> {
+            let spec_0 = Specifier::new(Identifier::new("Event1")?);
+            let spec_1 = Specifier::new(Identifier::new("Event2")?);
+            let tag_0 = Tag::new("tag1")?;
+            let tag_1 = Tag::new("tag2")?;
+
+            assert_ok!(Selector::specifiers_and_tags(vec![spec_0, spec_1], vec![tag_0, tag_1]));
+
+            Ok(())
+        }
+    }
+}

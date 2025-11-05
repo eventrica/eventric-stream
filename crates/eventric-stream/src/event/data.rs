@@ -59,3 +59,55 @@ impl Validate for Data {
         Ok(self)
     }
 }
+
+// -------------------------------------------------------------------------------------------------
+
+// Tests
+
+#[cfg(test)]
+mod tests {
+
+    use assertables::{
+        assert_err,
+        assert_ok,
+    };
+
+    use crate::{
+        error::Error,
+        event::data::Data,
+    };
+
+    #[test]
+    fn new_valid_data_succeeds() {
+        assert_ok!(Data::new(vec![1]));
+        assert_ok!(Data::new(vec![1, 2, 3]));
+        assert_ok!(Data::new(b"hello".to_vec()));
+    }
+
+    #[test]
+    fn new_single_byte_succeeds() {
+        assert_ok!(Data::new(vec![0]));
+        assert_ok!(Data::new(vec![255]));
+    }
+
+    #[test]
+    fn new_large_data_succeeds() {
+        assert_ok!(Data::new(vec![42; 10_000]));
+    }
+
+    #[test]
+    fn new_empty_data_fails() {
+        assert_err!(Data::new(vec![]));
+        assert_err!(Data::new(Vec::<u8>::new()));
+    }
+
+    #[test]
+    fn data_from_string_bytes() -> Result<(), Error> {
+        let data = Data::new("test".as_bytes().to_vec())?;
+        let slice: &[u8] = data.as_ref();
+
+        assert_eq!(slice, b"test");
+
+        Ok(())
+    }
+}

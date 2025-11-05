@@ -126,3 +126,86 @@ impl<'a> From<&'a Tag> for TagHashRef<'a> {
         Self::new(hash, tag)
     }
 }
+
+// -------------------------------------------------------------------------------------------------
+
+// Tests
+
+#[cfg(test)]
+mod tests {
+    use assertables::{
+        assert_err,
+        assert_ok,
+    };
+
+    use crate::{
+        error::Error,
+        event::tag::Tag,
+    };
+
+    #[test]
+    fn new_valid_tag_succeeds() {
+        assert_ok!(Tag::new("student:3242"));
+        assert_ok!(Tag::new("course:523"));
+        assert_ok!(Tag::new("organization-123"));
+        assert_ok!(Tag::new("user_456"));
+        assert_ok!(Tag::new("tag123"));
+    }
+
+    #[test]
+    fn new_with_internal_whitespace_succeeds() {
+        assert_ok!(Tag::new("tag with space"));
+    }
+
+    #[test]
+    fn new_empty_tag_fails() {
+        assert_err!(Tag::new(""));
+    }
+
+    #[test]
+    fn new_with_preceding_whitespace_fails() {
+        assert_err!(Tag::new(" student:123"));
+        assert_err!(Tag::new("\tstudent:123"));
+        assert_err!(Tag::new("\nstudent:123"));
+    }
+
+    #[test]
+    fn new_with_trailing_whitespace_fails() {
+        assert_err!(Tag::new("student:123 "));
+        assert_err!(Tag::new("student:123\t"));
+        assert_err!(Tag::new("student:123\n"));
+    }
+
+    #[test]
+    fn new_with_control_characters_fails() {
+        assert_err!(Tag::new("student\x00:123"));
+        assert_err!(Tag::new("student\x1b:123"));
+        assert_err!(Tag::new("student\x7f:123"));
+    }
+
+    #[test]
+    fn new_with_combined_whitespace_violations_fails() {
+        assert_err!(Tag::new(" student:123 "));
+        assert_err!(Tag::new("\t\nstudent:123\n\t"));
+    }
+
+    #[test]
+    fn tag_hash_consistency() -> Result<(), Error> {
+        let tag_0 = Tag::new("student:123")?;
+        let tag_1 = Tag::new("student:123")?;
+
+        assert_eq!(tag_0.hash(), tag_1.hash());
+
+        Ok(())
+    }
+
+    #[test]
+    fn tag_hash_uniqueness() -> Result<(), Error> {
+        let tag_0 = Tag::new("student:123")?;
+        let tag_1 = Tag::new("student:456")?;
+
+        assert_ne!(tag_0.hash(), tag_1.hash());
+
+        Ok(())
+    }
+}

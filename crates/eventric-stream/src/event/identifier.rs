@@ -128,3 +128,87 @@ impl<'a> From<&'a Identifier> for IdentifierHashRef<'a> {
         Self::new(hash, identifier)
     }
 }
+
+// -------------------------------------------------------------------------------------------------
+
+// Tests
+
+#[cfg(test)]
+mod tests {
+
+    use assertables::{
+        assert_err,
+        assert_ok,
+    };
+
+    use crate::{
+        error::Error,
+        event::identifier::Identifier,
+    };
+
+    #[test]
+    fn new_valid_identifier_succeeds() {
+        assert_ok!(Identifier::new("StudentSubscribedToCourse"));
+        assert_ok!(Identifier::new("user.registered"));
+        assert_ok!(Identifier::new("Order_Created"));
+        assert_ok!(Identifier::new("event-with-dash"));
+        assert_ok!(Identifier::new("EventWith123Numbers"));
+    }
+
+    #[test]
+    fn new_with_internal_whitespace_succeeds() {
+        assert_ok!(Identifier::new("Student Subscribed"));
+    }
+
+    #[test]
+    fn new_empty_identifier_fails() {
+        assert_err!(Identifier::new(""));
+    }
+
+    #[test]
+    fn new_with_preceding_whitespace_fails() {
+        assert_err!(Identifier::new(" StudentSubscribed"));
+        assert_err!(Identifier::new("\tStudentSubscribed"));
+        assert_err!(Identifier::new("\nStudentSubscribed"));
+    }
+
+    #[test]
+    fn new_with_trailing_whitespace_fails() {
+        assert_err!(Identifier::new("StudentSubscribed "));
+        assert_err!(Identifier::new("StudentSubscribed\t"));
+        assert_err!(Identifier::new("StudentSubscribed\n"));
+    }
+
+    #[test]
+    fn new_with_control_characters_fails() {
+        assert_err!(Identifier::new("Student\x00Subscribed"));
+        assert_err!(Identifier::new("Student\x1bSubscribed"));
+        assert_err!(Identifier::new("Student\x7fSubscribed"));
+    }
+
+    #[test]
+    fn new_with_combined_whitespace_violations_fails() {
+        assert_err!(Identifier::new(" StudentSubscribed "));
+        assert_err!(Identifier::new("\t\nStudentSubscribed\n\t"));
+    }
+
+    #[test]
+    fn identifier_hash_consistency() -> Result<(), Error> {
+        let id_0 = Identifier::new("id")?;
+        let id_1 = Identifier::new("id")?;
+
+        assert_eq!(id_0.hash(), id_1.hash());
+
+        Ok(())
+    }
+
+    #[test]
+    fn identifier_hash_uniqueness() -> Result<(), Error> {
+        let id_0 = Identifier::new("id_0")?;
+        let id_1 = Identifier::new("id_1")?;
+
+        assert_ne!(id_0.hash(), id_1.hash());
+
+        Ok(())
+    }
+}
