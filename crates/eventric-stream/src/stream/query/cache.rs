@@ -48,7 +48,6 @@ impl Cache {
                     self.populate_identifiers(specifiers);
                     self.populate_tags(tags);
                 }
-                SelectorHashRef::Tags(tags) => self.populate_tags(tags),
             }
         }
     }

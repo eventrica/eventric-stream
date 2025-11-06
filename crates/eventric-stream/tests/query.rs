@@ -200,63 +200,6 @@ fn multiple_specifiers_with_range() -> Result<(), Error> {
 }
 
 #[test]
-fn tag() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
-
-    let tag_1 = Tag::new("tag_1")?;
-    let sel_0 = Selector::tags([tag_1])?;
-
-    let query = Query::new([sel_0])?;
-    let condition = Condition::default().matches(&query);
-
-    let mut events = stream.query(&condition, None);
-
-    // A query with a single tag should return only events matching that tag, in
-    // this case the first event
-
-    {
-        let event = assert_some_as_result!(events.next()).unwrap()?;
-        assert_eq!(&Data::new("data_0")?, event.data());
-        assert_eq!(&Position::new(0), event.position());
-
-        assert_none!(events.next());
-    }
-
-    Ok(())
-}
-
-#[test]
-fn multiple_tags() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
-
-    let tag_4 = Tag::new("tag_4")?;
-    let tag_5 = Tag::new("tag_5")?;
-    let sel_0 = Selector::tags([tag_4, tag_5])?;
-
-    let query = Query::new([sel_0])?;
-    let condition = Condition::default().matches(&query);
-
-    let mut events = stream.query(&condition, None);
-
-    // A query with multiple tags should return only events matching all tags, in
-    // this case the last 2 events
-
-    {
-        let event = assert_some_as_result!(events.next()).unwrap()?;
-        assert_eq!(&Data::new("data_2")?, event.data());
-        assert_eq!(&Position::new(2), event.position());
-
-        let event = assert_some_as_result!(events.next()).unwrap()?;
-        assert_eq!(&Data::new("data_3")?, event.data());
-        assert_eq!(&Position::new(3), event.position());
-
-        assert_none!(events.next());
-    }
-
-    Ok(())
-}
-
-#[test]
 fn specifiers_and_tags() -> Result<(), Error> {
     let stream = stream(eventric_stream::temp_path(), true)?;
 
@@ -405,40 +348,40 @@ fn multiple_selectors_same_type() -> Result<(), Error> {
     Ok(())
 }
 
-#[test]
-fn multiple_selectors_different_types() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+// #[test]
+// fn multiple_selectors_different_types() -> Result<(), Error> {
+//     let stream = stream(eventric_stream::temp_path(), true)?;
 
-    // Query with different selector types (OR between selectors)
-    // Selector 1: Specifiers(id_a)
-    // Selector 2: Tags(tag_6)
-    // Should match EVENT_0 (id_a) and EVENT_3 (has tag_6)
-    let id_0 = Identifier::new("id_0")?;
-    let spec_0 = Specifier::new(id_0);
-    let sel_0 = Selector::specifiers([spec_0])?;
+//     // Query with different selector types (OR between selectors)
+//     // Selector 1: Specifiers(id_a)
+//     // Selector 2: Tags(tag_6)
+//     // Should match EVENT_0 (id_a) and EVENT_3 (has tag_6)
+//     let id_0 = Identifier::new("id_0")?;
+//     let spec_0 = Specifier::new(id_0);
+//     let sel_0 = Selector::specifiers([spec_0])?;
 
-    let tag_6 = Tag::new("tag_6")?;
-    let sel_1 = Selector::tags([tag_6])?;
+//     let tag_6 = Tag::new("tag_6")?;
+//     let sel_1 = Selector::tags([tag_6])?;
 
-    let query = Query::new([sel_0, sel_1])?;
-    let condition = Condition::default().matches(&query);
+//     let query = Query::new([sel_0, sel_1])?;
+//     let condition = Condition::default().matches(&query);
 
-    let mut events = stream.query(&condition, None);
+//     let mut events = stream.query(&condition, None);
 
-    {
-        let event = assert_some_as_result!(events.next()).unwrap()?;
-        assert_eq!(&Data::new("data_0")?, event.data());
-        assert_eq!(0, **event.position());
+//     {
+//         let event = assert_some_as_result!(events.next()).unwrap()?;
+//         assert_eq!(&Data::new("data_0")?, event.data());
+//         assert_eq!(0, **event.position());
 
-        let event = assert_some_as_result!(events.next()).unwrap()?;
-        assert_eq!(&Data::new("data_3")?, event.data());
-        assert_eq!(3, **event.position());
+//         let event = assert_some_as_result!(events.next()).unwrap()?;
+//         assert_eq!(&Data::new("data_3")?, event.data());
+//         assert_eq!(3, **event.position());
 
-        assert_none!(events.next());
-    }
+//         assert_none!(events.next());
+//     }
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 #[test]
 fn multiple_selectors_mixed_types() -> Result<(), Error> {
@@ -454,16 +397,12 @@ fn multiple_selectors_mixed_types() -> Result<(), Error> {
     let spec_0 = Specifier::new(id_0);
     let sel_0 = Selector::specifiers([spec_0])?;
 
-    let tag_4 = Tag::new("tag_4")?;
-    let tag_6 = Tag::new("tag_6")?;
-    let sel_1 = Selector::tags([tag_4, tag_6])?;
-
     let id_1 = Identifier::new("id_1")?;
     let spec_0 = Specifier::new(id_1);
     let tag_2 = Tag::new("tag_2")?;
-    let sel_2 = Selector::specifiers_and_tags([spec_0], [tag_2])?;
+    let sel_1 = Selector::specifiers_and_tags([spec_0], [tag_2])?;
 
-    let query = Query::new([sel_0, sel_1, sel_2])?;
+    let query = Query::new([sel_0, sel_1])?;
     let condition = Condition::default().matches(&query);
 
     let mut events = stream.query(&condition, None);
@@ -477,9 +416,9 @@ fn multiple_selectors_mixed_types() -> Result<(), Error> {
         assert_eq!(&Data::new("data_1")?, event.data());
         assert_eq!(&Position::new(1), event.position());
 
-        let event = assert_some_as_result!(events.next()).unwrap()?;
-        assert_eq!(&Data::new("data_3")?, event.data());
-        assert_eq!(&Position::new(3), event.position());
+        // let event = assert_some_as_result!(events.next()).unwrap()?;
+        // assert_eq!(&Data::new("data_3")?, event.data());
+        // assert_eq!(&Position::new(3), event.position());
 
         assert_none!(events.next());
     }
@@ -487,41 +426,41 @@ fn multiple_selectors_mixed_types() -> Result<(), Error> {
     Ok(())
 }
 
-#[test]
-fn multiple_selectors_overlapping_results() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+// #[test]
+// fn multiple_selectors_overlapping_results() -> Result<(), Error> {
+//     let stream = stream(eventric_stream::temp_path(), true)?;
 
-    // Query with selectors that match overlapping events
-    // Selector 1: id_c (matches EVENT_2 and EVENT_3)
-    // Selector 2: Tags(tag_4 AND tag_5) (also matches EVENT_2 and EVENT_3)
-    // Should return each event only once despite multiple matches
-    let id_2 = Identifier::new("id_2")?;
-    let spec_0 = Specifier::new(id_2);
-    let sel_0 = Selector::specifiers([spec_0])?;
+//     // Query with selectors that match overlapping events
+//     // Selector 1: id_c (matches EVENT_2 and EVENT_3)
+//     // Selector 2: Tags(tag_4 AND tag_5) (also matches EVENT_2 and EVENT_3)
+//     // Should return each event only once despite multiple matches
+//     let id_2 = Identifier::new("id_2")?;
+//     let spec_0 = Specifier::new(id_2);
+//     let sel_0 = Selector::specifiers([spec_0])?;
 
-    let tag_4 = Tag::new("tag_4")?;
-    let tag_5 = Tag::new("tag_5")?;
-    let sel_1 = Selector::tags([tag_4, tag_5])?;
+//     let tag_4 = Tag::new("tag_4")?;
+//     let tag_5 = Tag::new("tag_5")?;
+//     let sel_1 = Selector::tags([tag_4, tag_5])?;
 
-    let query = Query::new([sel_0, sel_1])?;
-    let condition = Condition::default().matches(&query);
+//     let query = Query::new([sel_0, sel_1])?;
+//     let condition = Condition::default().matches(&query);
 
-    let mut events = stream.query(&condition, None);
+//     let mut events = stream.query(&condition, None);
 
-    {
-        let event = assert_some_as_result!(events.next()).unwrap()?;
-        assert_eq!(&Data::new("data_2")?, event.data());
-        assert_eq!(&Position::new(2), event.position());
+//     {
+//         let event = assert_some_as_result!(events.next()).unwrap()?;
+//         assert_eq!(&Data::new("data_2")?, event.data());
+//         assert_eq!(&Position::new(2), event.position());
 
-        let event = assert_some_as_result!(events.next()).unwrap()?;
-        assert_eq!(&Data::new("data_3")?, event.data());
-        assert_eq!(&Position::new(3), event.position());
+//         let event = assert_some_as_result!(events.next()).unwrap()?;
+//         assert_eq!(&Data::new("data_3")?, event.data());
+//         assert_eq!(&Position::new(3), event.position());
 
-        assert_none!(events.next());
-    }
+//         assert_none!(events.next());
+//     }
 
-    Ok(())
-}
+//     Ok(())
+// }
 
 #[test]
 fn complex_version_ranges() -> Result<(), Error> {
@@ -623,19 +562,15 @@ fn complex_multi_selector_with_ranges() -> Result<(), Error> {
     let spec_1 = Specifier::new(id_1).range(range_0);
     let sel_1 = Selector::specifiers([spec_1])?;
 
-    let tag_1 = Tag::new("tag_1")?;
-    let tag_2 = Tag::new("tag_2")?;
-    let sel_2 = Selector::tags([tag_1, tag_2])?;
-
-    let query = Query::new([sel_0, sel_1, sel_2])?;
+    let query = Query::new([sel_0, sel_1])?;
     let condition = Condition::default().matches(&query);
 
     let mut events = stream.query(&condition, None);
 
     {
-        let event = assert_some_as_result!(events.next()).unwrap()?;
-        assert_eq!(&Data::new("data_0")?, event.data());
-        assert_eq!(&Position::new(0), event.position());
+        // let event = assert_some_as_result!(events.next()).unwrap()?;
+        // assert_eq!(&Data::new("data_0")?, event.data());
+        // assert_eq!(&Position::new(0), event.position());
 
         let event = assert_some_as_result!(events.next()).unwrap()?;
         assert_eq!(&Data::new("data_1")?, event.data());

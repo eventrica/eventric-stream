@@ -226,9 +226,6 @@ pub enum Selector {
     /// return all events that match match *any* of the supplied [`Specifier`]s
     /// *AND* *all* of the supplied [`Tag`]s.
     SpecifiersAndTags(Specifiers, Tags),
-    /// A [`Selector`] based only on [`Tag`]s, which will return all events that
-    /// match *all* of the supplied [`Tag`]s.
-    Tags(Tags),
 }
 
 impl Selector {
@@ -265,28 +262,12 @@ impl Selector {
             Tags::new(tags)?,
         ))
     }
-
-    /// Convenience function for creating a selector directly from a collection
-    /// of [`Tag`]s without constructing an intermediate [`Tags`]
-    /// instance directly.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the implied [`Tags`] instance returns an error
-    /// on construction.
-    pub fn tags<T>(tags: T) -> Result<Self, Error>
-    where
-        T: Into<Vec<Tag>>,
-    {
-        Ok(Self::Tags(Tags::new(tags)?))
-    }
 }
 
 #[derive(Debug)]
 pub(crate) enum SelectorHash {
     Specifiers(Vec<SpecifierHash>),
     SpecifiersAndTags(Vec<SpecifierHash>, Vec<TagHash>),
-    Tags(Vec<TagHash>),
 }
 
 impl From<&Selector> for SelectorHash {
@@ -295,7 +276,6 @@ impl From<&Selector> for SelectorHash {
         match selector {
             Selector::Specifiers(specifiers) => Self::Specifiers(specifiers.into()),
             Selector::SpecifiersAndTags(specifiers, tags) => Self::SpecifiersAndTags(specifiers.into(), tags.into()),
-            Selector::Tags(tags) => Self::Tags(tags.into()),
         }
     }
 }
@@ -310,9 +290,6 @@ impl From<&SelectorHashRef<'_>> for SelectorHash {
             SelectorHashRef::SpecifiersAndTags(specifiers, tags) => {
                 Self::SpecifiersAndTags(specifiers.iter().map(Into::into).collect(), tags.iter().map(Into::into).collect())
             }
-            SelectorHashRef::Tags(tags) => {
-                Self::Tags(tags.iter().map(Into::into).collect())
-            }
         }
     }
 }
@@ -321,7 +298,6 @@ impl From<&SelectorHashRef<'_>> for SelectorHash {
 pub(crate) enum SelectorHashRef<'a> {
     Specifiers(Vec<SpecifierHashRef<'a>>),
     SpecifiersAndTags(Vec<SpecifierHashRef<'a>>, Vec<TagHashRef<'a>>),
-    Tags(Vec<TagHashRef<'a>>),
 }
 
 impl<'a> From<&'a Selector> for SelectorHashRef<'a> {
@@ -330,7 +306,6 @@ impl<'a> From<&'a Selector> for SelectorHashRef<'a> {
         match selector {
             Selector::Specifiers(specifiers) => Self::Specifiers(specifiers.into()),
             Selector::SpecifiersAndTags(specifiers, tags) => Self::SpecifiersAndTags(specifiers.into(), tags.into()),
-            Selector::Tags(tags) => Self::Tags(tags.into()),
         }
     }
 }
@@ -508,8 +483,8 @@ mod tests {
 
         #[test]
         fn new_with_multiple_selectors_succeeds() -> Result<(), Error> {
-            let sel_0 = Selector::specifiers(vec![Specifier::new(Identifier::new("Event1")?)])?;
-            let sel_1 = Selector::tags(vec![Tag::new("tag1")?])?;
+            let sel_0 = Selector::specifiers(vec![Specifier::new(Identifier::new("id_0")?)])?;
+            let sel_1 = Selector::specifiers(vec![Specifier::new(Identifier::new("id_1")?)])?;
 
             assert_ok!(Query::new(vec![sel_0, sel_1]));
 
@@ -519,13 +494,12 @@ mod tests {
         #[test]
         fn new_with_mixed_selector_types_succeeds() -> Result<(), Error> {
             let sel_0 = Selector::specifiers(vec![Specifier::new(Identifier::new("Event1")?)])?;
-            let sel_1 = Selector::tags(vec![Tag::new("tag1")?])?;
-            let sel_2 = Selector::specifiers_and_tags(
+            let sel_1 = Selector::specifiers_and_tags(
                 vec![Specifier::new(Identifier::new("Event2")?)],
                 vec![Tag::new("tag2")?],
             )?;
 
-            assert_ok!(Query::new(vec![sel_0, sel_1, sel_2]));
+            assert_ok!(Query::new(vec![sel_0, sel_1]));
 
             Ok(())
         }
@@ -681,20 +655,6 @@ mod tests {
         }
 
         #[test]
-        fn selector_tags_convenience_method() -> Result<(), Error> {
-            let tag_0 = Tag::new("tag1")?;
-
-            assert_ok!(Selector::tags(vec![tag_0]));
-
-            Ok(())
-        }
-
-        #[test]
-        fn selector_tags_empty_fails() {
-            assert_err!(Selector::tags(vec![]));
-        }
-
-        #[test]
         fn selector_specifiers_and_tags_convenience_method() -> Result<(), Error> {
             let spec_0 = Specifier::new(Identifier::new("Event1")?);
             let tag_0 = Tag::new("tag1")?;
@@ -734,17 +694,6 @@ mod tests {
             let spec_2 = Specifier::new(Identifier::new("Event3")?);
 
             assert_ok!(Selector::specifiers(vec![spec_0, spec_1, spec_2]));
-
-            Ok(())
-        }
-
-        #[test]
-        fn selector_with_multiple_tags() -> Result<(), Error> {
-            let tag_0 = Tag::new("tag1")?;
-            let tag_1 = Tag::new("tag2")?;
-            let tag_2 = Tag::new("tag3")?;
-
-            assert_ok!(Selector::tags(vec![tag_0, tag_1, tag_2]));
 
             Ok(())
         }

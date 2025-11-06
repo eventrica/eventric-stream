@@ -109,7 +109,6 @@ impl Indices {
                 self.identifiers.query(specifiers.iter(), from),
                 self.tags.query(tags.iter(), from),
             ]),
-            SelectorHash::Tags(tags) => self.tags.query(tags.iter(), from),
         }))
     }
 }
