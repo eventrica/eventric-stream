@@ -19,7 +19,7 @@ double-ended-peekable = { version = "0.1.0" }
 eventric-core         = { git = "https://github.com/eventrica/eventric-core.git" }
 eventric-stream       = { path = "crates/eventric-stream" }
 fancy_constructor     = { version = "2" }
-fjall                 = { version = "=3.0.0-pre.4" }
+fjall                 = { version = "=3.0.0-pre.5" }
 include-utils         = { version = "0.2" }
 rand                  = { version = "0.9" }
 rapidhash             = { version = "4" }
