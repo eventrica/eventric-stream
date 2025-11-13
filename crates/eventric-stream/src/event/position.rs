@@ -49,6 +49,12 @@ impl AddAssign<u64> for Position {
     }
 }
 
+impl Default for Position {
+    fn default() -> Self {
+        Self::MIN
+    }
+}
+
 impl Sub<u64> for Position {
     type Output = Self;
 

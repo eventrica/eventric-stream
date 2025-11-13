@@ -115,6 +115,8 @@ impl Stream {
 
         self.next = next;
 
+        // TODO: Deal with edge case of appending zero events to an empty stream!
+
         Ok(self.next - 1)
     }
 }

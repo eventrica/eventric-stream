@@ -30,3 +30,9 @@ impl Version {
     /// `u8::MIN` internally).
     pub const MIN: Self = Self::new(u8::MIN);
 }
+
+impl Default for Version {
+    fn default() -> Self {
+        Self::MIN
+    }
+}
