@@ -504,9 +504,9 @@ checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
 name = "lsm-tree"
-version = "3.0.0-pre.5"
+version = "3.0.0-pre.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af1cdfd737b63065d5162e39b581d6c9575990af0669cd200d5031bfd88adf25"
+checksum = "7899d35cab5473500924607a7e17384c1e3e26d43b9c1c790dd43be6d15e9b8e"
 dependencies = [
  "byteorder-lite",
  "byteview",
