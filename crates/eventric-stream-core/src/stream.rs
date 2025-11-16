@@ -1,7 +1,5 @@
-//! The [`stream`][self] module contains the core stream abstraction,
-//! along with support for configuring and opening stream instances. Sub-modules
-//! contain types related to appending events to the stream, and querying the
-//! stream for previously appended events.
+//! See the `eventric-stream` crate for full documentation, including
+//! module-level documentation.
 
 pub mod append;
 pub mod query;

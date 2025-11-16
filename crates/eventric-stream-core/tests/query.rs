@@ -5,7 +5,7 @@ use assertables::{
     assert_some,
     assert_some_as_result,
 };
-use eventric_stream::{
+use eventric_stream_core::{
     error::Error,
     event::{
         Data,
@@ -32,7 +32,7 @@ use eventric_stream::{
 
 #[test]
 fn default_empty() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), false)?;
+    let stream = stream(eventric_stream_core::temp_path(), false)?;
 
     let condition = Condition::default();
 
@@ -49,7 +49,7 @@ fn default_empty() -> Result<(), Error> {
 
 #[test]
 fn default() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+    let stream = stream(eventric_stream_core::temp_path(), true)?;
 
     let condition = Condition::default();
 
@@ -72,7 +72,7 @@ fn default() -> Result<(), Error> {
 
 #[test]
 fn specifier() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+    let stream = stream(eventric_stream_core::temp_path(), true)?;
 
     let id_2 = Identifier::new("id_2")?;
     let spec_0 = Specifier::new(id_2);
@@ -104,7 +104,7 @@ fn specifier() -> Result<(), Error> {
 
 #[test]
 fn specifier_with_range() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+    let stream = stream(eventric_stream_core::temp_path(), true)?;
 
     let id_2 = Identifier::new("id_2")?;
     let range_0 = Version::new(1)..Version::MAX;
@@ -133,7 +133,7 @@ fn specifier_with_range() -> Result<(), Error> {
 
 #[test]
 fn multiple_specifiers() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+    let stream = stream(eventric_stream_core::temp_path(), true)?;
 
     let id_0 = Identifier::new("id_0")?;
     let spec_0 = Specifier::new(id_0);
@@ -167,7 +167,7 @@ fn multiple_specifiers() -> Result<(), Error> {
 
 #[test]
 fn multiple_specifiers_with_range() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+    let stream = stream(eventric_stream_core::temp_path(), true)?;
 
     let id_0 = Identifier::new("id_0")?;
     let spec_0 = Specifier::new(id_0);
@@ -201,7 +201,7 @@ fn multiple_specifiers_with_range() -> Result<(), Error> {
 
 #[test]
 fn specifiers_and_tags() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+    let stream = stream(eventric_stream_core::temp_path(), true)?;
 
     let id_2 = Identifier::new("id_2")?;
     let spec_0 = Specifier::new(id_2);
@@ -233,7 +233,7 @@ fn specifiers_and_tags() -> Result<(), Error> {
 
 #[test]
 fn specifiers_and_tags_with_version_range() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+    let stream = stream(eventric_stream_core::temp_path(), true)?;
 
     let id_2 = Identifier::new("id_2")?;
     let range_0 = Version::new(1)..Version::MAX;
@@ -260,7 +260,7 @@ fn specifiers_and_tags_with_version_range() -> Result<(), Error> {
 
 #[test]
 fn specifiers_and_tags_no_match() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+    let stream = stream(eventric_stream_core::temp_path(), true)?;
 
     let id_0 = Identifier::new("id_0")?;
     let spec_0 = Specifier::new(id_0);
@@ -282,7 +282,7 @@ fn specifiers_and_tags_no_match() -> Result<(), Error> {
 
 #[test]
 fn multiple_specifiers_and_tags() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+    let stream = stream(eventric_stream_core::temp_path(), true)?;
 
     let id_0 = Identifier::new("id_0")?;
     let spec_0 = Specifier::new(id_0);
@@ -314,7 +314,7 @@ fn multiple_specifiers_and_tags() -> Result<(), Error> {
 
 #[test]
 fn multiple_selectors_same_type() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+    let stream = stream(eventric_stream_core::temp_path(), true)?;
 
     // Query with two Specifiers selectors (OR between selectors)
     // Selector 1: id_a
@@ -385,7 +385,7 @@ fn multiple_selectors_same_type() -> Result<(), Error> {
 
 #[test]
 fn multiple_selectors_mixed_types() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+    let stream = stream(eventric_stream_core::temp_path(), true)?;
 
     // Complex query with three different selector types
     // Selector 1: Specifiers(id_a)
@@ -464,7 +464,7 @@ fn multiple_selectors_mixed_types() -> Result<(), Error> {
 
 #[test]
 fn complex_version_ranges() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+    let stream = stream(eventric_stream_core::temp_path(), true)?;
 
     // Query with multiple specifiers with different version ranges
     // Specifier 1: id_a version 0 only
@@ -501,7 +501,7 @@ fn complex_version_ranges() -> Result<(), Error> {
 
 #[test]
 fn multiple_specifiers_and_tags_selectors() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+    let stream = stream(eventric_stream_core::temp_path(), true)?;
 
     // Query with two SpecifiersAndTags selectors
     // Selector 1: id_a AND (tag_1 AND tag_2)
@@ -542,7 +542,7 @@ fn multiple_specifiers_and_tags_selectors() -> Result<(), Error> {
 
 #[test]
 fn complex_multi_selector_with_ranges() -> Result<(), Error> {
-    let stream = stream(eventric_stream::temp_path(), true)?;
+    let stream = stream(eventric_stream_core::temp_path(), true)?;
 
     // Complex query combining all selector types with version ranges
     // Selector 1: SpecifiersAndTags(id_c v0 only, tag_3)

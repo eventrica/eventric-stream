@@ -9,22 +9,24 @@ members  = ["benches/*", "crates/*", "examples/*"]
 resolver = "2"
 
 [workspace.dependencies]
-any-range             = { version = "0.1" }
-assertables           = { version = "9" }
-bytes                 = { version = "1" }
-criterion             = { version = "0.7" }
-dashmap               = { version = "6", features = ["inline"] }
-derive_more           = { version = "2", features = ["full"] }
-double-ended-peekable = { version = "0.1.0" }
-eventric-core         = { git = "https://github.com/eventrica/eventric-core.git" }
-eventric-stream       = { path = "crates/eventric-stream" }
-fancy_constructor     = { version = "2" }
-fjall                 = { version = "=3.0.0-pre.6" }
-include-utils         = { version = "0.2" }
-rand                  = { version = "0.9" }
-rapidhash             = { version = "4" }
-self_cell             = { version = "1" }
-thiserror             = { version = "2" }
+any-range              = { version = "0.1" }
+assertables            = { version = "9" }
+bytes                  = { version = "1" }
+criterion              = { version = "0.7" }
+dashmap                = { version = "6", features = ["inline"] }
+derive_more            = { version = "2", features = ["full"] }
+double-ended-peekable  = { version = "0.1.0" }
+eventric-core          = { git = "https://github.com/eventrica/eventric-core.git" }
+eventric-stream        = { path = "crates/eventric-stream" }
+eventric-stream-core   = { path = "crates/eventric-stream-core" }
+eventric-stream-macros = { path = "crates/eventric-stream-macros" }
+fancy_constructor      = { version = "2" }
+fjall                  = { version = "=3.0.0-pre.6" }
+include-utils          = { version = "0.2" }
+rand                   = { version = "0.9" }
+rapidhash              = { version = "4" }
+self_cell              = { version = "1" }
+thiserror              = { version = "2" }
 
 [workspace.lints.clippy]
 cargo       = "warn"

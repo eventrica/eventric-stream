@@ -1,6 +1,5 @@
-//! The [`append`][self] module contains types and functionality related to the
-//! [`Stream::append`] operation, such as the append-specific [`Condition`]
-//! type.
+//! See the `eventric-stream` crate for full documentation, including
+//! module-level documentation.
 
 pub(crate) mod condition;
 

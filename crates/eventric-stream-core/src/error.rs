@@ -1,7 +1,5 @@
-//! The [`error`][self] module contains the common [`Error`][error] type used
-//! throughout `eventric-stream`.
-//!
-//! [error]: enum@crate::error::Error
+//! See the `eventric-stream` crate for full documentation, including
+//! module-level documentation.
 
 use eventric_core::validation;
 use thiserror::Error;

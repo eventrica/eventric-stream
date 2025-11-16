@@ -1,6 +1,5 @@
-//! The [`event`][self] module contains the constituent components for events,
-//! both pre- and post- stream append, as well as types related to specifying
-//! events within queries.
+//! See the `eventric-stream` crate for full documentation, including
+//! module-level documentation.
 
 pub(crate) mod data;
 pub(crate) mod identifier;

@@ -1,7 +1,5 @@
-//! The [`query`][self] module contains types and functionality related to the
-//! [`Stream::query`] operation, such as the [`Cache`], query-specific
-//! [`Condition`], and [`Options`] types, as well as the fundamental [`Query`]
-//! type and its components.
+//! See the `eventric-stream` crate for full documentation, including
+//! module-level documentation.
 
 pub(crate) mod cache;
 pub(crate) mod condition;

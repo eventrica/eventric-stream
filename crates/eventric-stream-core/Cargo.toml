@@ -1,0 +1,31 @@
+[dependencies]
+any-range.workspace             = true
+bytes.workspace                 = true
+dashmap.workspace               = true
+derive_more.workspace           = true
+double-ended-peekable.workspace = true
+eventric-core.workspace         = true
+fancy_constructor.workspace     = true
+fjall.workspace                 = true
+rand.workspace                  = true
+rapidhash.workspace             = true
+self_cell.workspace             = true
+thiserror.workspace             = true
+
+[dev-dependencies]
+assertables.workspace = true
+
+[lints]
+workspace = true
+
+[package]
+authors.workspace    = true
+categories.workspace = true
+description          = "Eventric Stream Core"
+edition.workspace    = true
+keywords.workspace   = true
+license.workspace    = true
+name                 = "eventric-stream-core"
+readme.workspace     = true
+repository.workspace = true
+version.workspace    = true

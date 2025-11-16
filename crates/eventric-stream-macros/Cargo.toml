@@ -1,7 +1,7 @@
 [dependencies]
-eventric-stream-core.workspace   = true
-eventric-stream-macros.workspace = true
-include-utils.workspace          = true
+
+[lib]
+proc-macro = true
 
 [lints]
 workspace = true
@@ -9,11 +9,11 @@ workspace = true
 [package]
 authors.workspace    = true
 categories.workspace = true
-description          = "Eventric Stream"
+description          = "Eventric Stream Macros"
 edition.workspace    = true
 keywords.workspace   = true
 license.workspace    = true
-name                 = "eventric-stream"
+name                 = "eventric-stream-macros"
 readme.workspace     = true
 repository.workspace = true
 version.workspace    = true

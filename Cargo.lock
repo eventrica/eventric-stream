@@ -311,20 +311,9 @@ dependencies = [
 name = "eventric-stream"
 version = "0.1.0"
 dependencies = [
- "any-range",
- "assertables",
- "bytes",
- "dashmap",
- "derive_more",
- "double-ended-peekable",
- "eventric-core",
- "fancy_constructor",
- "fjall",
+ "eventric-stream-core",
+ "eventric-stream-macros",
  "include-utils",
- "rand",
- "rapidhash",
- "self_cell",
- "thiserror",
 ]
 
 [[package]]
@@ -336,11 +325,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "eventric-stream-core"
+version = "0.1.0"
+dependencies = [
+ "any-range",
+ "assertables",
+ "bytes",
+ "dashmap",
+ "derive_more",
+ "double-ended-peekable",
+ "eventric-core",
+ "fancy_constructor",
+ "fjall",
+ "rand",
+ "rapidhash",
+ "self_cell",
+ "thiserror",
+]
+
+[[package]]
 name = "eventric-stream-examples"
 version = "0.1.0"
 dependencies = [
  "eventric-stream",
 ]
+
+[[package]]
+name = "eventric-stream-macros"
+version = "0.1.0"
 
 [[package]]
 name = "eventric-stream-profiling-examples"
