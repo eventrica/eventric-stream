@@ -1,3 +1,5 @@
+pub(crate) mod macros;
+
 use derive_more::{
     AsRef,
     Deref,

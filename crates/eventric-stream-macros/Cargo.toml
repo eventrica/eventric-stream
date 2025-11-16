@@ -1,4 +1,6 @@
 [dependencies]
+eventric-stream-core.workspace = true
+syn.workspace                  = true
 
 [lib]
 proc-macro = true

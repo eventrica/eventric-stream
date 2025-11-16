@@ -13,6 +13,7 @@ any-range              = { version = "0.1" }
 assertables            = { version = "9" }
 bytes                  = { version = "1" }
 criterion              = { version = "0.7" }
+darling                = { version = "0.21" }
 dashmap                = { version = "6", features = ["inline"] }
 derive_more            = { version = "2", features = ["full"] }
 double-ended-peekable  = { version = "0.1.0" }
@@ -23,9 +24,12 @@ eventric-stream-macros = { path = "crates/eventric-stream-macros" }
 fancy_constructor      = { version = "2" }
 fjall                  = { version = "=3.0.0-pre.6" }
 include-utils          = { version = "0.2" }
+proc-macro2            = { version = "1" }
+quote                  = { version = "1" }
 rand                   = { version = "0.9" }
 rapidhash              = { version = "4" }
 self_cell              = { version = "1" }
+syn                    = { version = "2" }
 thiserror              = { version = "2" }
 
 [workspace.lints.clippy]

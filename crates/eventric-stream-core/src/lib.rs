@@ -11,6 +11,7 @@
 
 pub mod error;
 pub mod event;
+pub mod macros;
 pub mod stream;
 
 pub(crate) mod utils;

@@ -37,6 +37,7 @@ pub mod event {
         Tag,
         Version,
     };
+    pub use eventric_stream_macros::tag;
 }
 
 pub mod stream {
