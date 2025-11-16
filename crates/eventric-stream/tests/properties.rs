@@ -30,7 +30,7 @@ use eventric_stream_core::{
 
 #[test]
 fn empty() -> Result<(), Error> {
-    let stream = stream(eventric_stream_core::temp_path(), true)?;
+    let stream = stream(eventric_stream::temp_path(), true)?;
 
     // Initial state of a new stream should be empty/zero-length
 
@@ -44,7 +44,7 @@ fn empty() -> Result<(), Error> {
 
 #[test]
 fn post_append() -> Result<(), Error> {
-    let mut stream = stream(eventric_stream_core::temp_path(), true)?;
+    let mut stream = stream(eventric_stream::temp_path(), true)?;
 
     let position = stream.append(&*EVENTS, None)?;
 
@@ -62,7 +62,7 @@ fn post_append() -> Result<(), Error> {
 
 #[test]
 fn post_append_error() -> Result<(), Error> {
-    let mut stream = stream(eventric_stream_core::temp_path(), true)?;
+    let mut stream = stream(eventric_stream::temp_path(), true)?;
 
     stream.append(&*EVENTS, None)?;
 
@@ -88,7 +88,7 @@ fn post_append_error() -> Result<(), Error> {
 
 #[test]
 fn post_reopen() -> Result<(), Error> {
-    let path = eventric_stream_core::temp_path();
+    let path = eventric_stream::temp_path();
 
     {
         let mut stream = stream(path.clone(), false)?;

@@ -13,10 +13,8 @@
 // Re-Exports
 
 pub mod error {
-    //! The [`error`][self] module contains the common [`Error`][error] type
+    //! The [`error`][self] module contains the common [`Error`] type
     //! used throughout `eventric-stream`.
-    //!
-    //! [error]: enum@crate::error::Error
 
     pub use eventric_stream_core::error::Error;
 }
@@ -78,4 +76,4 @@ pub mod stream {
     }
 }
 
-pub use eventric_stream_core::temp_path;
+pub use eventric_stream_core::utils::temp_path;

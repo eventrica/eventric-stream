@@ -346,6 +346,7 @@ dependencies = [
 name = "eventric-stream"
 version = "0.1.0"
 dependencies = [
+ "assertables",
  "eventric-stream-core",
  "eventric-stream-macros",
  "include-utils",

@@ -1,3 +1,6 @@
+//! See the `eventric-stream` crate for full documentation, including
+//! module-level documentation.
+
 pub(crate) mod hashing;
 pub(crate) mod iteration;
 

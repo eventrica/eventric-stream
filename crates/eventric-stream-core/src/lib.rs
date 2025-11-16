@@ -13,13 +13,8 @@ pub mod error;
 pub mod event;
 pub mod macros;
 pub mod stream;
-
-pub(crate) mod utils;
+pub mod utils;
 
 // =================================================================================================
 // Eventric Stream
 // =================================================================================================
-
-// Re-Exports
-
-pub use crate::utils::temp_path;
