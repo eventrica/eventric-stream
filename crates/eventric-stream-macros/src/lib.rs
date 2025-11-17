@@ -11,7 +11,7 @@ use eventric_stream_core::macros;
 use proc_macro::TokenStream;
 
 // =================================================================================================
-// Eventric Surface Macro
+// Eventric Stream Macros
 // =================================================================================================
 
 /// Attempts to create a new [`Tag`][tag] instance, using a provided
