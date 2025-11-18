@@ -23,7 +23,7 @@ macro_rules! emit_impl_or_error {
 
 // Tag
 
-/// .
+#[doc(hidden)]
 #[must_use]
 pub fn tag(input: TokenStream) -> TokenStream {
     emit_impl_or_error!(tag::macros::Tag::new(input))
