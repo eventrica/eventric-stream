@@ -7,12 +7,27 @@
 #![deny(clippy::missing_safety_doc)]
 #![deny(missing_docs)]
 
-use eventric_stream_core::macros;
+pub(crate) mod event;
+
 use proc_macro::TokenStream;
+use quote::ToTokens;
+
+use crate::event::tag;
 
 // =================================================================================================
 // Eventric Stream Macros
 // =================================================================================================
+
+macro_rules! emit_impl_or_error {
+    ($e:expr) => {
+        match $e {
+            Ok(val) => val.into_token_stream(),
+            Err(err) => err.write_errors(),
+        }
+    };
+}
+
+// Tag
 
 /// Attempts to create a new [`Tag`][tag] instance, using a provided
 /// identifier-compatible prefix value, and a value which implements display.
@@ -22,5 +37,5 @@ use proc_macro::TokenStream;
 /// ```
 #[proc_macro]
 pub fn tag(input: TokenStream) -> TokenStream {
-    macros::tag(input.into()).into()
+    emit_impl_or_error!(tag::TagFunction::new(input.into())).into()
 }

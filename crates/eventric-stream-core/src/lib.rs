@@ -11,7 +11,6 @@
 
 pub mod error;
 pub mod event;
-pub mod macros;
 pub mod stream;
 pub mod utils;
 

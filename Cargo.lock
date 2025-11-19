@@ -367,18 +367,14 @@ dependencies = [
  "any-range",
  "assertables",
  "bytes",
- "darling",
  "dashmap",
  "derive_more",
  "double-ended-peekable",
  "eventric-core",
  "fancy_constructor",
  "fjall",
- "proc-macro2",
- "quote",
  "rand",
  "rapidhash",
- "syn",
  "thiserror",
 ]
 
@@ -393,7 +389,10 @@ dependencies = [
 name = "eventric-stream-macros"
 version = "0.1.0"
 dependencies = [
+ "darling",
  "eventric-stream-core",
+ "proc-macro2",
+ "quote",
  "syn",
 ]
 

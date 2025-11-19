@@ -1,18 +1,14 @@
 [dependencies]
 any-range.workspace             = true
 bytes.workspace                 = true
-darling.workspace               = true
 dashmap.workspace               = true
 derive_more.workspace           = true
 double-ended-peekable.workspace = true
 eventric-core.workspace         = true
 fancy_constructor.workspace     = true
 fjall.workspace                 = true
-proc-macro2.workspace           = true
-quote.workspace                 = true
 rand.workspace                  = true
 rapidhash.workspace             = true
-syn.workspace                   = true
 thiserror.workspace             = true
 
 [dev-dependencies]
