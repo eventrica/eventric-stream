@@ -33,6 +33,7 @@ pub mod event {
         Position,
         Specifier,
         Tag,
+        Timestamp,
         Version,
     };
     pub use eventric_stream_macros::tag;

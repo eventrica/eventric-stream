@@ -22,5 +22,5 @@ use proc_macro::TokenStream;
 /// ```
 #[proc_macro]
 pub fn tag(input: TokenStream) -> TokenStream {
-    macros::function::tag(input.into()).into()
+    macros::tag(input.into()).into()
 }
