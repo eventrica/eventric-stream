@@ -12,7 +12,6 @@ proc-macro2.workspace           = true
 quote.workspace                 = true
 rand.workspace                  = true
 rapidhash.workspace             = true
-self_cell.workspace             = true
 syn.workspace                   = true
 thiserror.workspace             = true
 

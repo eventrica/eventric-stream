@@ -22,13 +22,12 @@ eventric-stream        = { path = "crates/eventric-stream" }
 eventric-stream-core   = { path = "crates/eventric-stream-core" }
 eventric-stream-macros = { path = "crates/eventric-stream-macros" }
 fancy_constructor      = { version = "2" }
-fjall                  = { version = "=3.0.0-pre.6" }
+fjall                  = { version = "=3.0.0-pre.7" }
 include-utils          = { version = "0.2" }
 proc-macro2            = { version = "1" }
 quote                  = { version = "1" }
 rand                   = { version = "0.9" }
 rapidhash              = { version = "4" }
-self_cell              = { version = "1" }
 syn                    = { version = "2" }
 thiserror              = { version = "2" }
 

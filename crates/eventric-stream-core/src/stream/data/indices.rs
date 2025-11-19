@@ -18,16 +18,13 @@ use crate::{
         timestamp::Timestamp,
     },
     stream::{
-        data::indices::{
-            identifiers::{
-                IdentifierPositionIterator,
-                Identifiers,
+        data::{
+            BoxedIterator,
+            indices::{
+                identifiers::Identifiers,
+                tags::Tags,
+                timestamps::Timestamps,
             },
-            tags::{
-                TagPositionIterator,
-                Tags,
-            },
-            timestamps::Timestamps,
         },
         query::{
             QueryHash,
@@ -121,8 +118,7 @@ impl Indices {
 pub enum PositionIterator {
     And(SequentialAndIterator<PositionIterator, Position>),
     Or(SequentialOrIterator<PositionIterator, Position>),
-    Identifier(#[debug("Identifier Position Iterator")] IdentifierPositionIterator),
-    Tag(#[debug("Tag Position Iterator")] TagPositionIterator),
+    Iterator(#[debug("Position Iterator")] BoxedIterator<Position>),
 }
 
 impl DoubleEndedIterator for PositionIterator {
@@ -130,8 +126,7 @@ impl DoubleEndedIterator for PositionIterator {
         match self {
             Self::And(iter) => iter.next_back(),
             Self::Or(iter) => iter.next_back(),
-            Self::Identifier(iter) => iter.next_back(),
-            Self::Tag(iter) => iter.next_back(),
+            Self::Iterator(iter) => iter.next_back(),
         }
     }
 }
@@ -143,8 +138,7 @@ impl Iterator for PositionIterator {
         match self {
             Self::And(iter) => iter.next(),
             Self::Or(iter) => iter.next(),
-            Self::Identifier(iter) => iter.next(),
-            Self::Tag(iter) => iter.next(),
+            Self::Iterator(iter) => iter.next(),
         }
     }
 }

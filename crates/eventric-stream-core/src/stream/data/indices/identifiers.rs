@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use any_range::AnyRange;
 use bytes::{
     Buf,
@@ -13,7 +11,6 @@ use fjall::{
     Slice,
     WriteBatch,
 };
-use self_cell::self_cell;
 
 use crate::{
     error::Error,
@@ -27,6 +24,7 @@ use crate::{
         version::Version,
     },
     stream::data::{
+        BoxedIterator,
         HASH_LEN,
         ID_LEN,
         POSITION_LEN,
@@ -91,87 +89,53 @@ impl Identifiers {
         specifier: &SpecifierHash,
         from: Option<Position>,
     ) -> PositionIterator {
+        let identifier = &specifier.identifier;
         let range = specifier.range.clone();
 
         match from {
-            Some(position) => self.query_specifier_range(&specifier.identifier, position, range),
-            None => self.query_specifier_prefix(&specifier.identifier, range),
+            Some(from) => PositionIterator::Iterator(self.query_range(identifier, from, range)),
+            None => PositionIterator::Iterator(self.query_prefix(identifier, range)),
         }
     }
 
-    fn query_specifier_prefix(
+    fn query_prefix(
         &self,
         identifier: &IdentifierHash,
         range: Option<AnyRange<Version>>,
-    ) -> PositionIterator {
+    ) -> BoxedIterator<Position> {
         let hash = identifier.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
-        let iter = IdentifierPositionIterator::new(
-            (self.keyspace.clone(), Arc::new(range)),
-            |(keyspace, range)| {
-                Box::new(
-                    keyspace
-                        .prefix(prefix)
-                        .map(Guard::into_inner)
-                        .filter_map(|result| {
-                            IdentifierPositionIterator::filter_map(result, range.as_ref().as_ref())
-                        }),
-                )
-            },
-        );
-
-        PositionIterator::Identifier(iter)
+        Box::new(
+            self.keyspace
+                .prefix(prefix)
+                .map(Guard::into_inner)
+                .filter_map(move |result| Self::query_filter_map(result, range.as_ref())),
+        )
     }
 
-    fn query_specifier_range(
+    fn query_range(
         &self,
         identifier: &IdentifierHash,
         from: Position,
         range: Option<AnyRange<Version>>,
-    ) -> PositionIterator {
+    ) -> BoxedIterator<Position> {
         let hash = identifier.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
-        let iter = IdentifierPositionIterator::new(
-            (self.keyspace.clone(), Arc::new(range)),
-            |(keyspace, range)| {
-                Box::new(
-                    keyspace
-                        .range(lower..upper)
-                        .map(Guard::into_inner)
-                        .filter_map(|result| {
-                            IdentifierPositionIterator::filter_map(result, range.as_ref().as_ref())
-                        }),
-                )
-            },
-        );
-
-        PositionIterator::Identifier(iter)
+        Box::new(
+            self.keyspace
+                .range(lower..upper)
+                .map(Guard::into_inner)
+                .filter_map(move |result| Self::query_filter_map(result, range.as_ref())),
+        )
     }
-}
 
-// -------------------------------------------------------------------------------------------------
-
-// Iterators
-
-#[rustfmt::skip]
-type BoxedIdentifierPositionIterator<'a> = Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + Send + 'a>;
-
-self_cell!(
-    pub(crate) struct IdentifierPositionIterator {
-        owner: (Keyspace, Arc<Option<AnyRange<Version>>>),
-        #[covariant]
-        dependent: BoxedIdentifierPositionIterator,
-    }
-);
-
-impl IdentifierPositionIterator {
-    fn filter_map(
+    fn query_filter_map(
         result: Result<(Slice, Slice), fjall::Error>,
         range: Option<&AnyRange<Version>>,
-    ) -> Option<<Self as Iterator>::Item> {
+    ) -> Option<Result<Position, Error>> {
         match result {
             Ok((key, value)) => {
                 if let Some(range) = range {
@@ -186,20 +150,6 @@ impl IdentifierPositionIterator {
             }
             Err(err) => Some(Err(Error::from(err))),
         }
-    }
-}
-
-impl DoubleEndedIterator for IdentifierPositionIterator {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.with_dependent_mut(|_, iter| iter.next_back())
-    }
-}
-
-impl Iterator for IdentifierPositionIterator {
-    type Item = Result<Position, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.with_dependent_mut(|_, iter| iter.next())
     }
 }
 

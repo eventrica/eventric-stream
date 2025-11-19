@@ -12,7 +12,6 @@ use fjall::{
     Slice,
     WriteBatch,
 };
-use self_cell::self_cell;
 
 use crate::{
     error::Error,
@@ -26,7 +25,10 @@ use crate::{
         timestamp::Timestamp,
         version::Version,
     },
-    stream::data::indices::PositionIterator,
+    stream::data::{
+        BoxedIterator,
+        indices::PositionIterator,
+    },
 };
 
 // =================================================================================================
@@ -84,35 +86,12 @@ impl Events {
 
 impl Events {
     #[must_use]
-    pub fn iterate(&self, from: Option<Position>) -> DirectPersistentEventHashIterator {
+    #[rustfmt::skip]
+    pub fn iterate(&self, from: Option<Position>) -> BoxedIterator<PersistentEventHash> {
         match from {
-            Some(position) => self.iterate_from(position),
-            None => self.iterate_all(),
+            Some(from) => Box::new(self.keyspace.range(from.to_be_bytes()..).map(Guard::into_inner).map(map)),
+            None => Box::new(self.keyspace.iter().map(Guard::into_inner).map(map)),
         }
-    }
-
-    fn iterate_all(&self) -> DirectPersistentEventHashIterator {
-        DirectPersistentEventHashIterator::new(self.keyspace.clone(), |keyspace| {
-            Box::new(
-                keyspace
-                    .iter()
-                    .map(Guard::into_inner)
-                    .map(DirectPersistentEventHashIterator::map),
-            )
-        })
-    }
-
-    fn iterate_from(&self, from: Position) -> DirectPersistentEventHashIterator {
-        let range = from.to_be_bytes()..;
-
-        DirectPersistentEventHashIterator::new(self.keyspace.clone(), |keyspace| {
-            Box::new(
-                keyspace
-                    .range(range)
-                    .map(Guard::into_inner)
-                    .map(DirectPersistentEventHashIterator::map),
-            )
-        })
     }
 }
 
@@ -133,7 +112,7 @@ impl Events {
 
 #[derive(Debug)]
 pub(crate) enum PersistentEventHashIterator {
-    Direct(#[debug("Peristent Event Hash Iterator")] DirectPersistentEventHashIterator),
+    Direct(#[debug("Iterator")] BoxedIterator<PersistentEventHash>),
     Mapped(MappedPersistentEventHashIterator),
 }
 
@@ -157,39 +136,10 @@ impl Iterator for PersistentEventHashIterator {
     }
 }
 
-// Direct
-
-#[rustfmt::skip]
-type BoxedPersistentEventHashIterator<'a> = Box<dyn DoubleEndedIterator<Item = Result<PersistentEventHash, Error>> + Send + 'a>;
-
-self_cell!(
-    pub(crate) struct DirectPersistentEventHashIterator {
-        owner: Keyspace,
-        #[covariant]
-        dependent: BoxedPersistentEventHashIterator,
-    }
-);
-
-impl DirectPersistentEventHashIterator {
-    fn map(result: Result<(Slice, Slice), fjall::Error>) -> <Self as Iterator>::Item {
-        match result {
-            Ok((key, value)) => Ok(SliceAndPosition(value, Key(key).into()).into()),
-            Err(err) => Err(Error::from(err)),
-        }
-    }
-}
-
-impl DoubleEndedIterator for DirectPersistentEventHashIterator {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.with_dependent_mut(|_, iter| iter.next_back())
-    }
-}
-
-impl Iterator for DirectPersistentEventHashIterator {
-    type Item = Result<PersistentEventHash, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.with_dependent_mut(|_, iter| iter.next())
+fn map(result: Result<(Slice, Slice), fjall::Error>) -> Result<PersistentEventHash, Error> {
+    match result {
+        Ok((key, value)) => Ok(SliceAndPosition(value, Key(key).into()).into()),
+        Err(err) => Err(Error::from(err)),
     }
 }
 

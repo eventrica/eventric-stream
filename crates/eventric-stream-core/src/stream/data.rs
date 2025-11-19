@@ -27,6 +27,12 @@ static POSITION_LEN: usize = size_of::<u64>();
 
 // -------------------------------------------------------------------------------------------------
 
+// Types
+
+pub type BoxedIterator<T> = Box<dyn DoubleEndedIterator<Item = Result<T, Error>>>;
+
+// -------------------------------------------------------------------------------------------------
+
 // Data
 
 #[derive(new, Debug)]

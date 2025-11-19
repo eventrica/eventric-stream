@@ -10,7 +10,6 @@ use fjall::{
     Slice,
     WriteBatch,
 };
-use self_cell::self_cell;
 
 use crate::{
     error::Error,
@@ -22,6 +21,7 @@ use crate::{
         },
     },
     stream::data::{
+        BoxedIterator,
         HASH_LEN,
         ID_LEN,
         POSITION_LEN,
@@ -77,80 +77,41 @@ impl Tags {
 
     fn query_tag(&self, tag: &TagHash, from: Option<Position>) -> PositionIterator {
         match from {
-            Some(position) => self.query_tag_range(tag, position),
-            None => self.query_tag_prefix(tag),
+            Some(from) => PositionIterator::Iterator(self.query_range(tag, from)),
+            None => PositionIterator::Iterator(self.query_prefix(tag)),
         }
     }
 
-    fn query_tag_prefix(&self, tag: &TagHash) -> PositionIterator {
+    fn query_prefix(&self, tag: &TagHash) -> BoxedIterator<Position> {
         let hash = tag.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
-        let iter = TagPositionIterator::new(self.keyspace.clone(), |keyspace| {
-            Box::new(
-                keyspace
-                    .prefix(prefix)
-                    .map(Guard::key)
-                    .map(TagPositionIterator::map),
-            )
-        });
-
-        PositionIterator::Tag(iter)
+        Box::new(
+            self.keyspace
+                .prefix(prefix)
+                .map(Guard::key)
+                .map(Self::query_map),
+        )
     }
 
-    fn query_tag_range(&self, tag: &TagHash, from: Position) -> PositionIterator {
+    fn query_range(&self, tag: &TagHash, from: Position) -> BoxedIterator<Position> {
         let hash = tag.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
 
-        let iter = TagPositionIterator::new(self.keyspace.clone(), |keyspace| {
-            Box::new(
-                keyspace
-                    .range(lower..upper)
-                    .map(Guard::key)
-                    .map(TagPositionIterator::map),
-            )
-        });
-
-        PositionIterator::Tag(iter)
+        Box::new(
+            self.keyspace
+                .range(lower..upper)
+                .map(Guard::key)
+                .map(Self::query_map),
+        )
     }
-}
 
-// -------------------------------------------------------------------------------------------------
-
-// Iterators
-
-#[rustfmt::skip]
-type BoxedTagPositionIterator<'a> = Box<dyn DoubleEndedIterator<Item = Result<Position, Error>> + Send + 'a>;
-
-self_cell!(
-    pub(crate) struct TagPositionIterator {
-        owner: Keyspace,
-        #[covariant]
-        dependent: BoxedTagPositionIterator,
-    }
-);
-
-impl TagPositionIterator {
-    fn map(result: Result<Slice, fjall::Error>) -> <Self as Iterator>::Item {
+    fn query_map(result: Result<Slice, fjall::Error>) -> Result<Position, Error> {
         match result {
             Ok(key) => Ok(Key(key).into()),
             Err(err) => Err(Error::from(err)),
         }
-    }
-}
-
-impl DoubleEndedIterator for TagPositionIterator {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.with_dependent_mut(|_, iter| iter.next_back())
-    }
-}
-
-impl Iterator for TagPositionIterator {
-    type Item = Result<Position, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.with_dependent_mut(|_, iter| iter.next())
     }
 }
 
