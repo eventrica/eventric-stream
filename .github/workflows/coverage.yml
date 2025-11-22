@@ -9,3 +9,5 @@ jobs:
   call_shared:
     uses: eventrica/.github/.github/workflows/coverage.yml@main
     secrets: inherit
+    with:
+      arguments: --exclude eventric-stream-macros
