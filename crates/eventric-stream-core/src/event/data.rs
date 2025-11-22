@@ -66,7 +66,6 @@ impl Validate for Data {
 
 #[cfg(test)]
 mod tests {
-
     use assertables::{
         assert_err,
         assert_ok,

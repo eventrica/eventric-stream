@@ -135,7 +135,6 @@ impl<'a> From<&'a Identifier> for IdentifierHashRef<'a> {
 
 #[cfg(test)]
 mod tests {
-
     use assertables::{
         assert_err,
         assert_ok,

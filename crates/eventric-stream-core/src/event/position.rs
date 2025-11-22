@@ -68,3 +68,186 @@ impl SubAssign<u64> for Position {
         self.0 -= rhs;
     }
 }
+
+// =================================================================================================
+// Tests
+// =================================================================================================
+
+#[cfg(test)]
+mod tests {
+    use crate::event::position::Position;
+
+    #[test]
+    fn new_creates_position_with_given_value() {
+        let pos = Position::new(42);
+
+        assert_eq!(*pos, 42);
+    }
+
+    #[test]
+    fn min_constant_equals_zero() {
+        assert_eq!(*Position::MIN, 0);
+        assert_eq!(*Position::MIN, u64::MIN);
+    }
+
+    #[test]
+    fn max_constant_equals_u64_max() {
+        assert_eq!(*Position::MAX, u64::MAX);
+    }
+
+    #[test]
+    fn default_equals_min() {
+        assert_eq!(Position::default(), Position::MIN);
+        assert_eq!(*Position::default(), 0);
+    }
+
+    #[test]
+    fn deref_returns_inner_value() {
+        let pos = Position::new(123);
+        let value: &u64 = &pos;
+
+        assert_eq!(*value, 123);
+    }
+
+    #[allow(clippy::clone_on_copy)]
+    #[test]
+    fn clone_creates_equal_copy() {
+        let pos1 = Position::new(100);
+        let pos2 = pos1.clone();
+
+        assert_eq!(pos1, pos2);
+        assert_eq!(*pos1, *pos2);
+    }
+
+    #[test]
+    fn copy_creates_equal_copy() {
+        let pos1 = Position::new(100);
+        let pos2 = pos1; // Copy trait
+
+        assert_eq!(pos1, pos2);
+    }
+
+    #[test]
+    fn add_position_to_position() {
+        let pos1 = Position::new(10);
+        let pos2 = Position::new(20);
+        let result = pos1 + pos2;
+
+        assert_eq!(*result, 30);
+    }
+
+    #[test]
+    fn add_u64_to_position() {
+        let pos = Position::new(10);
+        let result = pos + 20u64;
+
+        assert_eq!(*result, 30);
+    }
+
+    #[test]
+    fn add_assign_position_to_position() {
+        let mut pos = Position::new(10);
+        pos += Position::new(20);
+
+        assert_eq!(*pos, 30);
+    }
+
+    #[test]
+    fn add_assign_u64_to_position() {
+        let mut pos = Position::new(10);
+        pos += 20u64;
+
+        assert_eq!(*pos, 30);
+    }
+
+    #[test]
+    fn sub_position_from_position() {
+        let pos1 = Position::new(50);
+        let pos2 = Position::new(20);
+        let result = pos1 - pos2;
+
+        assert_eq!(*result, 30);
+    }
+
+    #[test]
+    fn sub_u64_from_position() {
+        let pos = Position::new(50);
+        let result = pos - 20u64;
+
+        assert_eq!(*result, 30);
+    }
+
+    #[test]
+    fn sub_assign_position_from_position() {
+        let mut pos = Position::new(50);
+        pos -= Position::new(20);
+
+        assert_eq!(*pos, 30);
+    }
+
+    #[test]
+    fn sub_assign_u64_from_position() {
+        let mut pos = Position::new(50);
+        pos -= 20u64;
+
+        assert_eq!(*pos, 30);
+    }
+
+    #[test]
+    fn equality_comparison() {
+        let pos1 = Position::new(42);
+        let pos2 = Position::new(42);
+        let pos3 = Position::new(43);
+
+        assert_eq!(pos1, pos2);
+        assert_ne!(pos1, pos3);
+    }
+
+    #[test]
+    fn ordering_comparison() {
+        let pos1 = Position::new(10);
+        let pos2 = Position::new(20);
+        let pos3 = Position::new(30);
+
+        assert!(pos1 < pos2);
+        assert!(pos2 > pos1);
+        assert!(pos1 <= pos2);
+        assert!(pos2 >= pos1);
+        assert!(pos1 <= pos1);
+        assert!(pos1 >= pos1);
+
+        assert!(pos1 < pos3);
+        assert!(pos2 < pos3);
+    }
+
+    #[test]
+    fn debug_format() {
+        let pos = Position::new(42);
+        let debug_str = format!("{pos:?}");
+
+        assert!(debug_str.contains("Position"));
+        assert!(debug_str.contains("42"));
+    }
+
+    #[test]
+    fn arithmetic_chain() {
+        let pos = Position::new(100);
+        let result = pos + 50u64 - 30u64 + Position::new(10);
+
+        assert_eq!(*result, 130);
+    }
+
+    #[test]
+    fn min_plus_one() {
+        let pos = Position::MIN + 1u64;
+
+        assert_eq!(*pos, 1);
+    }
+
+    #[test]
+    fn max_minus_one() {
+        let pos = Position::MAX - 1u64;
+
+        assert_eq!(*pos, u64::MAX - 1);
+    }
+}
