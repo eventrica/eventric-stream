@@ -1,6 +1,8 @@
 //! See the `eventric-stream` crate for full documentation, including
 //! module-level documentation.
 
+pub(crate) mod filter;
+
 use derive_more::{
     AsRef,
     Debug,
@@ -31,10 +33,6 @@ use crate::{
 // =================================================================================================
 // Query
 // =================================================================================================
-
-// -------------------------------------------------------------------------------------------------
-
-// Query
 
 /// The [`Query`] type is the primary type when interacting with a [`Stream`],
 /// being used both directly in query [`Condition`] to determine the events to

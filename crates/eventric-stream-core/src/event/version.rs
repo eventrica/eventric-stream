@@ -1,3 +1,10 @@
+use std::ops::{
+    Add,
+    AddAssign,
+    Sub,
+    SubAssign,
+};
+
 use derive_more::Deref;
 
 // =================================================================================================
@@ -31,8 +38,36 @@ impl Version {
     pub const MIN: Self = Self::new(u8::MIN);
 }
 
+impl Add<u8> for Version {
+    type Output = Self;
+
+    fn add(self, rhs: u8) -> Self::Output {
+        Self(self.0 + rhs)
+    }
+}
+
+impl AddAssign<u8> for Version {
+    fn add_assign(&mut self, rhs: u8) {
+        self.0 += rhs;
+    }
+}
+
 impl Default for Version {
     fn default() -> Self {
         Self::MIN
+    }
+}
+
+impl Sub<u8> for Version {
+    type Output = Self;
+
+    fn sub(self, rhs: u8) -> Self::Output {
+        Self(self.0 - rhs)
+    }
+}
+
+impl SubAssign<u8> for Version {
+    fn sub_assign(&mut self, rhs: u8) {
+        self.0 -= rhs;
     }
 }
