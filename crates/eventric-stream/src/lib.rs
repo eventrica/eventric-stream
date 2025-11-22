@@ -70,6 +70,7 @@ pub mod stream {
             Cache,
             Condition,
             Iter,
+            Iterate,
             Options,
         };
     }

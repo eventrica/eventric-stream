@@ -27,11 +27,17 @@ use crate::{
 // Iterate
 // =================================================================================================
 
-impl Stream {
-    /// Queries the [`Stream`] based on the supplied [`Condition`], using the
-    /// [`Cache`] to avoid re-fetching intermediate components such as
-    /// [`Identifier`][identifier]s and [`Tag`]s, and optionally configured by
-    /// [`Options`] to determine which event data is returned.
+// Iterate
+
+/// The [`Iterate`] trait defines the logical operation of over a stream or
+/// stream-like type, with condition to determine whether to iterate over a
+/// selected subset of events, and/or from a particular position.
+pub trait Iterate {
+    /// Iterates over the stream or stream-like instance based on the supplied
+    /// [`Condition`], using the [`Options`] [`Cache`] to avoid re-fetching
+    /// intermediate components such as [`Identifier`][identifier]s and
+    /// [`Tag`]s, and optionally configured by to determine what event
+    /// metadata is returned.
     ///
     /// TODO: [Full query documentation + examples][issue]
     ///
@@ -41,34 +47,44 @@ impl Stream {
     ///
     /// [identifier]: crate::event::Identifier
     /// [issue]: https://github.com/eventrica/eventric-stream/issues/21
-    #[must_use]
-    pub fn query(&self, condition: &Condition<'_>, options: Option<Options>) -> Iter {
+    fn iterate(&self, condition: &Condition<'_>, options: Option<Options>) -> Iter;
+}
+
+impl Iterate for Stream {
+    fn iterate(&self, condition: &Condition<'_>, options: Option<Options>) -> Iter {
         let options = options.unwrap_or_default();
         let references = self.data.references.clone();
 
         let iter = condition.matches.map_or_else(
-            || self.query_events(condition.from),
+            || self.iter_events(condition.from),
             |query| {
                 let query_hash_ref: QueryHashRef<'_> = query.into();
                 let query_hash: QueryHash = (&query_hash_ref).into();
 
                 options.cache.populate(&query_hash_ref);
 
-                self.query_indices(&query_hash, condition.from)
+                self.iter_indices(&query_hash, condition.from)
             },
         );
+
         let iter = Exclusive::new(iter);
 
         Iter::new(options, references, iter)
     }
+}
 
-    fn query_events(&self, from: Option<Position>) -> PersistentEventHashIterator {
+// -------------------------------------------------------------------------------------------------
+
+// Stream Extension
+
+impl Stream {
+    fn iter_events(&self, from: Option<Position>) -> PersistentEventHashIterator {
         let iter = self.data.events.iterate(from);
 
         PersistentEventHashIterator::Direct(iter)
     }
 
-    fn query_indices(
+    fn iter_indices(
         &self,
         query: &QueryHash,
         from: Option<Position>,

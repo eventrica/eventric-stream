@@ -19,6 +19,7 @@ use eventric_stream::{
         iterate::{
             Cache,
             Condition,
+            Iterate as _,
             Options,
         },
         query::{
@@ -74,7 +75,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         .retrieve_tags(false)
         .with_shared_cache(cache.clone());
 
-    for event in stream.query(&condition, Some(options)) {
+    for event in stream.iterate(&condition, Some(options)) {
         println!("event: {event:#?}");
     }
 

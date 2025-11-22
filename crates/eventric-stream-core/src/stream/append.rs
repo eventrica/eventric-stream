@@ -21,8 +21,9 @@ use crate::{
 /// events to a stream or stream-like type, with an optional condition to
 /// determine behaviour related to concurrency, etc.
 pub trait Append {
-    /// Appends new [`EphemeralEvent`]s to the [`Stream`], optionally performing
-    /// a concurrency check based on a supplied [`Condition`].
+    /// Appends new [`EphemeralEvent`]s to the relevant stream or stream-like
+    /// instance, optionally performing a concurrency check based on a supplied
+    /// [`Condition`].
     ///
     /// If successful, returns the position of the last event appended, i.e. the
     /// effective head of the stream. This position can be used in concurrency
@@ -36,21 +37,15 @@ pub trait Append {
     /// case of underlying database/IO errors.
     ///
     /// [issue]: https://github.com/eventrica/eventric-stream/issues/23
-    fn append<'a, E>(
-        &mut self,
-        events: E,
-        condition: Option<&Condition<'_>>,
-    ) -> Result<Position, Error>
+    #[rustfmt::skip]
+    fn append<'a, E>(&mut self, events: E, condition: Option<&Condition<'_>>) -> Result<Position, Error>
     where
         E: IntoIterator<Item = &'a EphemeralEvent>;
 }
 
 impl Append for Stream {
-    fn append<'a, E>(
-        &mut self,
-        events: E,
-        condition: Option<&Condition<'_>>,
-    ) -> Result<Position, Error>
+    #[rustfmt::skip]
+    fn append<'a, E>(&mut self, events: E, condition: Option<&Condition<'_>>) -> Result<Position, Error>
     where
         E: IntoIterator<Item = &'a EphemeralEvent>,
     {
@@ -58,18 +53,22 @@ impl Append for Stream {
         // the append should be unconditional.
 
         if let Some(condition) = condition {
-            self.append_check(condition)?;
+            self.check(condition)?;
         }
 
         // Append the events, as the concurrency check did not return an error.
 
-        self.append_put(events)
+        self.put(events)
     }
 }
 
+// -------------------------------------------------------------------------------------------------
+
+// Stream Extension
+
 impl Stream {
     #[rustfmt::skip]
-    fn append_check(&self, condition: &Condition<'_>) -> Result<(), Error> {
+    fn check(&self, condition: &Condition<'_>) -> Result<(), Error> {
 
         // Shortcut the append concurrency check if the "after" position is at least the
         // current stream position. If it is, no events have been written after
@@ -97,7 +96,7 @@ impl Stream {
         Ok(())
     }
 
-    fn append_put<'a, E>(&mut self, events: E) -> Result<Position, Error>
+    fn put<'a, E>(&mut self, events: E) -> Result<Position, Error>
     where
         E: IntoIterator<Item = &'a EphemeralEvent>,
     {
