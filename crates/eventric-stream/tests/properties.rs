@@ -3,15 +3,15 @@ use std::{
     sync::LazyLock,
 };
 
-use eventric_stream_core::{
+use eventric_stream::{
     error::Error,
     event::{
         Data,
         EphemeralEvent,
         Identifier,
         Specifier,
-        Tag,
         Version,
+        tag,
     },
     stream::{
         Stream,
@@ -137,7 +137,7 @@ static EVENTS: LazyLock<Vec<EphemeralEvent>> = LazyLock::new(|| {
             .map(|_| {
                 let data = Data::new("data")?;
                 let identifier = Identifier::new("id")?;
-                let tags = [Tag::new("tag_a")?, Tag::new("tag_b")?];
+                let tags = [tag!(test, "a")?, tag!(test, "b")?];
                 let version = Version::new(0);
 
                 Ok(EphemeralEvent::new(data, identifier, tags, version))
