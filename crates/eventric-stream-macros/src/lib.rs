@@ -12,7 +12,10 @@ pub(crate) mod event;
 use proc_macro::TokenStream;
 use quote::ToTokens;
 
-use crate::event::tag;
+use crate::{
+    event::tag,
+    tag::Tag,
+};
 
 // =================================================================================================
 // Eventric Stream Macros
@@ -30,12 +33,12 @@ macro_rules! emit_impl_or_error {
 // Tag
 
 /// Attempts to create a new [`Tag`][tag] instance, using a provided
-/// identifier-compatible prefix value, and a value which implements display.
+/// identifier-compatible prefix, and a value which implements display.
 ///
 /// ```ignore
 /// tag!(tag_prefix, "tag_value")?
 /// ```
 #[proc_macro]
 pub fn tag(input: TokenStream) -> TokenStream {
-    emit_impl_or_error!(tag::TagFunction::new(input.into())).into()
+    emit_impl_or_error!(Tag::new(input.into())).into()
 }
