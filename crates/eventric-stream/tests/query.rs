@@ -18,8 +18,8 @@ use eventric_stream_core::{
     },
     stream::{
         Stream,
+        iterate::Condition,
         query::{
-            Condition,
             Query,
             Selector,
         },

@@ -1,13 +1,6 @@
 //! See the `eventric-stream` crate for full documentation, including
 //! module-level documentation.
 
-pub(crate) mod cache;
-pub(crate) mod condition;
-pub(crate) mod iter;
-pub(crate) mod options;
-
-use std::sync::Exclusive;
-
 use derive_more::{
     AsRef,
     Debug,
@@ -22,7 +15,6 @@ use fancy_constructor::new;
 use crate::{
     error::Error,
     event::{
-        position::Position,
         specifier::{
             Specifier,
             SpecifierHash,
@@ -34,72 +26,11 @@ use crate::{
             TagHashRef,
         },
     },
-    stream::{
-        Stream,
-        data::events::{
-            MappedPersistentEventHashIterator,
-            PersistentEventHashIterator,
-        },
-    },
 };
 
 // =================================================================================================
 // Query
 // =================================================================================================
-
-impl Stream {
-    /// Queries the [`Stream`] based on the supplied [`Condition`], using the
-    /// [`Cache`] to avoid re-fetching intermediate components such as
-    /// [`Identifier`][identifier]s and [`Tag`]s, and optionally configured by
-    /// [`Options`] to determine which event data is returned.
-    ///
-    /// TODO: [Full query documentation + examples][issue]
-    ///
-    /// # Errors
-    ///
-    /// Returns an error in the case of an underlying IO/database error.
-    ///
-    /// [identifier]: crate::event::Identifier
-    /// [issue]: https://github.com/eventrica/eventric-stream/issues/21
-    #[must_use]
-    pub fn query(&self, condition: &Condition<'_>, options: Option<Options>) -> QueryIterator {
-        let options = options.unwrap_or_default();
-        let references = self.data.references.clone();
-
-        let iter = condition.matches.map_or_else(
-            || self.query_events(condition.from),
-            |query| {
-                let query_hash_ref: QueryHashRef<'_> = query.into();
-                let query_hash: QueryHash = (&query_hash_ref).into();
-
-                options.cache.populate(&query_hash_ref);
-
-                self.query_indices(&query_hash, condition.from)
-            },
-        );
-        let iter = Exclusive::new(iter);
-
-        QueryIterator::new(iter, options, references)
-    }
-
-    fn query_events(&self, from: Option<Position>) -> PersistentEventHashIterator {
-        let iter = self.data.events.iterate(from);
-
-        PersistentEventHashIterator::Direct(iter)
-    }
-
-    fn query_indices(
-        &self,
-        query: &QueryHash,
-        from: Option<Position>,
-    ) -> PersistentEventHashIterator {
-        let events = self.data.events.clone();
-        let iter = self.data.indices.query(query, from);
-        let iter = MappedPersistentEventHashIterator::new(events, iter);
-
-        PersistentEventHashIterator::Mapped(iter)
-    }
-}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -117,11 +48,12 @@ impl Stream {
 /// for the [`Selector`] type.
 ///
 /// [append]: crate::stream::append::Condition
-#[derive(new, AsRef, Debug)]
+#[derive(new, AsRef, Clone, Debug)]
 #[as_ref([Selector])]
 #[new(const_fn, name(new_inner), vis())]
 pub struct Query {
-    selectors: Vec<Selector>,
+    /// The set of one or more selectors which make up the overall query.
+    pub selectors: Vec<Selector>,
 }
 
 impl Query {
@@ -215,7 +147,7 @@ impl<'a> From<&'a Query> for QueryHashRef<'a> {
 /// logical OR operation).
 ///
 /// Each variant of the [`Selector`] has a different meaning.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum Selector {
     /// A [`Selector`] based only on [`Specifier`]s, which will return all
     /// events that match *any* of the supplied [`Specifier`]s.
@@ -319,11 +251,13 @@ impl<'a> From<&'a Selector> for SelectorHashRef<'a> {
 /// instances within a [`Specifiers`] collection are always combined as a
 /// logical OR operation, so events that match *any* of the supplied
 /// [`Specifier`] instances will be returned.
-#[derive(new, AsRef, Debug)]
+#[derive(new, AsRef, Clone, Debug)]
 #[as_ref([Specifier])]
 #[new(const_fn, name(new_inner), vis())]
 pub struct Specifiers {
-    specifiers: Vec<Specifier>,
+    /// The collection of one or more [`Specifier`]s which makes up the
+    /// [`Specifiers`] collection.
+    pub specifiers: Vec<Specifier>,
 }
 
 impl Specifiers {
@@ -382,11 +316,13 @@ impl Validate for Specifiers {
 /// instances within a [`Tags`] collection are always combined as a
 /// logical AND operation, so *only* events that match *all* of the supplied
 /// [`Tag`] instances will be returned.
-#[derive(new, AsRef, Debug)]
+#[derive(new, AsRef, Clone, Debug)]
 #[as_ref([Tag])]
 #[new(const_fn, name(new_inner), vis())]
 pub struct Tags {
-    tags: Vec<Tag>,
+    /// The collection of one or more [`Tag`]s which makes up the [`Tags`]
+    /// collection.
+    pub tags: Vec<Tag>,
 }
 
 impl Tags {
@@ -433,17 +369,6 @@ impl Validate for Tags {
         Ok(self)
     }
 }
-
-// -------------------------------------------------------------------------------------------------
-
-// Re-Export
-
-pub use self::{
-    cache::Cache,
-    condition::Condition,
-    iter::QueryIterator,
-    options::Options,
-};
 
 // -------------------------------------------------------------------------------------------------
 

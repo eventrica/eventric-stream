@@ -58,18 +58,27 @@ pub mod stream {
         pub use eventric_stream_core::stream::append::Condition;
     }
 
-    pub mod query {
-        //! The [`query`][self] module contains types and functionality related
-        //! to the [`Stream::query`] operation, such as the [`Cache`],
-        //! query-specific [`Condition`], and [`Options`] types, as well
-        //! as the fundamental [`Query`] type and its components.
+    pub mod iterate {
+        //! The [`iterate`][self] module contains types and functionality
+        //! related to iteration over a stream, which supports multiple models
+        //! of operation.
 
-        pub use eventric_stream_core::stream::query::{
+        pub use eventric_stream_core::stream::iterate::{
             Cache,
             Condition,
+            Iter,
             Options,
+        };
+    }
+
+    pub mod query {
+        //! The [`query`][self] module contains types and functionality related
+        //! to the construction and use instances of [`Stream::query`], used as
+        //! part of iteration and append operations via the respective
+        //! condition models.
+
+        pub use eventric_stream_core::stream::query::{
             Query,
-            QueryIterator,
             Selector,
             Specifiers,
             Tags,

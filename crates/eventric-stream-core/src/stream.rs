@@ -2,6 +2,7 @@
 //! module-level documentation.
 
 pub mod append;
+pub mod iterate;
 pub mod query;
 
 pub(crate) mod data;

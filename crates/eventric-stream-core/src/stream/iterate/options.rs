@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fancy_constructor::new;
 
-use crate::stream::query::cache::Cache;
+use crate::stream::iterate::cache::Cache;
 
 // =================================================================================================
 // Options

@@ -15,10 +15,12 @@ use eventric_stream::{
     },
     stream::{
         Stream,
-        query::{
+        iterate::{
             Cache,
             Condition,
             Options,
+        },
+        query::{
             Query,
             Selector,
             Specifiers,

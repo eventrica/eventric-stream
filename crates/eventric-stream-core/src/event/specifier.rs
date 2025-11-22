@@ -21,7 +21,7 @@ use crate::event::{
 ///
 /// Where no range is given, the meaning is **ALL** (or **ANY**)versions of the
 /// given type, rather than **NO** versions.
-#[derive(new, Debug, Eq, PartialEq)]
+#[derive(new, Clone, Debug, Eq, PartialEq)]
 #[new(name(new_inner), vis())]
 pub struct Specifier {
     identifier: Identifier,
