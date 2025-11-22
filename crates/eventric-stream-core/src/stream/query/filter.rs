@@ -23,6 +23,7 @@ use crate::{
 
 // Matches
 
+#[allow(dead_code)]
 trait Matches {
     fn matches(&self, event: &PersistentEventHash) -> bool;
 }
@@ -31,12 +32,14 @@ trait Matches {
 
 // Event Level Filter
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct Filter {
     filters: HashMap<u64, IdentifierLevelFilter>,
 }
 
 impl Filter {
+    #[allow(dead_code)]
     pub fn new(query: &QueryHash) -> Self {
         let mut filters = HashMap::new();
 
@@ -78,6 +81,7 @@ impl Matches for Filter {
 
 // Identifier Level Filter
 
+#[allow(dead_code)]
 #[derive(new, Debug)]
 struct IdentifierLevelFilter {
     #[new(default)]

@@ -16,6 +16,7 @@ use crate::{
 /// ordered and normalized vector of version ranges (where normalized means that
 /// adjacent/overlapping version ranges are merged, and nested version ranges
 /// are subsumed).
+#[allow(dead_code)]
 pub fn normalize_version_ranges(ranges: &[AnyRange<Version>]) -> Vec<AnyRange<Version>> {
     let mut points = ranges
         .iter()

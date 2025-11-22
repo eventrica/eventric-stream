@@ -11,6 +11,7 @@ use crate::event::version::Version;
 // Point
 // =================================================================================================
 
+#[allow(dead_code)]
 #[derive(Debug, Eq, PartialEq)]
 pub enum Point {
     Open(Version),
@@ -18,6 +19,7 @@ pub enum Point {
 }
 
 impl Point {
+    #[allow(dead_code)]
     pub fn pair_from_range(range: &AnyRange<Version>) -> [Point; 2] {
         [
             Point::Open(match range.start_bound() {
