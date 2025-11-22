@@ -13,7 +13,10 @@ use eventric_stream::{
         Tag,
         Version,
     },
-    stream::Stream,
+    stream::{
+        Stream,
+        append::Append as _,
+    },
 };
 
 // =================================================================================================

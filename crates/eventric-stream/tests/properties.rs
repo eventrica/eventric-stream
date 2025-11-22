@@ -15,7 +15,10 @@ use eventric_stream::{
     },
     stream::{
         Stream,
-        append::Condition,
+        append::{
+            Append as _,
+            Condition,
+        },
         query::{
             Query,
             Selector,

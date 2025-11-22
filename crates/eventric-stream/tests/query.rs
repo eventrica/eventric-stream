@@ -5,6 +5,7 @@ use assertables::{
     assert_some,
     assert_some_as_result,
 };
+use eventric_stream::stream::append::Append as _;
 use eventric_stream_core::{
     error::Error,
     event::{

@@ -17,7 +17,10 @@ use crate::{
 // Append
 // =================================================================================================
 
-impl Stream {
+/// The [`Append`] trait defines the logical operation of appending (ephemeral)
+/// events to a stream or stream-like type, with an optional condition to
+/// determine behaviour related to concurrency, etc.
+pub trait Append {
     /// Appends new [`EphemeralEvent`]s to the [`Stream`], optionally performing
     /// a concurrency check based on a supplied [`Condition`].
     ///
@@ -33,7 +36,17 @@ impl Stream {
     /// case of underlying database/IO errors.
     ///
     /// [issue]: https://github.com/eventrica/eventric-stream/issues/23
-    pub fn append<'a, E>(
+    fn append<'a, E>(
+        &mut self,
+        events: E,
+        condition: Option<&Condition<'_>>,
+    ) -> Result<Position, Error>
+    where
+        E: IntoIterator<Item = &'a EphemeralEvent>;
+}
+
+impl Append for Stream {
+    fn append<'a, E>(
         &mut self,
         events: E,
         condition: Option<&Condition<'_>>,
@@ -52,7 +65,9 @@ impl Stream {
 
         self.append_put(events)
     }
+}
 
+impl Stream {
     #[rustfmt::skip]
     fn append_check(&self, condition: &Condition<'_>) -> Result<(), Error> {
 

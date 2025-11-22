@@ -15,6 +15,7 @@ use eventric_stream::{
     },
     stream::{
         Stream,
+        append::Append as _,
         iterate::{
             Cache,
             Condition,
