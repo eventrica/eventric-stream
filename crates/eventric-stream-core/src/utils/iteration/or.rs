@@ -4,12 +4,18 @@
 //!
 //! [or]: self]
 
+use std::{
+    cmp::Ordering,
+    iter::FusedIterator,
+};
+
 use derive_more::with_trait::Debug;
 use double_ended_peekable::{
     DoubleEndedPeekable,
     DoubleEndedPeekableExt,
 };
 use fancy_constructor::new;
+use smallvec::SmallVec;
 
 use crate::error::Error;
 
@@ -17,12 +23,50 @@ use crate::error::Error;
 // Or
 // =================================================================================================
 
-/// The [`SequentialOrIterator`] type represents an iterator over the combined
-/// values of a set of sequential iterators. The resulting iterator is
-/// equivalent to an ordered union (∪) of the underlying iterators (i.e. values
-/// appear only once, and are totally ordered).
+/// The [`SequentialOrIterator`] implements a sorted set union.
 ///
-/// See local unit tests for simple examples.
+/// This iterator type represents an iterator over the combined values of a set
+/// of sequential iterators. The resulting iterator is equivalent to an ordered
+/// union (∪) of the underlying iterators (i.e. values appear only once, and
+/// are totally ordered).
+///
+/// # Algorithm
+///
+/// The iterator finds the minimum value across all input iterators and returns
+/// it. For each iteration:
+/// - Peek at the front/back of all iterators
+/// - Find the minimum/maximum value
+/// - Advance all iterators that have that value (to ensure uniqueness)
+///
+/// This ensures O(n*m) complexity where n is the number of iterators and m is
+/// the average number of elements per iterator.
+///
+/// # Requirements
+///
+/// Input iterators **MUST** be sorted in ascending order. Behavior is undefined
+/// if this precondition is not met.
+///
+/// # Error Handling
+///
+/// Errors from any underlying iterator are propagated immediately. When an
+/// error is encountered, iteration stops and the error is returned. The
+/// iterator state after an error is unspecified - callers should not continue
+/// iterating after receiving an error.
+///
+/// # Examples
+///
+/// ```ignore
+/// use eventric_stream_core::utils::iteration::or::SequentialOrIterator;
+///
+/// let a = vec![Ok(1), Ok(3), Ok(5)];
+/// let b = vec![Ok(2), Ok(3), Ok(4)];
+///
+/// let result: Vec<_> = SequentialOrIterator::combine([a.into_iter(), b.into_iter()])
+///     .collect::<Result<Vec<_>, _>>()
+///     .unwrap();
+///
+/// assert_eq!(result, vec![1, 2, 3, 4, 5]); // All unique values from both iterators
+/// ```
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
 pub struct SequentialOrIterator<I, T>(Vec<DoubleEndedPeekable<I>>)
@@ -56,23 +100,44 @@ where
     I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
+    #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
-        let mut current = None;
+        if self.0.is_empty() {
+            return None;
+        }
 
-        for iter in &mut self.0 {
+        let mut max_value = None;
+        let mut indices: SmallVec<[usize; 8]> = SmallVec::new();
+
+        for (index, iter) in self.0.iter_mut().enumerate() {
             match iter.peek_back() {
-                Some(Ok(next)) => match &mut current {
-                    Some(current) => *current = *next.max(current),
-                    None => current = Some(*next),
-                },
+                Some(Ok(next)) => {
+                    if let Some(current_max_value) = &mut max_value {
+                        match next.cmp(current_max_value) {
+                            Ordering::Greater => {
+                                *current_max_value = *next;
+
+                                indices.clear();
+                                indices.push(index);
+                            }
+                            Ordering::Equal => {
+                                indices.push(index);
+                            }
+                            Ordering::Less => {}
+                        }
+                    } else {
+                        max_value = Some(*next);
+                        indices.push(index);
+                    }
+                }
                 Some(Err(_)) => return iter.next_back(),
                 None => {}
             }
         }
 
-        current.map(Ok).inspect(|item| {
-            for iter in &mut self.0 {
-                iter.next_back_if_eq(item);
+        max_value.map(Ok).inspect(|item| {
+            for &index in &indices {
+                self.0[index].next_back_if_eq(item);
             }
         })
     }
@@ -85,26 +150,74 @@ where
 {
     type Item = Result<T, Error>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let mut current = None;
+        if self.0.is_empty() {
+            return None;
+        }
 
-        for iter in &mut self.0 {
+        let mut min_value = None;
+        let mut indices: SmallVec<[usize; 8]> = SmallVec::new();
+
+        for (index, iter) in self.0.iter_mut().enumerate() {
             match iter.peek() {
-                Some(Ok(next)) => match &mut current {
-                    Some(current) => *current = *next.min(current),
-                    None => current = Some(*next),
-                },
+                Some(Ok(next)) => {
+                    if let Some(current_min_value) = &mut min_value {
+                        match next.cmp(current_min_value) {
+                            Ordering::Less => {
+                                *current_min_value = *next;
+
+                                indices.clear();
+                                indices.push(index);
+                            }
+                            Ordering::Equal => indices.push(index),
+                            Ordering::Greater => {}
+                        }
+                    } else {
+                        min_value = Some(*next);
+                        indices.push(index);
+                    }
+                }
                 Some(Err(_)) => return iter.next(),
                 None => {}
             }
         }
 
-        current.map(Ok).inspect(|item| {
-            for iter in &mut self.0 {
-                iter.next_if_eq(item);
+        // Advance all iterators that had the minimum value
+        min_value.map(Ok).inspect(|item| {
+            for &index in &indices {
+                self.0[index].next_if_eq(item);
             }
         })
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        if self.0.is_empty() {
+            return (0, Some(0));
+        }
+
+        // Lower bound is the maximum of all iterator lower bounds
+        let lower = self
+            .0
+            .iter()
+            .map(|iter| iter.size_hint().0)
+            .max()
+            .unwrap_or(0);
+
+        // Upper bound is the sum of all iterator upper bounds
+        let upper = self.0.iter().try_fold(0usize, |acc, iter| {
+            iter.size_hint().1.and_then(|n| acc.checked_add(n))
+        });
+
+        (lower, upper)
+    }
+}
+
+impl<I, T> FusedIterator for SequentialOrIterator<I, T>
+where
+    I: DoubleEndedIterator<Item = Result<T, Error>> + FusedIterator,
+    T: Copy + Debug + Ord + PartialOrd,
+{
 }
 
 // -------------------------------------------------------------------------------------------------

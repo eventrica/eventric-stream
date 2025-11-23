@@ -4,7 +4,10 @@
 //!
 //! [and]: self]
 
-use std::cmp::Ordering;
+use std::{
+    cmp::Ordering,
+    iter::FusedIterator,
+};
 
 use derive_more::with_trait::Debug;
 use double_ended_peekable::{
@@ -19,12 +22,51 @@ use crate::error::Error;
 // And
 // =================================================================================================
 
-/// The [`SequentialAndIterator`] type represents an iterator over the combined
-/// values of a set of sequential iterators The resulting iterator is equivalent
-/// to an ordered intersection (∩) of the underlying iterators (i.e. values
-/// appear only once, and are totally ordered).
+/// The [`SequentialAndIterator`] implements a sorted set intersection.
 ///
-/// See local unit tests for simple examples.
+/// This iterator type represents an iterator over the combined values of a set
+/// of sequential iterators. The resulting iterator is equivalent to an ordered
+/// intersection (∩) of the underlying iterators (i.e. values appear only once,
+/// and are totally ordered).
+///
+/// # Algorithm
+///
+/// The iterator maintains a "candidate" value and advances through all input
+/// iterators simultaneously. For each iteration:
+/// - If an iterator has a value less than the candidate, advance that iterator
+/// - If an iterator has a value greater than the candidate, update the
+///   candidate
+/// - When all iterators converge on the same value, that value is returned
+///
+/// This ensures O(n*m) complexity where n is the number of iterators and m is
+/// the average number of elements per iterator.
+///
+/// # Requirements
+///
+/// Input iterators **MUST** be sorted in ascending order. Behavior is undefined
+/// if this precondition is not met.
+///
+/// # Error Handling
+///
+/// Errors from any underlying iterator are propagated immediately. When an
+/// error is encountered, iteration stops and the error is returned. The
+/// iterator state after an error is unspecified - callers should not continue
+/// iterating after receiving an error.
+///
+/// # Examples
+///
+/// ```ignore
+/// use eventric_stream_core::utils::iteration::and::SequentialAndIterator;
+///
+/// let a = vec![Ok(1), Ok(3), Ok(5)];
+/// let b = vec![Ok(3), Ok(5), Ok(7)];
+///
+/// let result: Vec<_> = SequentialAndIterator::combine([a.into_iter(), b.into_iter()])
+///     .collect::<Result<Vec<_>, _>>()
+///     .unwrap();
+///
+/// assert_eq!(result, vec![3, 5]); // Only values in both iterators
+/// ```
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
 pub struct SequentialAndIterator<I, T>(Vec<DoubleEndedPeekable<I>>)
@@ -58,33 +100,44 @@ where
     I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
+    #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
-        let mut current = None;
+        if self.0.is_empty() {
+            return None;
+        }
 
-        'seek: loop {
+        let mut candidate_value = None;
+
+        loop {
+            let mut converged = true;
+
             for iter in &mut self.0 {
                 match iter.peek_back() {
-                    Some(Ok(next)) => match &mut current {
-                        Some(current) => {
-                            match next.cmp(current) {
-                                Ordering::Greater => drop(iter.next_back()),
-                                Ordering::Less => *current = *next,
-                                Ordering::Equal => continue,
+                    Some(Ok(next)) => match &mut candidate_value {
+                        Some(current_candidate_value) => match next.cmp(current_candidate_value) {
+                            Ordering::Greater => {
+                                iter.next_back();
+                                converged = false;
                             }
-
-                            continue 'seek;
-                        }
-                        None => current = Some(*next),
+                            Ordering::Less => {
+                                *current_candidate_value = *next;
+                                converged = false;
+                            }
+                            Ordering::Equal => {}
+                        },
+                        None => candidate_value = Some(*next),
                     },
                     Some(Err(_)) => return iter.next_back(),
                     None => return None,
                 }
             }
 
-            break 'seek;
+            if converged {
+                break;
+            }
         }
 
-        current.map(Ok).inspect(|item| {
+        candidate_value.map(Ok).inspect(|item| {
             for iter in &mut self.0 {
                 iter.next_back_if_eq(item);
             }
@@ -99,38 +152,68 @@ where
 {
     type Item = Result<T, Error>;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let mut current = None;
+        if self.0.is_empty() {
+            return None;
+        }
 
-        'seek: loop {
+        let mut candidate_value = None;
+
+        loop {
+            let mut converged = true;
+
             for iter in &mut self.0 {
                 match iter.peek() {
-                    Some(Ok(next)) => match &mut current {
-                        Some(current) => {
-                            match next.cmp(current) {
-                                Ordering::Greater => *current = *next,
-                                Ordering::Less => drop(iter.next()),
-                                Ordering::Equal => continue,
+                    Some(Ok(next)) => match &mut candidate_value {
+                        Some(current_candidate_value) => match next.cmp(current_candidate_value) {
+                            Ordering::Greater => {
+                                *current_candidate_value = *next;
+                                converged = false;
                             }
-
-                            continue 'seek;
-                        }
-                        None => current = Some(*next),
+                            Ordering::Less => {
+                                iter.next();
+                                converged = false;
+                            }
+                            Ordering::Equal => {}
+                        },
+                        None => candidate_value = Some(*next),
                     },
                     Some(Err(_)) => return iter.next(),
                     None => return None,
                 }
             }
 
-            break 'seek;
+            if converged {
+                break;
+            }
         }
 
-        current.map(Ok).inspect(|item| {
+        candidate_value.map(Ok).inspect(|item| {
             for iter in &mut self.0 {
                 iter.next_if_eq(item);
             }
         })
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        if self.0.is_empty() {
+            return (0, Some(0));
+        }
+
+        // Lower bound is 0 (might be no intersection)
+        // Upper bound is the minimum of all iterator upper bounds
+        let upper = self.0.iter().filter_map(|iter| iter.size_hint().1).min();
+
+        (0, upper)
+    }
+}
+
+impl<I, T> FusedIterator for SequentialAndIterator<I, T>
+where
+    I: DoubleEndedIterator<Item = Result<T, Error>> + FusedIterator,
+    T: Copy + Debug + Ord + PartialOrd,
+{
 }
 
 // -------------------------------------------------------------------------------------------------

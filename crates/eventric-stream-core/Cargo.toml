@@ -9,6 +9,7 @@ fancy_constructor.workspace     = true
 fjall.workspace                 = true
 rand.workspace                  = true
 rapidhash.workspace             = true
+smallvec.workspace              = true
 thiserror.workspace             = true
 
 [dev-dependencies]

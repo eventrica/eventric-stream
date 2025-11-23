@@ -376,6 +376,7 @@ dependencies = [
  "fjall",
  "rand",
  "rapidhash",
+ "smallvec",
  "thiserror",
 ]
 
