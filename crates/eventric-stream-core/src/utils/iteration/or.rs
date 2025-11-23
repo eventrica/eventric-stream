@@ -28,7 +28,7 @@ use crate::error::Error;
 /// The OR iterator uses a single-pass algorithm to find the minimum/maximum
 /// value and collect indices of all iterators that have that value.
 macro_rules! impl_or_next {
-    ($peek:ident, $next:ident, $next_if_eq:ident, $winning_ordering:path) => {
+    ($peek:ident, $next:ident, $next_if_eq:ident, $update:path) => {
         #[inline]
         fn $next(&mut self) -> Option<Self::Item> {
             if self.0.is_empty() {
@@ -43,7 +43,7 @@ macro_rules! impl_or_next {
                     Some(Ok(next)) => {
                         if let Some(current_candidate) = &mut candidate {
                             match next.cmp(current_candidate) {
-                                $winning_ordering => {
+                                $update => {
                                     *current_candidate = *next;
                                     indices.clear();
                                     indices.push(index);

@@ -27,9 +27,7 @@ use crate::error::Error;
 /// The AND iterator uses a convergence algorithm where it seeks a value that
 /// exists in all input iterators.
 macro_rules! impl_and_next {
-    (
-        $peek:ident, $next:ident, $next_if_eq:ident, $update_ordering:path, $advance_ordering:path
-    ) => {
+    ($peek:ident, $next:ident, $next_if_eq:ident, $update:path, $advance:path) => {
         #[inline]
         fn $next(&mut self) -> Option<Self::Item> {
             if self.0.is_empty() {
@@ -45,11 +43,11 @@ macro_rules! impl_and_next {
                     match iter.$peek() {
                         Some(Ok(next)) => match &mut candidate {
                             Some(current_candidate) => match next.cmp(current_candidate) {
-                                $update_ordering => {
+                                $update => {
                                     *current_candidate = *next;
                                     converged = false;
                                 }
-                                $advance_ordering => {
+                                $advance => {
                                     iter.$next();
                                     converged = false;
                                 }
