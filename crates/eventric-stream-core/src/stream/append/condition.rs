@@ -2,7 +2,7 @@ use fancy_constructor::new;
 
 use crate::{
     event::position::Position,
-    stream::query::Query,
+    stream::query::QueryHash,
 };
 
 // =================================================================================================
@@ -17,22 +17,25 @@ use crate::{
 /// [append]: crate::stream::Stream::query
 #[derive(new, Debug)]
 #[new(name(new_inner), vis())]
-pub struct Condition<'a> {
+pub struct Condition {
     #[new(default)]
     pub(crate) after: Option<Position>,
-    pub(crate) fail_if_matches: &'a Query,
+    pub(crate) fail_if_matches: QueryHash,
 }
 
-impl<'a> Condition<'a> {
+impl Condition {
     /// Constructs a new [`Condition`] given a reference to a query which should
     /// cause the append to fail if it is matched.
     #[must_use]
-    pub fn new(fail_if_matches: &'a Query) -> Self {
-        Self::new_inner(fail_if_matches)
+    pub fn new<Q>(fail_if_matches: Q) -> Self
+    where
+        Q: Into<QueryHash>,
+    {
+        Self::new_inner(fail_if_matches.into())
     }
 }
 
-impl Condition<'_> {
+impl Condition {
     /// Sets a position after which the query should apply. If no position is
     /// supplied, the append will fail if *any* events match the query at any
     /// point in the stream, while supplying a [`Position`] will only cause the

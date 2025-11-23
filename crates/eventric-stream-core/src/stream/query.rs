@@ -43,8 +43,7 @@ use crate::{
 #[as_ref([Selector])]
 #[new(const_fn, name(new_inner), vis())]
 pub struct Query {
-    /// The set of one or more selectors which make up the overall query.
-    pub selectors: Vec<Selector>,
+    pub(crate) selectors: Vec<Selector>,
 }
 
 impl Query {
@@ -88,9 +87,17 @@ impl Validate for Query {
 
 // Hash
 
+/// The [`QueryHash`] type is the optimized form of a [`Query`] which has been
+/// used as part of an [`Iterate`][iterate] or [`IterateMulti`][iterate_multi]
+/// operation. This can be used as part of a conditional [`Append`][append]
+/// operation, and is more efficient than supplying a complete [`Query`].
+///
+/// [append]: crate::stream::append::Append
+/// [iterate]: crate::stream::iterate::Iterate
+/// [iterate_multi]: crate::stream::iterate::IterateMulti
 #[derive(new, AsRef, Debug)]
 #[as_ref([SelectorHash])]
-pub(crate) struct QueryHash(Vec<SelectorHash>);
+pub struct QueryHash(Vec<SelectorHash>);
 
 impl From<Query> for QueryHash {
     fn from(query: Query) -> Self {

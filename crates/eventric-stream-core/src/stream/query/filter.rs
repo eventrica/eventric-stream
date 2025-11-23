@@ -24,7 +24,7 @@ use crate::{
 // Matches
 
 #[allow(dead_code)]
-trait Matches {
+pub trait Matches {
     fn matches(&self, event: &PersistentEventHash) -> bool;
 }
 

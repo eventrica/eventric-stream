@@ -38,14 +38,14 @@ pub trait Append {
     ///
     /// [issue]: https://github.com/eventrica/eventric-stream/issues/23
     #[rustfmt::skip]
-    fn append<'a, E>(&mut self, events: E, condition: Option<&Condition<'_>>) -> Result<Position, Error>
+    fn append<'a, E>(&mut self, events: E, condition: Option<&Condition>) -> Result<Position, Error>
     where
         E: IntoIterator<Item = &'a EphemeralEvent>;
 }
 
 impl Append for Stream {
     #[rustfmt::skip]
-    fn append<'a, E>(&mut self, events: E, condition: Option<&Condition<'_>>) -> Result<Position, Error>
+    fn append<'a, E>(&mut self, events: E, condition: Option<&Condition>) -> Result<Position, Error>
     where
         E: IntoIterator<Item = &'a EphemeralEvent>,
     {
@@ -68,7 +68,7 @@ impl Append for Stream {
 
 impl Stream {
     #[rustfmt::skip]
-    fn check(&self, condition: &Condition<'_>) -> Result<(), Error> {
+    fn check(&self, condition: &Condition) -> Result<(), Error> {
 
         // Shortcut the append concurrency check if the "after" position is at least the
         // current stream position. If it is, no events have been written after
@@ -82,14 +82,14 @@ impl Stream {
         // always from, rather than after, a particular position, so we increment the
         // position here (if it exists) to ensure a correct from position.
 
-        let query = condition.fail_if_matches.into();
+        let query = &condition.fail_if_matches;
         let from = condition.after.map(|after| after + 1);
 
         // We don't need to actually examine the events at all, the underlying
         // implementation only needs to check if there is any matching event in the
         // resultant query stream - contains avoids mapping positions to events, etc.
 
-        if self.data.indices.contains(&query, from) {
+        if self.data.indices.contains(query, from) {
             return Err(Error::Concurrency);
         }
 

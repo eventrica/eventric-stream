@@ -23,6 +23,10 @@ use crate::{
             references::References,
         },
         iterate::options::Options,
+        query::filter::{
+            Filter,
+            Matches as _,
+        },
     },
 };
 
@@ -33,7 +37,7 @@ use crate::{
 // Iterator
 
 /// The [`Iter`] type provides an [`Iterator`]/[`DoubleEndedIterator`]
-/// over query results for a [`Stream`][stream].
+/// over iteration results for a [`Stream`][stream].
 ///
 /// [stream]: crate::stream::Stream
 #[derive(new, Debug)]
@@ -67,6 +71,53 @@ impl DoubleEndedIterator for Iter {
 
 impl Iterator for Iter {
     type Item = Result<PersistentEvent, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.get_mut().next().map(|event| self.map(event))
+    }
+}
+
+// Iterator (Multiple)
+
+/// The [`IterMulti`] type provides an [`Iterator`]/[`DoubleEndedIterator`]
+/// over iteration results for a [`Stream`][stream], along with a matching mask
+/// for each result, indicating which of the supplied queries the returned event
+/// matches.
+///
+/// [stream]: crate::stream::Stream
+#[derive(new, Debug)]
+#[new(args(options: Options, references: References), const_fn, vis(pub(crate)))]
+pub struct IterMulti {
+    filters: Vec<Filter>,
+    #[allow(clippy::struct_field_names)]
+    iter: Exclusive<PersistentEventHashIterator>,
+    #[new(val(Retrieve::new(options, references)))]
+    retrieve: Retrieve,
+}
+
+impl IterMulti {
+    #[rustfmt::skip]
+    fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
+        event.and_then(|event| {
+            let mask = self.filters.iter().map(|filter| filter.matches(&event)).collect();
+            let (data, identifier, position, tags, timestamp, version) = event.take();
+            
+            self.retrieve
+                .get_identifier(&identifier)
+                .and_then(|identifier| self.retrieve.get_tags(&tags).map(|tags| (identifier, tags)))
+                .map(|(identifier, tags)| (PersistentEvent::new(data, identifier, position, tags, timestamp, version), mask))
+        })
+    }
+}
+
+impl DoubleEndedIterator for IterMulti {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.get_mut().next_back().map(|event| self.map(event))
+    }
+}
+
+impl Iterator for IterMulti {
+    type Item = Result<(PersistentEvent, Vec<bool>), Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next().map(|event| self.map(event))

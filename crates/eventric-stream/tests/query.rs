@@ -5,8 +5,7 @@ use assertables::{
     assert_some,
     assert_some_as_result,
 };
-use eventric_stream::stream::append::Append as _;
-use eventric_stream_core::{
+use eventric_stream::{
     error::Error,
     event::{
         Data,
@@ -19,9 +18,10 @@ use eventric_stream_core::{
     },
     stream::{
         Stream,
+        append::Append as _,
         iterate::{
-            Condition,
             Iterate as _,
+            IterateQuery as _,
         },
         query::{
             Query,
@@ -38,9 +38,7 @@ use eventric_stream_core::{
 fn default_empty() -> Result<(), Error> {
     let stream = stream(eventric_stream::temp_path(), false)?;
 
-    let condition = Condition::default();
-
-    let mut events = stream.iterate(&condition, None);
+    let mut events = stream.iterate(None);
 
     // Query on an empty stream should always return an empty iterator
 
@@ -55,9 +53,7 @@ fn default_empty() -> Result<(), Error> {
 fn default() -> Result<(), Error> {
     let stream = stream(eventric_stream::temp_path(), true)?;
 
-    let condition = Condition::default();
-
-    let mut events = stream.iterate(&condition, None);
+    let mut events = stream.iterate(None);
 
     // A query with default (empty) conditions should return all of the events in
     // the stream
@@ -83,9 +79,8 @@ fn specifier() -> Result<(), Error> {
     let sel_0 = Selector::specifiers([spec_0])?;
 
     let query = Query::new([sel_0])?;
-    let condition = Condition::default().matches(&query);
 
-    let mut events = stream.iterate(&condition, None);
+    let (mut events, _) = stream.iterate_query(query, None);
 
     // A query with a single specifier with no version range should return any
     // events with a specific identifier, regardless of version, in this case 2
@@ -93,10 +88,12 @@ fn specifier() -> Result<(), Error> {
 
     {
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_2")?, event.data());
         assert_eq!(&Position::new(2), event.position());
 
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_3")?, event.data());
         assert_eq!(&Position::new(3), event.position());
 
@@ -116,9 +113,8 @@ fn specifier_with_range() -> Result<(), Error> {
     let sel_0 = Selector::specifiers([spec_0])?;
 
     let query = Query::new([sel_0])?;
-    let condition = Condition::default().matches(&query);
 
-    let mut events = stream.iterate(&condition, None);
+    let (mut events, _) = stream.iterate_query(query, None);
 
     // A query with a single specifier with a version range should only return
     // events matching both the specifier and the range, in this case the single
@@ -126,6 +122,7 @@ fn specifier_with_range() -> Result<(), Error> {
 
     {
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_3")?, event.data());
         assert_eq!(&Position::new(3), event.position());
 
@@ -146,9 +143,8 @@ fn multiple_specifiers() -> Result<(), Error> {
     let sel_0 = Selector::specifiers([spec_0, spec_1])?;
 
     let query = Query::new([sel_0])?;
-    let condition = Condition::default().matches(&query);
 
-    let mut events = stream.iterate(&condition, None);
+    let (mut events, _) = stream.iterate_query(query, None);
 
     // A query with multiple specifiers (without version ranges in this case) should
     // return events which match any of the specifiers, in this case the two events
@@ -156,10 +152,12 @@ fn multiple_specifiers() -> Result<(), Error> {
 
     {
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_0")?, event.data());
         assert_eq!(&Position::new(0), event.position());
 
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_1")?, event.data());
         assert_eq!(&Position::new(1), event.position());
 
@@ -181,19 +179,20 @@ fn multiple_specifiers_with_range() -> Result<(), Error> {
     let sel_0 = Selector::specifiers([spec_0, spec_1])?;
 
     let query = Query::new([sel_0])?;
-    let condition = Condition::default().matches(&query);
 
-    let mut events = stream.iterate(&condition, None);
+    let (mut events, _) = stream.iterate_query(query, None);
 
     // A query with multiple specifiers (some of which have version ranges) should
     // again return events matching any of the specifiers
 
     {
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_0")?, event.data());
         assert_eq!(&Position::new(0), event.position());
 
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_3")?, event.data());
         assert_eq!(&Position::new(3), event.position());
 
@@ -214,18 +213,19 @@ fn specifiers_and_tags() -> Result<(), Error> {
     let sel_0 = Selector::specifiers_and_tags([spec_0], [tag_4, tag_5])?;
 
     let query = Query::new([sel_0])?;
-    let condition = Condition::default().matches(&query);
 
-    let mut events = stream.iterate(&condition, None);
+    let (mut events, _) = stream.iterate_query(query, None);
 
     // Should return events matching the specifier AND all tags
 
     {
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_2")?, event.data());
         assert_eq!(&Position::new(2), event.position());
 
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_3")?, event.data());
         assert_eq!(&Position::new(3), event.position());
 
@@ -247,12 +247,12 @@ fn specifiers_and_tags_with_version_range() -> Result<(), Error> {
     let sel_0 = Selector::specifiers_and_tags([spec_0], [tag_4, tag_5])?;
 
     let query = Query::new([sel_0])?;
-    let condition = Condition::default().matches(&query);
 
-    let mut events = stream.iterate(&condition, None);
+    let (mut events, _) = stream.iterate_query(query, None);
 
     {
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_3")?, event.data());
         assert_eq!(&Position::new(3), event.position());
 
@@ -273,9 +273,8 @@ fn specifiers_and_tags_no_match() -> Result<(), Error> {
     let sel_0 = Selector::specifiers_and_tags([spec_0], [tag_4, tag_5])?;
 
     let query = Query::new([sel_0])?;
-    let condition = Condition::default().matches(&query);
 
-    let mut events = stream.iterate(&condition, None);
+    let (mut events, _) = stream.iterate_query(query, None);
 
     {
         assert_none!(events.next());
@@ -297,16 +296,17 @@ fn multiple_specifiers_and_tags() -> Result<(), Error> {
     let sel_0 = Selector::specifiers_and_tags([spec_0, spec_1], [tag_2, tag_3])?;
 
     let query = Query::new([sel_0])?;
-    let condition = Condition::default().matches(&query);
 
-    let mut events = stream.iterate(&condition, None);
+    let (mut events, _) = stream.iterate_query(query, None);
 
     {
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_0")?, event.data());
         assert_eq!(&Position::new(0), event.position());
 
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_1")?, event.data());
         assert_eq!(&Position::new(1), event.position());
 
@@ -333,16 +333,17 @@ fn multiple_selectors_same_type() -> Result<(), Error> {
     let sel_1 = Selector::specifiers([spec_0])?;
 
     let query = Query::new([sel_0, sel_1])?;
-    let condition = Condition::default().matches(&query);
 
-    let mut events = stream.iterate(&condition, None);
+    let (mut events, _) = stream.iterate_query(query, None);
 
     {
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_0")?, event.data());
         assert_eq!(&Position::new(0), event.position());
 
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_1")?, event.data());
         assert_eq!(&Position::new(1), event.position());
 
@@ -407,16 +408,17 @@ fn multiple_selectors_mixed_types() -> Result<(), Error> {
     let sel_1 = Selector::specifiers_and_tags([spec_0], [tag_2])?;
 
     let query = Query::new([sel_0, sel_1])?;
-    let condition = Condition::default().matches(&query);
 
-    let mut events = stream.iterate(&condition, None);
+    let (mut events, _) = stream.iterate_query(query, None);
 
     {
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_0")?, event.data());
         assert_eq!(&Position::new(0), event.position());
 
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_1")?, event.data());
         assert_eq!(&Position::new(1), event.position());
 
@@ -484,16 +486,17 @@ fn complex_version_ranges() -> Result<(), Error> {
     let sel_0 = Selector::specifiers([spec_0, spec_1])?;
 
     let query = Query::new([sel_0])?;
-    let condition = Condition::default().matches(&query);
 
-    let mut events = stream.iterate(&condition, None);
+    let (mut events, _) = stream.iterate_query(query, None);
 
     {
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_0")?, event.data());
         assert_eq!(&Position::new(0), event.position());
 
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_3")?, event.data());
         assert_eq!(&Position::new(3), event.position());
 
@@ -525,16 +528,17 @@ fn multiple_specifiers_and_tags_selectors() -> Result<(), Error> {
     let sel_1 = Selector::specifiers_and_tags([spec_0], [tag_5, tag_6])?;
 
     let query = Query::new([sel_0, sel_1])?;
-    let condition = Condition::default().matches(&query);
 
-    let mut events = stream.iterate(&condition, None);
+    let (mut events, _) = stream.iterate_query(query, None);
 
     {
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_0")?, event.data());
         assert_eq!(&Position::new(0), event.position());
 
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_3")?, event.data());
         assert_eq!(&Position::new(3), event.position());
 
@@ -567,9 +571,8 @@ fn complex_multi_selector_with_ranges() -> Result<(), Error> {
     let sel_1 = Selector::specifiers([spec_1])?;
 
     let query = Query::new([sel_0, sel_1])?;
-    let condition = Condition::default().matches(&query);
 
-    let mut events = stream.iterate(&condition, None);
+    let (mut events, _) = stream.iterate_query(query, None);
 
     {
         // let event = assert_some_as_result!(events.next()).unwrap()?;
@@ -577,10 +580,12 @@ fn complex_multi_selector_with_ranges() -> Result<(), Error> {
         // assert_eq!(&Position::new(0), event.position());
 
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_1")?, event.data());
         assert_eq!(&Position::new(1), event.position());
 
         let event = assert_some_as_result!(events.next()).unwrap()?;
+
         assert_eq!(&Data::new("data_2")?, event.data());
         assert_eq!(&Position::new(2), event.position());
 

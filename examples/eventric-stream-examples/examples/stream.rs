@@ -8,7 +8,6 @@ use eventric_stream::{
         Data,
         EphemeralEvent,
         Identifier,
-        Position,
         Specifier,
         Tag,
         Version,
@@ -18,8 +17,7 @@ use eventric_stream::{
         append::Append as _,
         iterate::{
             Cache,
-            Condition,
-            Iterate as _,
+            IterateQuery as _,
             Options,
         },
         query::{
@@ -68,14 +66,14 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         Tags::new([Tag::new("course:523")?])?,
     )])?;
 
-    let condition = Condition::default().matches(&query).from(Position::MIN);
-
     let cache = Arc::new(Cache::default());
     let options = Options::default()
         .retrieve_tags(false)
         .with_shared_cache(cache.clone());
 
-    for event in stream.iterate(&condition, Some(options)) {
+    let (events, _) = stream.iterate_query_with_options(query, None, options);
+
+    for event in events {
         println!("event: {event:#?}");
     }
 
