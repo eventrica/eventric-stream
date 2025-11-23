@@ -28,7 +28,7 @@ use crate::{
         },
         query::{
             QueryHash,
-            SelectorHash,
+            selector::SelectorHash,
         },
     },
     utils::iteration::{

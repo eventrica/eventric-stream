@@ -2,6 +2,7 @@
 //! module-level documentation.
 
 pub(crate) mod filter;
+pub(crate) mod selector;
 
 use derive_more::{
     AsRef,
@@ -16,17 +17,9 @@ use fancy_constructor::new;
 
 use crate::{
     error::Error,
-    event::{
-        specifier::{
-            Specifier,
-            SpecifierHash,
-            SpecifierHashRef,
-        },
-        tag::{
-            Tag,
-            TagHash,
-            TagHashRef,
-        },
+    stream::query::selector::{
+        SelectorHash,
+        SelectorHashRef,
     },
 };
 
@@ -137,236 +130,13 @@ impl<'a> From<&'a Query> for QueryHashRef<'a> {
 
 // -------------------------------------------------------------------------------------------------
 
-// Selector
+// Re-Exports
 
-/// The [`Selector`] type is the functional core of a [`Query`], which contains
-/// one or more [`Selector`] instances. A query will return all events matched
-/// by *any* of the [`Selector`] instances (they are effectively combined as a
-/// logical OR operation).
-///
-/// Each variant of the [`Selector`] has a different meaning.
-#[derive(Clone, Debug)]
-pub enum Selector {
-    /// A [`Selector`] based only on [`Specifier`]s, which will return all
-    /// events that match *any* of the supplied [`Specifier`]s.
-    Specifiers(Specifiers),
-    /// A [`Selector`] which has both [`Specifier`]s and [`Tag`]s, which will
-    /// return all events that match match *any* of the supplied [`Specifier`]s
-    /// *AND* *all* of the supplied [`Tag`]s.
-    SpecifiersAndTags(Specifiers, Tags),
-}
-
-impl Selector {
-    /// Convenience function for creating a selector directly from a collection
-    /// of [`Specifier`]s without constructing an intermediate [`Specifiers`]
-    /// instance directly.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the implied [`Specifiers`] instance returns an error
-    /// on construction.
-    pub fn specifiers<S>(specifiers: S) -> Result<Self, Error>
-    where
-        S: Into<Vec<Specifier>>,
-    {
-        Ok(Self::Specifiers(Specifiers::new(specifiers)?))
-    }
-
-    /// Convenience function for creating a selector directly from a collection
-    /// of [`Specifier`]s and a collection of [`Tag`]s without constructing
-    /// intermediate instances of [`Specifiers`] and [`Tags`] directly.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the implied [`Specifiers`] or [`Tags`] instances
-    /// return an error on construction.
-    pub fn specifiers_and_tags<S, T>(specifiers: S, tags: T) -> Result<Self, Error>
-    where
-        S: Into<Vec<Specifier>>,
-        T: Into<Vec<Tag>>,
-    {
-        Ok(Self::SpecifiersAndTags(
-            Specifiers::new(specifiers)?,
-            Tags::new(tags)?,
-        ))
-    }
-}
-
-#[derive(Debug)]
-pub(crate) enum SelectorHash {
-    Specifiers(Vec<SpecifierHash>),
-    SpecifiersAndTags(Vec<SpecifierHash>, Vec<TagHash>),
-}
-
-impl From<&Selector> for SelectorHash {
-    #[rustfmt::skip]
-    fn from(selector: &Selector) -> Self {
-        match selector {
-            Selector::Specifiers(specifiers) => Self::Specifiers(specifiers.into()),
-            Selector::SpecifiersAndTags(specifiers, tags) => Self::SpecifiersAndTags(specifiers.into(), tags.into()),
-        }
-    }
-}
-
-impl From<&SelectorHashRef<'_>> for SelectorHash {
-    #[rustfmt::skip]
-    fn from(selector: &SelectorHashRef<'_>) -> Self {
-        match selector {
-            SelectorHashRef::Specifiers(specifiers) => {
-                Self::Specifiers(specifiers.iter().map(Into::into).collect())
-            }
-            SelectorHashRef::SpecifiersAndTags(specifiers, tags) => {
-                Self::SpecifiersAndTags(specifiers.iter().map(Into::into).collect(), tags.iter().map(Into::into).collect())
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-pub(crate) enum SelectorHashRef<'a> {
-    Specifiers(Vec<SpecifierHashRef<'a>>),
-    SpecifiersAndTags(Vec<SpecifierHashRef<'a>>, Vec<TagHashRef<'a>>),
-}
-
-impl<'a> From<&'a Selector> for SelectorHashRef<'a> {
-    #[rustfmt::skip]
-    fn from(selector: &'a Selector) -> Self {
-        match selector {
-            Selector::Specifiers(specifiers) => Self::Specifiers(specifiers.into()),
-            Selector::SpecifiersAndTags(specifiers, tags) => Self::SpecifiersAndTags(specifiers.into(), tags.into()),
-        }
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Specifiers
-
-/// The [`Specifiers`] type is a validating collection of [`Specifier`]
-/// instances, used to ensure that invariants are met when constructing queries.
-///
-/// When used within a [`Selector`] (of whatever variant), the [`Specifier`]
-/// instances within a [`Specifiers`] collection are always combined as a
-/// logical OR operation, so events that match *any* of the supplied
-/// [`Specifier`] instances will be returned.
-#[derive(new, AsRef, Clone, Debug)]
-#[as_ref([Specifier])]
-#[new(const_fn, name(new_inner), vis())]
-pub struct Specifiers {
-    /// The collection of one or more [`Specifier`]s which makes up the
-    /// [`Specifiers`] collection.
-    pub specifiers: Vec<Specifier>,
-}
-
-impl Specifiers {
-    /// Constructs a new [`Specifiers`] instance given any value which can be
-    /// converted into a valid [`Vec`] of [`Specifier`] instances.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error on validation failure. Specifiers must conform to the
-    /// following constraints:
-    /// - Min 1 Specifier (Non-Zero Length/Non-Empty)
-    pub fn new<S>(specifiers: S) -> Result<Self, Error>
-    where
-        S: Into<Vec<Specifier>>,
-    {
-        Self::new_unvalidated(specifiers.into()).validate()
-    }
-
-    #[doc(hidden)]
-    #[must_use]
-    pub fn new_unvalidated(specifiers: Vec<Specifier>) -> Self {
-        Self::new_inner(specifiers)
-    }
-}
-
-impl From<&Specifiers> for Vec<SpecifierHash> {
-    fn from(specifiers: &Specifiers) -> Self {
-        specifiers.as_ref().iter().map(Into::into).collect()
-    }
-}
-
-impl<'a> From<&'a Specifiers> for Vec<SpecifierHashRef<'a>> {
-    fn from(specifiers: &'a Specifiers) -> Self {
-        specifiers.as_ref().iter().map(Into::into).collect()
-    }
-}
-
-impl Validate for Specifiers {
-    type Err = Error;
-
-    fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.specifiers, "specifiers", &[&vec::IsEmpty])?;
-
-        Ok(self)
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Tags
-
-/// The [`Tags`] type is a validating collection of [`Tag`] instances, used to
-/// ensure that invariants are met when constructing queries.
-///
-/// When used within a [`Selector`] (of whatever variant), the [`Tag`]
-/// instances within a [`Tags`] collection are always combined as a
-/// logical AND operation, so *only* events that match *all* of the supplied
-/// [`Tag`] instances will be returned.
-#[derive(new, AsRef, Clone, Debug)]
-#[as_ref([Tag])]
-#[new(const_fn, name(new_inner), vis())]
-pub struct Tags {
-    /// The collection of one or more [`Tag`]s which makes up the [`Tags`]
-    /// collection.
-    pub tags: Vec<Tag>,
-}
-
-impl Tags {
-    /// Constructs a new [`Tags`] instance given any value which can be
-    /// converted into a valid [`Vec`] of [`Tag`] instances.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error on validation failure. Tags must conform to the
-    /// following constraints:
-    /// - Min 1 Tag (Non-Zero Length/Non-Empty)
-    pub fn new<T>(tags: T) -> Result<Self, Error>
-    where
-        T: Into<Vec<Tag>>,
-    {
-        Self::new_unvalidated(tags.into()).validate()
-    }
-
-    #[doc(hidden)]
-    #[must_use]
-    pub fn new_unvalidated(tags: Vec<Tag>) -> Self {
-        Self::new_inner(tags)
-    }
-}
-
-impl From<&Tags> for Vec<TagHash> {
-    fn from(tags: &Tags) -> Self {
-        tags.as_ref().iter().map(Into::into).collect()
-    }
-}
-
-impl<'a> From<&'a Tags> for Vec<TagHashRef<'a>> {
-    fn from(tags: &'a Tags) -> Self {
-        tags.as_ref().iter().map(Into::into).collect()
-    }
-}
-
-impl Validate for Tags {
-    type Err = Error;
-
-    fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.tags, "tags", &[&vec::IsEmpty])?;
-
-        Ok(self)
-    }
-}
+pub use self::selector::{
+    Selector,
+    specifiers::Specifiers,
+    tags::Tags,
+};
 
 // -------------------------------------------------------------------------------------------------
 
@@ -374,262 +144,235 @@ impl Validate for Tags {
 
 #[cfg(test)]
 mod tests {
-    mod query_tests {
-        use assertables::{
-            assert_err,
-            assert_ok,
-        };
+    use eventric_core::validation::Validate;
 
-        use crate::{
-            error::Error,
-            event::{
-                identifier::Identifier,
-                specifier::Specifier,
-                tag::Tag,
-            },
-            stream::query::{
-                Query,
-                Selector,
-            },
-        };
+    use crate::{
+        error::Error,
+        event::{
+            identifier::Identifier,
+            specifier::Specifier,
+            tag::Tag,
+        },
+        stream::query::{
+            Query,
+            QueryHash,
+            QueryHashRef,
+            Selector,
+        },
+    };
 
-        #[test]
-        fn new_valid_query_succeeds() -> Result<(), Error> {
-            let sel_0 = Selector::specifiers(vec![Specifier::new(Identifier::new("Event1")?)])?;
+    // Query::new
 
-            assert_ok!(Query::new(vec![sel_0]));
+    #[test]
+    fn new_with_single_selector() {
+        let id = Identifier::new("TestEvent").unwrap();
+        let spec = Specifier::new(id);
+        let selector = Selector::specifiers(vec![spec]).unwrap();
 
-            Ok(())
-        }
+        let result = Query::new(vec![selector]);
 
-        #[test]
-        fn new_with_multiple_selectors_succeeds() -> Result<(), Error> {
-            let sel_0 = Selector::specifiers(vec![Specifier::new(Identifier::new("id_0")?)])?;
-            let sel_1 = Selector::specifiers(vec![Specifier::new(Identifier::new("id_1")?)])?;
-
-            assert_ok!(Query::new(vec![sel_0, sel_1]));
-
-            Ok(())
-        }
-
-        #[test]
-        fn new_with_mixed_selector_types_succeeds() -> Result<(), Error> {
-            let sel_0 = Selector::specifiers(vec![Specifier::new(Identifier::new("Event1")?)])?;
-            let sel_1 = Selector::specifiers_and_tags(
-                vec![Specifier::new(Identifier::new("Event2")?)],
-                vec![Tag::new("tag2")?],
-            )?;
-
-            assert_ok!(Query::new(vec![sel_0, sel_1]));
-
-            Ok(())
-        }
-
-        #[test]
-        fn new_empty_query_fails() {
-            assert_err!(Query::new(vec![]));
-            assert_err!(Query::new(Vec::<Selector>::new()));
-        }
+        assert!(result.is_ok());
+        let query = result.unwrap();
+        assert_eq!(1, query.selectors.len());
     }
 
-    mod specifiers_tests {
-        use assertables::{
-            assert_err,
-            assert_ok,
-        };
+    #[test]
+    fn new_with_multiple_selectors() {
+        let id1 = Identifier::new("EventA").unwrap();
+        let id2 = Identifier::new("EventB").unwrap();
+        let id3 = Identifier::new("EventC").unwrap();
 
-        use crate::{
-            error::Error,
-            event::{
-                identifier::Identifier,
-                specifier::Specifier,
-                version::Version,
-            },
-            stream::query::Specifiers,
-        };
+        let spec1 = Specifier::new(id1);
+        let spec2 = Specifier::new(id2);
+        let spec3 = Specifier::new(id3);
 
-        #[test]
-        fn new_valid_specifiers_succeeds() -> Result<(), Error> {
-            let spec_0 = Specifier::new(Identifier::new("Event1")?);
+        let selector1 = Selector::specifiers(vec![spec1]).unwrap();
+        let selector2 = Selector::specifiers(vec![spec2]).unwrap();
+        let selector3 = Selector::specifiers(vec![spec3]).unwrap();
 
-            assert_ok!(Specifiers::new(vec![spec_0]));
+        let result = Query::new(vec![selector1, selector2, selector3]);
 
-            Ok(())
-        }
-
-        #[test]
-        fn new_with_multiple_specifiers_succeeds() -> Result<(), Error> {
-            let spec_0 = Specifier::new(Identifier::new("Event1")?);
-            let spec_1 = Specifier::new(Identifier::new("Event2")?);
-
-            assert_ok!(Specifiers::new(vec![spec_0, spec_1]));
-
-            Ok(())
-        }
-
-        #[test]
-        #[rustfmt::skip]
-        fn new_with_versioned_specifiers_succeeds() -> Result<(), Error> {
-            let spec_0 = Specifier::new(Identifier::new("Event1")?).range(Version::new(1)..=Version::new(5));
-
-            assert_ok!(Specifiers::new(vec![spec_0]));
-
-            Ok(())
-        }
-
-        #[test]
-        #[rustfmt::skip]
-        fn new_with_mixed_versioned_and_unversioned_succeeds() -> Result<(), Error> {
-            let spec_0 = Specifier::new(Identifier::new("Event1")?);
-            let spec_1 = Specifier::new(Identifier::new("Event2")?).range(Version::new(1)..=Version::new(5));
-            let spec_2 = Specifier::new(Identifier::new("Event3")?).range(Version::new(10)..);
-
-            assert_ok!(Specifiers::new(vec![spec_0, spec_1, spec_2]));
-
-            Ok(())
-        }
-
-        #[test]
-        fn new_empty_specifiers_fails() {
-            assert_err!(Specifiers::new(vec![]));
-            assert_err!(Specifiers::new(Vec::<Specifier>::new()));
-        }
+        assert!(result.is_ok());
+        let query = result.unwrap();
+        assert_eq!(3, query.selectors.len());
     }
 
-    mod tags_tests {
-        use assertables::{
-            assert_err,
-            assert_ok,
-        };
+    #[test]
+    fn new_with_mixed_selector_types() {
+        let id1 = Identifier::new("EventA").unwrap();
+        let spec1 = Specifier::new(id1);
+        let selector1 = Selector::specifiers(vec![spec1]).unwrap();
 
-        use crate::{
-            error::Error,
-            event::tag::Tag,
-            stream::query::Tags,
-        };
+        let id2 = Identifier::new("EventB").unwrap();
+        let spec2 = Specifier::new(id2);
+        let tag = Tag::new("user:123").unwrap();
+        let selector2 = Selector::specifiers_and_tags(vec![spec2], vec![tag]).unwrap();
 
-        #[test]
-        fn new_valid_tags_succeeds() -> Result<(), Error> {
-            let tag_0 = Tag::new("tag1")?;
+        let result = Query::new(vec![selector1, selector2]);
 
-            assert_ok!(Tags::new(vec![tag_0]));
+        assert!(result.is_ok());
 
-            Ok(())
-        }
+        let query = result.unwrap();
 
-        #[test]
-        fn new_with_multiple_tags_succeeds() -> Result<(), Error> {
-            let tag_0 = Tag::new("tag1")?;
-            let tag_1 = Tag::new("tag2")?;
-
-            assert_ok!(Tags::new(vec![tag_0, tag_1]));
-
-            Ok(())
-        }
-
-        #[test]
-        fn new_with_complex_tags_succeeds() -> Result<(), Error> {
-            let tag_0 = Tag::new("student:123")?;
-            let tag_1 = Tag::new("course:456")?;
-            let tag_2 = Tag::new("organization:789")?;
-
-            assert_ok!(Tags::new(vec![tag_0, tag_1, tag_2]));
-
-            Ok(())
-        }
-
-        #[test]
-        fn new_empty_tags_fails() {
-            assert_err!(Tags::new(vec![]));
-            assert_err!(Tags::new(Vec::<Tag>::new()));
-        }
+        assert_eq!(2, query.selectors.len());
     }
 
-    mod selector_tests {
-        use assertables::{
-            assert_err,
-            assert_ok,
-        };
+    #[test]
+    fn new_with_empty_vec_returns_error() {
+        let result = Query::new(Vec::<Selector>::new());
 
-        use crate::{
-            error::Error,
-            event::{
-                identifier::Identifier,
-                specifier::Specifier,
-                tag::Tag,
-            },
-            stream::query::Selector,
-        };
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), Error::Validation(_)));
+    }
 
-        #[test]
-        fn selector_specifiers_convenience_method() -> Result<(), Error> {
-            let spec_0 = Specifier::new(Identifier::new("Event1")?);
+    // Query::new_unvalidated
 
-            assert_ok!(Selector::specifiers(vec![spec_0]));
+    #[test]
+    fn new_unvalidated_allows_empty_vec() {
+        let query = Query::new_unvalidated(vec![]);
 
-            Ok(())
-        }
+        assert_eq!(0, query.selectors.len());
+    }
 
-        #[test]
-        fn selector_specifiers_empty_fails() {
-            assert_err!(Selector::specifiers(vec![]));
-        }
+    #[test]
+    fn new_unvalidated_with_selectors() {
+        let id = Identifier::new("TestEvent").unwrap();
+        let spec = Specifier::new(id);
+        let selector = Selector::specifiers(vec![spec]).unwrap();
 
-        #[test]
-        fn selector_specifiers_and_tags_convenience_method() -> Result<(), Error> {
-            let spec_0 = Specifier::new(Identifier::new("Event1")?);
-            let tag_0 = Tag::new("tag1")?;
+        let query = Query::new_unvalidated(vec![selector]);
 
-            assert_ok!(Selector::specifiers_and_tags(vec![spec_0], vec![tag_0]));
+        assert_eq!(1, query.selectors.len());
+    }
 
-            Ok(())
-        }
+    // AsRef<[Selector]>
 
-        #[test]
-        fn selector_specifiers_and_tags_empty_specifiers_fails() -> Result<(), Error> {
-            let tag_0 = Tag::new("tag1")?;
+    #[test]
+    fn as_ref_returns_slice() {
+        let id = Identifier::new("TestEvent").unwrap();
+        let spec = Specifier::new(id);
+        let selector = Selector::specifiers(vec![spec]).unwrap();
+        let query = Query::new(vec![selector]).unwrap();
 
-            assert_err!(Selector::specifiers_and_tags(vec![], vec![tag_0]));
+        let slice: &[Selector] = query.as_ref();
 
-            Ok(())
-        }
+        assert_eq!(1, slice.len());
+    }
 
-        #[test]
-        fn selector_specifiers_and_tags_empty_tags_fails() -> Result<(), Error> {
-            let spec_0 = Specifier::new(Identifier::new("Event1")?);
+    // Clone
 
-            assert_err!(Selector::specifiers_and_tags(vec![spec_0], vec![]));
+    #[test]
+    fn clone_creates_independent_copy() {
+        let id = Identifier::new("TestEvent").unwrap();
+        let spec = Specifier::new(id);
+        let selector = Selector::specifiers(vec![spec]).unwrap();
+        let query = Query::new(vec![selector]).unwrap();
 
-            Ok(())
-        }
+        let cloned = query.clone();
 
-        #[test]
-        fn selector_specifiers_and_tags_both_empty_fails() {
-            assert_err!(Selector::specifiers_and_tags(vec![], vec![]));
-        }
+        assert_eq!(query.selectors.len(), cloned.selectors.len());
+    }
 
-        #[test]
-        fn selector_with_multiple_specifiers() -> Result<(), Error> {
-            let spec_0 = Specifier::new(Identifier::new("Event1")?);
-            let spec_1 = Specifier::new(Identifier::new("Event2")?);
-            let spec_2 = Specifier::new(Identifier::new("Event3")?);
+    // From<Query> for Vec<Selector>
 
-            assert_ok!(Selector::specifiers(vec![spec_0, spec_1, spec_2]));
+    #[allow(clippy::similar_names)]
+    #[test]
+    fn from_query_to_vec_selector() {
+        let id1 = Identifier::new("EventA").unwrap();
+        let id2 = Identifier::new("EventB").unwrap();
 
-            Ok(())
-        }
+        let spec1 = Specifier::new(id1);
+        let spec2 = Specifier::new(id2);
 
-        #[test]
-        #[rustfmt::skip]
-        fn selector_specifiers_and_tags_with_multiple_each() -> Result<(), Error> {
-            let spec_0 = Specifier::new(Identifier::new("Event1")?);
-            let spec_1 = Specifier::new(Identifier::new("Event2")?);
-            let tag_0 = Tag::new("tag1")?;
-            let tag_1 = Tag::new("tag2")?;
+        let selector1 = Selector::specifiers(vec![spec1]).unwrap();
+        let selector2 = Selector::specifiers(vec![spec2]).unwrap();
 
-            assert_ok!(Selector::specifiers_and_tags(vec![spec_0, spec_1], vec![tag_0, tag_1]));
+        let query = Query::new(vec![selector1, selector2]).unwrap();
 
-            Ok(())
-        }
+        let selectors: Vec<Selector> = query.into();
+
+        assert_eq!(2, selectors.len());
+    }
+
+    // Validate
+
+    #[test]
+    fn validate_succeeds_for_non_empty() {
+        let id = Identifier::new("TestEvent").unwrap();
+        let spec = Specifier::new(id);
+        let selector = Selector::specifiers(vec![spec]).unwrap();
+        let query = Query::new_unvalidated(vec![selector]);
+
+        let result = query.validate();
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn validate_fails_for_empty() {
+        let query = Query::new_unvalidated(vec![]);
+
+        let result = query.validate();
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), Error::Validation(_)));
+    }
+
+    // From<Query> for QueryHash
+
+    #[test]
+    fn from_query_to_query_hash_by_value() {
+        let id = Identifier::new("TestEvent").unwrap();
+        let spec = Specifier::new(id);
+        let selector = Selector::specifiers(vec![spec]).unwrap();
+        let query = Query::new(vec![selector]).unwrap();
+
+        let _hash: QueryHash = query.into();
+    }
+
+    #[test]
+    fn from_query_to_query_hash_by_ref() {
+        let id = Identifier::new("TestEvent").unwrap();
+        let spec = Specifier::new(id);
+        let selector = Selector::specifiers(vec![spec]).unwrap();
+        let query = Query::new(vec![selector]).unwrap();
+
+        let _hash: QueryHash = (&query).into();
+    }
+
+    // From<&Query> for QueryHashRef
+
+    #[test]
+    fn from_query_to_query_hash_ref() {
+        let id = Identifier::new("TestEvent").unwrap();
+        let spec = Specifier::new(id);
+        let selector = Selector::specifiers(vec![spec]).unwrap();
+        let query = Query::new(vec![selector]).unwrap();
+
+        let _hash_ref: QueryHashRef<'_> = (&query).into();
+    }
+
+    // From<QueryHashRef> for QueryHash
+
+    #[test]
+    fn from_query_hash_ref_to_query_hash() {
+        let id = Identifier::new("TestEvent").unwrap();
+        let spec = Specifier::new(id);
+        let selector = Selector::specifiers(vec![spec]).unwrap();
+        let query = Query::new(vec![selector]).unwrap();
+
+        let hash_ref: QueryHashRef<'_> = (&query).into();
+        let _hash: QueryHash = hash_ref.into();
+    }
+
+    #[test]
+    fn from_query_hash_ref_to_query_hash_by_ref() {
+        let id = Identifier::new("TestEvent").unwrap();
+        let spec = Specifier::new(id);
+        let selector = Selector::specifiers(vec![spec]).unwrap();
+        let query = Query::new(vec![selector]).unwrap();
+
+        let hash_ref: QueryHashRef<'_> = (&query).into();
+        let _hash: QueryHash = (&hash_ref).into();
     }
 }
