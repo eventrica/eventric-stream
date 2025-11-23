@@ -57,7 +57,7 @@ pub mod stream {
 
         pub use eventric_stream_core::stream::append::{
             Append,
-            Condition,
+            AppendQuery,
         };
     }
 

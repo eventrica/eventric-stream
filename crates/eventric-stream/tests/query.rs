@@ -608,25 +608,25 @@ where
     if populate {
         stream.append(
             [
-                &EphemeralEvent::new(
+                EphemeralEvent::new(
                     Data::new("data_0")?,
                     Identifier::new("id_0")?,
                     [Tag::new("tag_1")?, Tag::new("tag_2")?, Tag::new("tag_3")?],
                     Version::new(0),
                 ),
-                &EphemeralEvent::new(
+                EphemeralEvent::new(
                     Data::new("data_1")?,
                     Identifier::new("id_1")?,
                     [Tag::new("tag_2")?, Tag::new("tag_3")?, Tag::new("tag_4")?],
                     Version::new(1),
                 ),
-                &EphemeralEvent::new(
+                EphemeralEvent::new(
                     Data::new("data_2")?,
                     Identifier::new("id_2")?,
                     [Tag::new("tag_3")?, Tag::new("tag_4")?, Tag::new("tag_5")?],
                     Version::new(0),
                 ),
-                &EphemeralEvent::new(
+                EphemeralEvent::new(
                     Data::new("data_3")?,
                     Identifier::new("id_2")?,
                     [Tag::new("tag_4")?, Tag::new("tag_5")?, Tag::new("tag_6")?],

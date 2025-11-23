@@ -133,14 +133,14 @@ impl Retrieve {
     fn get(&self, event: PersistentEventHash) -> Result<PersistentEvent, Error> {
         let (data, identifier, position, tags, timestamp, version) = event.take();
 
-        self.get_identifier(&identifier)
+        self.get_identifier(identifier)
             .and_then(|identifier| self.get_tags(&tags).map(|tags| (identifier, tags)))
             .map(|(identifier, tags)| PersistentEvent::new(data, identifier, position, tags, timestamp, version))
     }
 }
 
 impl Retrieve {
-    fn get_identifier(&self, identifier: &IdentifierHash) -> Result<Identifier, Error> {
+    fn get_identifier(&self, identifier: IdentifierHash) -> Result<Identifier, Error> {
         let identifiers = &self.options.cache.identifiers;
 
         identifiers
@@ -159,12 +159,12 @@ impl Retrieve {
 
 impl Retrieve {
     fn get_tags(&self, tags: &[TagHash]) -> Result<Vec<Tag>, Error> {
-        tags.iter().filter_map(|tag| self.get_tag(tag)).collect()
+        tags.iter().filter_map(|tag| self.get_tag(*tag)).collect()
     }
 
     #[rustfmt::skip]
     #[allow(clippy::obfuscated_if_else)]
-    fn get_tag(&self, tag: &TagHash) -> Option<Result<Tag, Error>> {
+    fn get_tag(&self, tag: TagHash) -> Option<Result<Tag, Error>> {
         let retrieve_tags = &self.options.retrieve_tags;
         let tags = &self.options.cache.tags;
 

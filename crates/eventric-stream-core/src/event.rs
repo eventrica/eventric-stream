@@ -34,7 +34,7 @@ use crate::event::{
 /// yet have some of the properties of an event which has been persisted (in
 /// this case a [`PersistentEvent`]) such as a [`Position`] within the stream or
 /// a [`Timestamp`].
-#[derive(new, Debug, Eq, PartialEq)]
+#[derive(new, Clone, Debug, Eq, PartialEq)]
 #[new(const_fn, name(new_inner), vis())]
 pub struct EphemeralEvent {
     data: Data,

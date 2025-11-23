@@ -46,7 +46,7 @@ pub fn single_append(c: &mut Criterion) {
 
         b.iter_with_large_drop(|| {
             for _ in 0..1_000 {
-                stream.append(&events, None).unwrap();
+                stream.append(events.clone(), None).unwrap();
             }
         });
 
@@ -85,7 +85,7 @@ pub fn multiple_append(c: &mut Criterion) {
 
             b.iter_with_large_drop(|| {
                 for _ in 0..1_000 {
-                    stream.append(&events, None).unwrap();
+                    stream.append(events.clone(), None).unwrap();
                 }
             });
 

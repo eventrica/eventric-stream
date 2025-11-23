@@ -15,10 +15,7 @@ use eventric_stream::{
     },
     stream::{
         Stream,
-        append::{
-            Append as _,
-            Condition,
-        },
+        append::Append as _,
         query::{
             Query,
             Selector,
@@ -26,6 +23,7 @@ use eventric_stream::{
         },
     },
 };
+use eventric_stream_core::stream::append::AppendQuery;
 
 // =================================================================================================
 // Properties
@@ -49,7 +47,7 @@ fn empty() -> Result<(), Error> {
 fn post_append() -> Result<(), Error> {
     let mut stream = stream(eventric_stream::temp_path(), true)?;
 
-    let position = stream.append(&*EVENTS, None)?;
+    let position = stream.append(EVENTS.clone(), None)?;
 
     // Position after appending 4 events should be 3, with a stream length of 4, and
     // a non-empty stream
@@ -67,15 +65,14 @@ fn post_append() -> Result<(), Error> {
 fn post_append_error() -> Result<(), Error> {
     let mut stream = stream(eventric_stream::temp_path(), true)?;
 
-    stream.append(&*EVENTS, None)?;
+    stream.append(EVENTS.clone(), None)?;
 
     let specifier = Specifier::new(Identifier::new("id")?);
     let specifiers = Specifiers::new([specifier])?;
     let selector = Selector::Specifiers(specifiers);
     let query = Query::new([selector])?;
-    let condition = Condition::new(&query);
 
-    let result = stream.append(&*EVENTS, Some(&condition));
+    let result = stream.append_query(EVENTS.clone(), query, None);
 
     // Result should be a concurrency error after attempting an append with a
     // matching fail_if_matches query, and the length should not have changed.
@@ -103,7 +100,7 @@ fn post_reopen() -> Result<(), Error> {
             assert!(stream.is_empty());
         }
 
-        let position = stream.append(&*EVENTS, None)?;
+        let position = stream.append(EVENTS.clone(), None)?;
 
         // Position after appending 4 events should be 3, with a stream length of 4, and
         // a non-empty stream

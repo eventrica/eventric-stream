@@ -79,13 +79,13 @@ impl Validate for Tag {
 
 // Hash
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Copy, Debug)]
 #[new(const_fn)]
 pub(crate) struct TagHash(u64);
 
 impl TagHash {
     #[must_use]
-    pub fn hash(&self) -> u64 {
+    pub fn hash(self) -> u64 {
         self.0
     }
 }

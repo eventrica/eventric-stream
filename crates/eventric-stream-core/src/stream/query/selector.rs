@@ -78,7 +78,7 @@ impl Selector {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) enum SelectorHash {
     Specifiers(Vec<SpecifierHash>),
     SpecifiersAndTags(Vec<SpecifierHash>, Vec<TagHash>),

@@ -44,7 +44,7 @@ pub fn main() -> Result<(), Error> {
     let start = Instant::now();
 
     for _ in 0..iterations as u64 {
-        stream.append(&events, None).unwrap();
+        stream.append(events.clone(), None).unwrap();
     }
 
     let duration = Instant::now().duration_since(start);

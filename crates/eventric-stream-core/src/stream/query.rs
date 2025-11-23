@@ -4,6 +4,8 @@
 pub(crate) mod filter;
 pub(crate) mod selector;
 
+use std::borrow::Cow;
+
 use derive_more::{
     AsRef,
     Debug,
@@ -69,6 +71,18 @@ impl Query {
     }
 }
 
+impl<'a> From<&'a Query> for Cow<'a, Query> {
+    fn from(val: &'a Query) -> Self {
+        Cow::Borrowed(val)
+    }
+}
+
+impl From<Query> for Cow<'_, Query> {
+    fn from(val: Query) -> Self {
+        Cow::Owned(val)
+    }
+}
+
 impl From<Query> for Vec<Selector> {
     fn from(query: Query) -> Self {
         query.selectors
@@ -95,9 +109,21 @@ impl Validate for Query {
 /// [append]: crate::stream::append::Append
 /// [iterate]: crate::stream::iterate::Iterate
 /// [iterate_multi]: crate::stream::iterate::IterateMulti
-#[derive(new, AsRef, Debug)]
+#[derive(new, AsRef, Clone, Debug)]
 #[as_ref([SelectorHash])]
 pub struct QueryHash(pub(crate) Vec<SelectorHash>);
+
+impl From<Cow<'_, Query>> for QueryHash {
+    fn from(query: Cow<'_, Query>) -> Self {
+        Self::new(query.selectors.iter().map(Into::into).collect::<Vec<_>>())
+    }
+}
+
+impl From<Cow<'_, QueryHash>> for QueryHash {
+    fn from(query: Cow<'_, QueryHash>) -> Self {
+        query.into_owned()
+    }
+}
 
 impl From<Query> for QueryHash {
     fn from(query: Query) -> Self {
@@ -108,6 +134,18 @@ impl From<Query> for QueryHash {
 impl From<&Query> for QueryHash {
     fn from(query: &Query) -> Self {
         Self::new(query.as_ref().iter().map(Into::into).collect::<Vec<_>>())
+    }
+}
+
+impl<'a> From<&'a QueryHash> for Cow<'a, QueryHash> {
+    fn from(query: &'a QueryHash) -> Self {
+        Cow::Borrowed(query)
+    }
+}
+
+impl From<QueryHash> for Cow<'_, QueryHash> {
+    fn from(query: QueryHash) -> Self {
+        Cow::Owned(query)
     }
 }
 

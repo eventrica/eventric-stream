@@ -81,13 +81,13 @@ impl Validate for Identifier {
 
 // Hash
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Copy, Debug)]
 #[new(const_fn)]
 pub(crate) struct IdentifierHash(u64);
 
 impl IdentifierHash {
     #[must_use]
-    pub fn hash(&self) -> u64 {
+    pub fn hash(self) -> u64 {
         self.0
     }
 }

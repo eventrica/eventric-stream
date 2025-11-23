@@ -89,7 +89,7 @@ impl Identifiers {
         specifier: &SpecifierHash,
         from: Option<Position>,
     ) -> PositionIterator {
-        let identifier = &specifier.identifier;
+        let identifier = specifier.identifier;
         let range = specifier.range.clone();
 
         match from {
@@ -100,7 +100,7 @@ impl Identifiers {
 
     fn query_prefix(
         &self,
-        identifier: &IdentifierHash,
+        identifier: IdentifierHash,
         range: Option<AnyRange<Version>>,
     ) -> BoxedIterator<Position> {
         let hash = identifier.hash();
@@ -116,7 +116,7 @@ impl Identifiers {
 
     fn query_range(
         &self,
-        identifier: &IdentifierHash,
+        identifier: IdentifierHash,
         from: Position,
         range: Option<AnyRange<Version>>,
     ) -> BoxedIterator<Position> {

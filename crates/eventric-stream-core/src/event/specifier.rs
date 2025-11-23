@@ -51,7 +51,7 @@ impl Specifier {
 
 // Hash
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 #[new(const_fn)]
 pub(crate) struct SpecifierHash {
     pub identifier: IdentifierHash,

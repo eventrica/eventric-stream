@@ -1,7 +1,7 @@
 //! See the `eventric-stream` crate for full documentation, including
 //! module-level documentation.
 
-pub(crate) mod condition;
+use std::borrow::Cow;
 
 use crate::{
     error::Error,
@@ -10,12 +10,17 @@ use crate::{
         position::Position,
         timestamp::Timestamp,
     },
-    stream::Stream,
+    stream::{
+        Stream,
+        query::QueryHash,
+    },
 };
 
 // =================================================================================================
 // Append
 // =================================================================================================
+
+// Append
 
 /// The [`Append`] trait defines the logical operation of appending (ephemeral)
 /// events to a stream or stream-like type, with an optional condition to
@@ -37,27 +42,63 @@ pub trait Append {
     /// case of underlying database/IO errors.
     ///
     /// [issue]: https://github.com/eventrica/eventric-stream/issues/23
-    #[rustfmt::skip]
-    fn append<'a, E>(&mut self, events: E, condition: Option<&Condition>) -> Result<Position, Error>
+    //#[rustfmt::skip]
+    fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
     where
-        E: IntoIterator<Item = &'a EphemeralEvent>;
+        E: IntoIterator<Item = EphemeralEvent>;
 }
 
 impl Append for Stream {
-    #[rustfmt::skip]
-    fn append<'a, E>(&mut self, events: E, condition: Option<&Condition>) -> Result<Position, Error>
+    fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
     where
-        E: IntoIterator<Item = &'a EphemeralEvent>,
+        E: IntoIterator<Item = EphemeralEvent>,
     {
-        // Only apply the concurrent check if a condition has been provided, otherwise
-        // the append should be unconditional.
+        self.check(None, after)?;
+        self.put(events)
+    }
+}
 
-        if let Some(condition) = condition {
-            self.check(condition)?;
-        }
+// -------------------------------------------------------------------------------------------------
 
-        // Append the events, as the concurrency check did not return an error.
+// Append Query
 
+/// .
+pub trait AppendQuery {
+    /// .
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if .
+    fn append_query<'a, E, T, Q>(
+        &mut self,
+        events: E,
+        fail_if_matches: T,
+        after: Option<Position>,
+    ) -> Result<Position, Error>
+    where
+        E: IntoIterator<Item = EphemeralEvent>,
+        T: Into<Cow<'a, Q>>,
+        Q: Clone + 'a,
+        Cow<'a, Q>: Into<QueryHash>;
+}
+
+impl AppendQuery for Stream {
+    fn append_query<'a, E, T, Q>(
+        &mut self,
+        events: E,
+        fail_if_matches: T,
+        after: Option<Position>,
+    ) -> Result<Position, Error>
+    where
+        E: IntoIterator<Item = EphemeralEvent>,
+        T: Into<Cow<'a, Q>>,
+        Q: Clone + 'a,
+        Cow<'a, Q>: Into<QueryHash>,
+    {
+        let query = fail_if_matches.into();
+        let query = query.into();
+
+        self.check(Some(query), after)?;
         self.put(events)
     }
 }
@@ -67,14 +108,20 @@ impl Append for Stream {
 // Stream Extension
 
 impl Stream {
-    #[rustfmt::skip]
-    fn check(&self, condition: &Condition) -> Result<(), Error> {
-
+    fn check(
+        &self,
+        fail_if_matches: Option<QueryHash>,
+        after: Option<Position>,
+    ) -> Result<(), Error> {
         // Shortcut the append concurrency check if the "after" position is at least the
         // current stream position. If it is, no events have been written after
         // the given position, so the condition will never match.
 
-        if let Some(after) = condition.after && after >= self.next {
+        let from = after.map(|after| after + 1);
+
+        if let Some(from) = from
+            && from >= self.next
+        {
             return Ok(());
         }
 
@@ -82,23 +129,26 @@ impl Stream {
         // always from, rather than after, a particular position, so we increment the
         // position here (if it exists) to ensure a correct from position.
 
-        let query = &condition.fail_if_matches;
-        let from = condition.after.map(|after| after + 1);
+        if let Some(query) = fail_if_matches {
+            // We don't need to actually examine the events at all, the underlying
+            // implementation only needs to check if there is any matching event in the
+            // resultant query stream - contains avoids mapping positions to events, etc.
 
-        // We don't need to actually examine the events at all, the underlying
-        // implementation only needs to check if there is any matching event in the
-        // resultant query stream - contains avoids mapping positions to events, etc.
-
-        if self.data.indices.contains(query, from) {
+            if self.data.indices.contains(&query, from) {
+                return Err(Error::Concurrency);
+            }
+        } else if let Some(from) = from
+            && from < self.next
+        {
             return Err(Error::Concurrency);
         }
 
         Ok(())
     }
 
-    fn put<'a, E>(&mut self, events: E) -> Result<Position, Error>
+    fn put<E>(&mut self, events: E) -> Result<Position, Error>
     where
-        E: IntoIterator<Item = &'a EphemeralEvent>,
+        E: IntoIterator<Item = EphemeralEvent>,
     {
         // Create a local copy of the "next" position here, so that it can be
         // incremented independently of the stream instance. As we only set the stream
@@ -110,7 +160,7 @@ impl Stream {
         let mut batch = self.database.batch();
 
         for event in events {
-            let event = event.into();
+            let event = (&event).into();
             let timestamp = Timestamp::now()?;
 
             self.data.events.put(&mut batch, next, &event, timestamp);
@@ -133,9 +183,3 @@ impl Stream {
         Ok(self.next - 1)
     }
 }
-
-// -------------------------------------------------------------------------------------------------
-
-// Re-Exports
-
-pub use self::condition::Condition;

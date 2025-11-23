@@ -72,17 +72,17 @@ impl Tags {
     where
         T: Iterator<Item = &'a TagHash>,
     {
-        SequentialAndIterator::combine(tags.map(|tag| self.query_tag(tag, from)))
+        SequentialAndIterator::combine(tags.map(|tag| self.query_tag(*tag, from)))
     }
 
-    fn query_tag(&self, tag: &TagHash, from: Option<Position>) -> PositionIterator {
+    fn query_tag(&self, tag: TagHash, from: Option<Position>) -> PositionIterator {
         match from {
             Some(from) => PositionIterator::Iterator(self.query_range(tag, from)),
             None => PositionIterator::Iterator(self.query_prefix(tag)),
         }
     }
 
-    fn query_prefix(&self, tag: &TagHash) -> BoxedIterator<Position> {
+    fn query_prefix(&self, tag: TagHash) -> BoxedIterator<Position> {
         let hash = tag.hash();
         let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
 
@@ -94,7 +94,7 @@ impl Tags {
         )
     }
 
-    fn query_range(&self, tag: &TagHash, from: Position) -> BoxedIterator<Position> {
+    fn query_range(&self, tag: TagHash, from: Position) -> BoxedIterator<Position> {
         let hash = tag.hash();
         let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
         let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
