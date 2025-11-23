@@ -1,9 +1,7 @@
-//! The [`iteration`][iteration] module provides combinatorial iterators over
+//! The [`iteration`][self] module provides combinatorial iterators over
 //! collections of sequential iterators, such that sequential order is
 //! maintained while the output represents a boolean logical operation over the
 //! input iterators.
-//!
-//! [iteration]: self
 
 pub(crate) mod and;
 pub(crate) mod or;
