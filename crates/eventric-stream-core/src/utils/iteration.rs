@@ -57,9 +57,17 @@ mod tests {
 
         fn next(&mut self) -> Option<Self::Item> {
             match self {
-                Self::And(iterator) => iterator.next(),
-                Self::Or(iterator) => iterator.next(),
+                Self::And(iter) => iter.next(),
+                Self::Or(iter) => iter.next(),
                 Self::Boxed(iter) => iter.next(),
+            }
+        }
+
+        fn size_hint(&self) -> (usize, Option<usize>) {
+            match self {
+                Self::And(iter) => iter.size_hint(),
+                Self::Or(iter) => iter.size_hint(),
+                Self::Boxed(iter) => iter.size_hint(),
             }
         }
     }
@@ -67,8 +75,8 @@ mod tests {
     impl DoubleEndedIterator for TestIterator {
         fn next_back(&mut self) -> Option<Self::Item> {
             match self {
-                Self::And(iterator) => iterator.next_back(),
-                Self::Or(iterator) => iterator.next_back(),
+                Self::And(iter) => iter.next_back(),
+                Self::Or(iter) => iter.next_back(),
                 Self::Boxed(iter) => iter.next_back(),
             }
         }

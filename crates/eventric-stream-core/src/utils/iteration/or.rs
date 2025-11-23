@@ -637,4 +637,149 @@ mod tests {
         assert_eq!(Some(Ok(7)), iter.next_back());
         assert!(matches!(iter.next_back(), Some(Err(Error::Concurrency))));
     }
+
+    #[test]
+    fn size_hint_empty_iterators() {
+        // Empty iterator collection
+        let iter = SequentialOrIterator::<TestIterator, u64>::new(vec![]);
+
+        assert_eq!((0, Some(0)), iter.size_hint());
+    }
+
+    #[test]
+    fn size_hint_single_iterator() {
+        // Single iterator with known size
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
+
+        let iter = SequentialOrIterator::combine([a]);
+
+        assert_eq!((3, Some(3)), iter.size_hint());
+    }
+
+    #[test]
+    fn size_hint_multiple_iterators_same_size() {
+        // Multiple iterators with same size
+        let a = TestIterator::from([Ok(1), Ok(3), Ok(5)]);
+        let b = TestIterator::from([Ok(2), Ok(3), Ok(6)]);
+        let c = TestIterator::from([Ok(3), Ok(4), Ok(5)]);
+
+        let iter = SequentialOrIterator::combine([a, b, c]);
+
+        // Lower bound is maximum of all (all are 3, so max is 3)
+        // Upper bound is sum of all (3 + 3 + 3 = 9)
+        assert_eq!((3, Some(9)), iter.size_hint());
+    }
+
+    #[test]
+    fn size_hint_multiple_iterators_different_sizes() {
+        // Multiple iterators with different sizes
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4), Ok(5)]);
+        let b = TestIterator::from([Ok(1), Ok(2)]);
+        let c = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
+
+        let iter = SequentialOrIterator::combine([a, b, c]);
+
+        // Lower bound is maximum of all (5 is the largest)
+        // Upper bound is sum of all (5 + 2 + 3 = 10)
+        assert_eq!((5, Some(10)), iter.size_hint());
+    }
+
+    #[test]
+    fn size_hint_one_empty_iterator() {
+        // One empty iterator among non-empty ones
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
+        let b = TestIterator::from([]);
+        let c = TestIterator::from([Ok(1), Ok(2)]);
+
+        let iter = SequentialOrIterator::combine([a, b, c]);
+
+        // Lower bound is maximum (3 is the largest)
+        // Upper bound is sum (3 + 0 + 2 = 5)
+        assert_eq!((3, Some(5)), iter.size_hint());
+    }
+
+    #[test]
+    fn size_hint_all_empty_iterators() {
+        // All empty iterators
+        let a = TestIterator::from([]);
+        let b = TestIterator::from([]);
+        let c = TestIterator::from([]);
+
+        let iter = SequentialOrIterator::combine([a, b, c]);
+
+        // Lower bound is 0, upper bound is 0
+        assert_eq!((0, Some(0)), iter.size_hint());
+    }
+
+    #[test]
+    fn size_hint_after_partial_iteration() {
+        // Test size_hint after consuming some elements
+        let a = TestIterator::from([Ok(1), Ok(3), Ok(5)]);
+        let b = TestIterator::from([Ok(2), Ok(4), Ok(6)]);
+
+        let mut iter = SequentialOrIterator::combine([a, b]);
+
+        // Initially: lower bound is 3, upper bound is 6
+        assert_eq!((3, Some(6)), iter.size_hint());
+
+        // Consume one element (1)
+        assert_eq!(Some(Ok(1)), iter.next());
+
+        // After consuming: a has 2 left, b has 3 left
+        // Lower bound is max(2, 3) = 3, upper bound is 2 + 3 = 5
+        assert_eq!((3, Some(5)), iter.size_hint());
+
+        // Consume another (2)
+        assert_eq!(Some(Ok(2)), iter.next());
+
+        // After consuming: a has 2 left, b has 2 left
+        // Lower bound is max(2, 2) = 2, upper bound is 2 + 2 = 4
+        assert_eq!((2, Some(4)), iter.size_hint());
+    }
+
+    #[test]
+    fn size_hint_after_exhaustion() {
+        // Test size_hint after iterator is exhausted
+        let a = TestIterator::from([Ok(1)]);
+        let b = TestIterator::from([Ok(1)]);
+
+        let mut iter = SequentialOrIterator::combine([a, b]);
+
+        // Initially: lower bound is 1, upper bound is 2
+        assert_eq!((1, Some(2)), iter.size_hint());
+
+        // Consume the element (deduplicated)
+        assert_eq!(Some(Ok(1)), iter.next());
+
+        // After exhaustion
+        assert_eq!((0, Some(0)), iter.size_hint());
+    }
+
+    #[test]
+    fn size_hint_lower_bound_is_maximum() {
+        // Verify lower bound is maximum of all iterator lower bounds
+        let a = TestIterator::from([Ok(1), Ok(2)]);
+        let b = TestIterator::from([Ok(3), Ok(4), Ok(5), Ok(6)]);
+        let c = TestIterator::from([Ok(7)]);
+
+        let iter = SequentialOrIterator::combine([a, b, c]);
+
+        // Lower bound is max(2, 4, 1) = 4
+        // Upper bound is 2 + 4 + 1 = 7
+        assert_eq!((4, Some(7)), iter.size_hint());
+    }
+
+    #[test]
+    fn size_hint_upper_bound_is_sum() {
+        // Verify upper bound is sum of all iterator upper bounds
+        let a = TestIterator::from([Ok(1)]);
+        let b = TestIterator::from([Ok(2), Ok(3)]);
+        let c = TestIterator::from([Ok(4), Ok(5), Ok(6)]);
+
+        let iter = SequentialOrIterator::combine([a, b, c]);
+
+        // Lower bound is max(1, 2, 3) = 3
+        // Upper bound is 1 + 2 + 3 = 6
+        assert_eq!((3, Some(6)), iter.size_hint());
+    }
 }
