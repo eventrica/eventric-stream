@@ -183,7 +183,6 @@ where
             }
         }
 
-        // Advance all iterators that had the minimum value
         min_value.map(Ok).inspect(|item| {
             for &index in &indices {
                 self.0[index].next_if_eq(item);
