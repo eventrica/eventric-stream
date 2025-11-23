@@ -99,7 +99,6 @@ where
 {
     type Item = Result<T, Error>;
 
-    #[allow(clippy::redundant_at_rest_pattern)]
     fn next(&mut self) -> Option<Self::Item> {
         let mut current = None;
 
