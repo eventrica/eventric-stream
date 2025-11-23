@@ -57,8 +57,7 @@ macro_rules! impl_and_next {
                             },
                             None => candidate = Some(*next),
                         },
-                        Some(Err(_)) => return iter.$next(),
-                        None => return None,
+                        _ => return iter.$next(),
                     }
                 }
 
@@ -570,6 +569,24 @@ mod tests {
 
         // Both internal iterators have 2 elements left
         assert_eq!((0, Some(2)), iter.size_hint());
+    }
+
+    #[test]
+    fn size_hint_after_exhaustion() {
+        // Test size_hint after iterator is exhausted
+        let a = TestIterator::from([Ok(1)]);
+        let b = TestIterator::from([Ok(2)]);
+
+        let mut iter = SequentialAndIterator::combine([a, b]);
+
+        // Initially
+        assert_eq!((0, Some(1)), iter.size_hint());
+
+        // Exhaust the iterator (no intersection)
+        assert_eq!(None, iter.next());
+
+        // After exhaustion
+        assert_eq!((0, Some(0)), iter.size_hint());
     }
 
     #[test]
