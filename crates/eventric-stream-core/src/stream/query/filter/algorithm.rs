@@ -18,34 +18,39 @@ use crate::{
 /// are subsumed).
 #[allow(dead_code)]
 pub fn normalize_version_ranges(ranges: &[AnyRange<Version>]) -> Vec<AnyRange<Version>> {
-    let mut points = ranges
-        .iter()
-        .flat_map(Point::pair_from_range)
-        .collect::<Vec<_>>();
+    if ranges.is_empty() {
+        return Vec::new();
+    }
 
+    let mut points = Vec::with_capacity(ranges.len() * 2);
+
+    points.extend(ranges.iter().flat_map(Point::pair_from_range));
     points.sort();
 
-    let mut depth = 0u8;
-    let mut open = None;
-    let mut ranges = Vec::new();
+    let mut depth = 0usize;
+    let mut range_start = None;
+    let mut normalized = Vec::with_capacity(ranges.len());
 
     for point in points {
         match point {
             Point::Open(version) => {
                 depth += 1;
-                open.get_or_insert(version);
+
+                if depth == 1 {
+                    range_start = Some(version);
+                }
             }
             Point::Close(version) => {
                 depth -= 1;
 
                 if depth == 0 {
-                    ranges.push((open.take().expect("opening bound")..version).into());
+                    normalized.push((range_start.take().unwrap()..version).into());
                 }
             }
         }
     }
 
-    ranges
+    normalized
 }
 
 // -------------------------------------------------------------------------------------------------

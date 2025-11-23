@@ -54,3 +54,156 @@ impl PartialEq for Error {
         }
     }
 }
+
+// -------------------------------------------------------------------------------------------------
+
+// Tests
+
+#[cfg(test)]
+mod tests {
+    use eventric_core::validation;
+
+    use crate::error::Error;
+
+    // Error::Concurrency
+
+    #[test]
+    fn concurrency_variant_creation() {
+        let error = Error::Concurrency;
+
+        assert!(matches!(error, Error::Concurrency));
+    }
+
+    #[test]
+    fn concurrency_variant_display() {
+        let error = Error::Concurrency;
+
+        assert_eq!(error.to_string(), "Concurrency Error");
+    }
+
+    #[test]
+    fn concurrency_variant_equality() {
+        let error1 = Error::Concurrency;
+        let error2 = Error::Concurrency;
+
+        assert_eq!(error1, error2);
+    }
+
+    #[test]
+    fn concurrency_variant_not_equal_to_data() {
+        let concurrency = Error::Concurrency;
+        let data = Error::data("test message");
+
+        assert_ne!(concurrency, data);
+    }
+
+    // Error::Data
+
+    #[test]
+    fn data_variant_creation_from_string() {
+        let message = String::from("corruption detected");
+        let error = Error::data(message);
+
+        assert!(matches!(error, Error::Data(_)));
+    }
+
+    #[test]
+    fn data_variant_creation_from_str() {
+        let error = Error::data("corruption detected");
+
+        assert!(matches!(error, Error::Data(_)));
+    }
+
+    #[test]
+    fn data_variant_display() {
+        let error = Error::data("corruption detected");
+
+        assert_eq!(error.to_string(), "Data Error: corruption detected");
+    }
+
+    #[test]
+    fn data_variant_preserves_message() {
+        let message = "unable to deserialize event";
+        let error = Error::data(message);
+
+        match error {
+            Error::Data(msg) => assert_eq!(msg, message),
+            _ => panic!("Expected Data variant"),
+        }
+    }
+
+    #[test]
+    fn data_variant_equality_same_message() {
+        let error1 = Error::data("same message");
+        let error2 = Error::data("same message");
+
+        assert_eq!(error1, error2);
+    }
+
+    #[test]
+    fn data_variant_inequality_different_messages() {
+        let error1 = Error::data("message one");
+        let error2 = Error::data("message two");
+
+        assert_ne!(error1, error2);
+    }
+
+    // Error::Validation
+
+    #[test]
+    fn validation_variant_from_validation_error() {
+        let validation_error = validation::Error::invalid("test validation error");
+        let error: Error = validation_error.into();
+
+        assert!(matches!(error, Error::Validation(_)));
+    }
+
+    #[test]
+    fn validation_variant_display() {
+        let validation_error = validation::Error::invalid("invalid field");
+        let error: Error = validation_error.into();
+
+        assert_eq!(error.to_string(), "Validation Error: invalid field");
+    }
+
+    #[test]
+    fn validation_variant_equality_same_message() {
+        let validation_error1 = validation::Error::invalid("same validation");
+        let validation_error2 = validation::Error::invalid("same validation");
+        let error1: Error = validation_error1.into();
+        let error2: Error = validation_error2.into();
+
+        assert_eq!(error1, error2);
+    }
+
+    #[test]
+    fn validation_variant_inequality_different_messages() {
+        let validation_error1 = validation::Error::invalid("validation one");
+        let validation_error2 = validation::Error::invalid("validation two");
+        let error1: Error = validation_error1.into();
+        let error2: Error = validation_error2.into();
+
+        assert_ne!(error1, error2);
+    }
+
+    // PartialEq
+
+    #[test]
+    fn different_variants_not_equal() {
+        let concurrency = Error::Concurrency;
+        let data = Error::data("test");
+        let validation = Error::Validation(validation::Error::invalid("test"));
+
+        assert_ne!(concurrency, data);
+        assert_ne!(concurrency, validation);
+        assert_ne!(data, validation);
+    }
+
+    #[test]
+    fn data_and_validation_with_same_content_not_equal() {
+        let data = Error::data("same message");
+        let validation = Error::Validation(validation::Error::invalid("same message"));
+
+        assert_ne!(data, validation);
+    }
+}
