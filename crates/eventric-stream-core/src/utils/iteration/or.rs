@@ -121,7 +121,6 @@ mod tests {
     #[test]
     fn impl_iterator() {
         // Empty
-
         let a = TestIterator::from([]);
         let b = TestIterator::from([]);
 
@@ -129,11 +128,10 @@ mod tests {
 
         assert_eq!(None, iter.next());
 
-        // Matched Lengths
-
-        let a = TestIterator::from([0, 4]);
-        let b = TestIterator::from([1, 5]);
-        let c = TestIterator::from([2, 3]);
+        // Disjoint sets - no overlap
+        let a = TestIterator::from([0, 1, 2]);
+        let b = TestIterator::from([3, 4, 5]);
+        let c = TestIterator::from([6, 7, 8]);
 
         let mut iter = SequentialOrIterator::combine([a, b, c]);
 
@@ -143,10 +141,41 @@ mod tests {
         assert_eq!(Some(Ok(3)), iter.next());
         assert_eq!(Some(Ok(4)), iter.next());
         assert_eq!(Some(Ok(5)), iter.next());
+        assert_eq!(Some(Ok(6)), iter.next());
+        assert_eq!(Some(Ok(7)), iter.next());
+        assert_eq!(Some(Ok(8)), iter.next());
         assert_eq!(None, iter.next());
 
-        // Variable Lengths
+        // Partial overlap
+        let a = TestIterator::from([0, 2, 4, 6]);
+        let b = TestIterator::from([2, 3, 4, 5]);
+        let c = TestIterator::from([1, 2, 4, 7]);
 
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(0)), iter.next());
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(Some(Ok(4)), iter.next());
+        assert_eq!(Some(Ok(5)), iter.next());
+        assert_eq!(Some(Ok(6)), iter.next());
+        assert_eq!(Some(Ok(7)), iter.next());
+        assert_eq!(None, iter.next());
+
+        // Complete overlap - all iterators have same values
+        let a = TestIterator::from([1, 2, 3]);
+        let b = TestIterator::from([1, 2, 3]);
+        let c = TestIterator::from([1, 2, 3]);
+
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(None, iter.next());
+
+        // Variable lengths
         let a = TestIterator::from([0, 3, 4]);
         let b = TestIterator::from([1, 2, 3]);
         let c = TestIterator::from([0, 1, 4, 5]);
@@ -160,12 +189,68 @@ mod tests {
         assert_eq!(Some(Ok(4)), iter.next());
         assert_eq!(Some(Ok(5)), iter.next());
         assert_eq!(None, iter.next());
+
+        // Single iterator
+        let a = TestIterator::from([1, 2, 3]);
+
+        let mut iter = SequentialOrIterator::combine([a]);
+
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(None, iter.next());
+
+        // Two iterators with one empty
+        let a = TestIterator::from([1, 2, 3]);
+        let b = TestIterator::from([]);
+
+        let mut iter = SequentialOrIterator::combine([a, b]);
+
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(None, iter.next());
+
+        // Complex pattern with gaps
+        let a = TestIterator::from([1, 2, 3, 5, 7, 9]);
+        let b = TestIterator::from([2, 3, 4, 5, 6, 7]);
+        let c = TestIterator::from([3, 5, 7, 8]);
+
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(Some(Ok(4)), iter.next());
+        assert_eq!(Some(Ok(5)), iter.next());
+        assert_eq!(Some(Ok(6)), iter.next());
+        assert_eq!(Some(Ok(7)), iter.next());
+        assert_eq!(Some(Ok(8)), iter.next());
+        assert_eq!(Some(Ok(9)), iter.next());
+        assert_eq!(None, iter.next());
+
+        // Interleaved values
+        let a = TestIterator::from([0, 2, 4, 6, 8]);
+        let b = TestIterator::from([1, 3, 5, 7, 9]);
+
+        let mut iter = SequentialOrIterator::combine([a, b]);
+
+        assert_eq!(Some(Ok(0)), iter.next());
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(Some(Ok(4)), iter.next());
+        assert_eq!(Some(Ok(5)), iter.next());
+        assert_eq!(Some(Ok(6)), iter.next());
+        assert_eq!(Some(Ok(7)), iter.next());
+        assert_eq!(Some(Ok(8)), iter.next());
+        assert_eq!(Some(Ok(9)), iter.next());
+        assert_eq!(None, iter.next());
     }
 
     #[test]
     fn impl_double_ended_iterator() {
         // Empty
-
         let a = TestIterator::from([]);
         let b = TestIterator::from([]);
 
@@ -173,11 +258,57 @@ mod tests {
 
         assert_eq!(None, iter.next_back());
 
-        // Matched Lengths
+        // Disjoint sets - no overlap
+        let a = TestIterator::from([0, 1, 2]);
+        let b = TestIterator::from([3, 4, 5]);
+        let c = TestIterator::from([6, 7, 8]);
 
-        let a = TestIterator::from([0, 4]);
-        let b = TestIterator::from([1, 5]);
-        let c = TestIterator::from([2, 3]);
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(8)), iter.next_back());
+        assert_eq!(Some(Ok(7)), iter.next_back());
+        assert_eq!(Some(Ok(6)), iter.next_back());
+        assert_eq!(Some(Ok(5)), iter.next_back());
+        assert_eq!(Some(Ok(4)), iter.next_back());
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next_back());
+        assert_eq!(Some(Ok(1)), iter.next_back());
+        assert_eq!(Some(Ok(0)), iter.next_back());
+        assert_eq!(None, iter.next_back());
+
+        // Partial overlap
+        let a = TestIterator::from([0, 2, 4, 6]);
+        let b = TestIterator::from([2, 3, 4, 5]);
+        let c = TestIterator::from([1, 2, 4, 7]);
+
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(7)), iter.next_back());
+        assert_eq!(Some(Ok(6)), iter.next_back());
+        assert_eq!(Some(Ok(5)), iter.next_back());
+        assert_eq!(Some(Ok(4)), iter.next_back());
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next_back());
+        assert_eq!(Some(Ok(1)), iter.next_back());
+        assert_eq!(Some(Ok(0)), iter.next_back());
+        assert_eq!(None, iter.next_back());
+
+        // Complete overlap - all iterators have same values
+        let a = TestIterator::from([1, 2, 3]);
+        let b = TestIterator::from([1, 2, 3]);
+        let c = TestIterator::from([1, 2, 3]);
+
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next_back());
+        assert_eq!(Some(Ok(1)), iter.next_back());
+        assert_eq!(None, iter.next_back());
+
+        // Variable lengths
+        let a = TestIterator::from([0, 3, 4]);
+        let b = TestIterator::from([1, 2, 3]);
+        let c = TestIterator::from([0, 1, 4, 5]);
 
         let mut iter = SequentialOrIterator::combine([a, b, c]);
 
@@ -189,14 +320,55 @@ mod tests {
         assert_eq!(Some(Ok(0)), iter.next_back());
         assert_eq!(None, iter.next_back());
 
-        // Variable Lengths
+        // Single iterator
+        let a = TestIterator::from([1, 2, 3]);
 
-        let a = TestIterator::from([0, 3, 4]);
-        let b = TestIterator::from([1, 2, 3]);
-        let c = TestIterator::from([0, 1, 4, 5]);
+        let mut iter = SequentialOrIterator::combine([a]);
+
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next_back());
+        assert_eq!(Some(Ok(1)), iter.next_back());
+        assert_eq!(None, iter.next_back());
+
+        // Two iterators with one empty
+        let a = TestIterator::from([1, 2, 3]);
+        let b = TestIterator::from([]);
+
+        let mut iter = SequentialOrIterator::combine([a, b]);
+
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next_back());
+        assert_eq!(Some(Ok(1)), iter.next_back());
+        assert_eq!(None, iter.next_back());
+
+        // Complex pattern with gaps
+        let a = TestIterator::from([1, 2, 3, 5, 7, 9]);
+        let b = TestIterator::from([2, 3, 4, 5, 6, 7]);
+        let c = TestIterator::from([3, 5, 7, 8]);
 
         let mut iter = SequentialOrIterator::combine([a, b, c]);
 
+        assert_eq!(Some(Ok(9)), iter.next_back());
+        assert_eq!(Some(Ok(8)), iter.next_back());
+        assert_eq!(Some(Ok(7)), iter.next_back());
+        assert_eq!(Some(Ok(6)), iter.next_back());
+        assert_eq!(Some(Ok(5)), iter.next_back());
+        assert_eq!(Some(Ok(4)), iter.next_back());
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next_back());
+        assert_eq!(Some(Ok(1)), iter.next_back());
+        assert_eq!(None, iter.next_back());
+
+        // Interleaved values
+        let a = TestIterator::from([0, 2, 4, 6, 8]);
+        let b = TestIterator::from([1, 3, 5, 7, 9]);
+
+        let mut iter = SequentialOrIterator::combine([a, b]);
+
+        assert_eq!(Some(Ok(9)), iter.next_back());
+        assert_eq!(Some(Ok(8)), iter.next_back());
+        assert_eq!(Some(Ok(7)), iter.next_back());
+        assert_eq!(Some(Ok(6)), iter.next_back());
         assert_eq!(Some(Ok(5)), iter.next_back());
         assert_eq!(Some(Ok(4)), iter.next_back());
         assert_eq!(Some(Ok(3)), iter.next_back());
@@ -208,36 +380,109 @@ mod tests {
 
     #[test]
     fn impl_iterator_and_double_ended_iterator() {
-        // Matched Lengths
-
-        let a = TestIterator::from([0, 4]);
-        let b = TestIterator::from([1, 5]);
-        let c = TestIterator::from([2, 3]);
+        // Partial overlap - alternating next and next_back
+        let a = TestIterator::from([0, 2, 4, 6, 8]);
+        let b = TestIterator::from([2, 3, 4, 5, 6]);
+        let c = TestIterator::from([1, 2, 4, 6, 7]);
 
         let mut iter = SequentialOrIterator::combine([a, b, c]);
 
         assert_eq!(Some(Ok(0)), iter.next());
-        assert_eq!(Some(Ok(5)), iter.next_back());
-        assert_eq!(Some(Ok(4)), iter.next_back());
+        assert_eq!(Some(Ok(8)), iter.next_back());
         assert_eq!(Some(Ok(1)), iter.next());
-        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(7)), iter.next_back());
         assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(6)), iter.next_back());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(Some(Ok(5)), iter.next_back());
+        assert_eq!(Some(Ok(4)), iter.next());
         assert_eq!(None, iter.next());
 
-        // Variable Lengths
-
-        let a = TestIterator::from([0, 3, 4]);
-        let b = TestIterator::from([1, 2, 3]);
-        let c = TestIterator::from([0, 1, 4, 5]);
+        // Complete overlap - mixed iteration
+        let a = TestIterator::from([1, 2, 3, 4, 5]);
+        let b = TestIterator::from([1, 2, 3, 4, 5]);
+        let c = TestIterator::from([1, 2, 3, 4, 5]);
 
         let mut iter = SequentialOrIterator::combine([a, b, c]);
 
-        assert_eq!(Some(Ok(5)), iter.next_back());
-        assert_eq!(Some(Ok(0)), iter.next());
         assert_eq!(Some(Ok(1)), iter.next());
-        assert_eq!(Some(Ok(4)), iter.next_back());
-        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(5)), iter.next_back());
         assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(4)), iter.next_back());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(None, iter.next());
+
+        // Variable lengths - mixed iteration
+        let a = TestIterator::from([0, 3, 4, 5, 8]);
+        let b = TestIterator::from([1, 2, 3, 4, 5]);
+        let c = TestIterator::from([0, 3, 4, 5, 6]);
+
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(0)), iter.next());
+        assert_eq!(Some(Ok(8)), iter.next_back());
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(6)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(5)), iter.next_back());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(Some(Ok(4)), iter.next_back());
+        assert_eq!(None, iter.next());
+
+        // Disjoint sets - mixed iteration
+        let a = TestIterator::from([0, 1, 2]);
+        let b = TestIterator::from([3, 4, 5]);
+        let c = TestIterator::from([6, 7, 8]);
+
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(0)), iter.next());
+        assert_eq!(Some(Ok(8)), iter.next_back());
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(7)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(6)), iter.next_back());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(Some(Ok(5)), iter.next_back());
+        assert_eq!(Some(Ok(4)), iter.next());
+        assert_eq!(None, iter.next());
+
+        // Interleaved values - mixed iteration
+        let a = TestIterator::from([0, 2, 4, 6, 8]);
+        let b = TestIterator::from([1, 3, 5, 7, 9]);
+
+        let mut iter = SequentialOrIterator::combine([a, b]);
+
+        assert_eq!(Some(Ok(0)), iter.next());
+        assert_eq!(Some(Ok(9)), iter.next_back());
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(8)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(7)), iter.next_back());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(Some(Ok(6)), iter.next_back());
+        assert_eq!(Some(Ok(4)), iter.next());
+        assert_eq!(Some(Ok(5)), iter.next_back());
+        assert_eq!(None, iter.next());
+
+        // Complex pattern - ensure correctness
+        let a = TestIterator::from([1, 2, 3, 5, 7, 9, 11]);
+        let b = TestIterator::from([2, 3, 4, 5, 6, 7, 10]);
+        let c = TestIterator::from([3, 5, 7, 8, 9]);
+
+        let mut iter = SequentialOrIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert_eq!(Some(Ok(11)), iter.next_back());
+        assert_eq!(Some(Ok(2)), iter.next());
+        assert_eq!(Some(Ok(10)), iter.next_back());
+        assert_eq!(Some(Ok(3)), iter.next());
+        assert_eq!(Some(Ok(9)), iter.next_back());
+        assert_eq!(Some(Ok(4)), iter.next());
+        assert_eq!(Some(Ok(8)), iter.next_back());
+        assert_eq!(Some(Ok(5)), iter.next());
+        assert_eq!(Some(Ok(7)), iter.next_back());
+        assert_eq!(Some(Ok(6)), iter.next());
         assert_eq!(None, iter.next());
     }
 }
