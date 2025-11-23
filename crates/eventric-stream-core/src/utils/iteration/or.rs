@@ -23,6 +23,55 @@ use crate::error::Error;
 // Or
 // =================================================================================================
 
+/// Macro to implement `next()` or `next_back()` for [`SequentialOrIterator`].
+///
+/// The OR iterator uses a single-pass algorithm to find the minimum/maximum
+/// value and collect indices of all iterators that have that value.
+macro_rules! impl_or_next {
+    ($peek:ident, $next:ident, $next_if_eq:ident, $winning_ordering:path) => {
+        #[inline]
+        fn $next(&mut self) -> Option<Self::Item> {
+            if self.0.is_empty() {
+                return None;
+            }
+
+            let mut candidate = None;
+            let mut indices: SmallVec<[usize; 8]> = SmallVec::new();
+
+            for (index, iter) in self.0.iter_mut().enumerate() {
+                match iter.$peek() {
+                    Some(Ok(next)) => {
+                        if let Some(current_candidate) = &mut candidate {
+                            match next.cmp(current_candidate) {
+                                $winning_ordering => {
+                                    *current_candidate = *next;
+                                    indices.clear();
+                                    indices.push(index);
+                                }
+                                Ordering::Equal => {
+                                    indices.push(index);
+                                }
+                                _ => {}
+                            }
+                        } else {
+                            candidate = Some(*next);
+                            indices.push(index);
+                        }
+                    }
+                    Some(Err(_)) => return iter.$next(),
+                    None => {}
+                }
+            }
+
+            candidate.map(Ok).inspect(|item| {
+                for &index in &indices {
+                    self.0[index].$next_if_eq(item);
+                }
+            })
+        }
+    };
+}
+
 /// The [`SequentialOrIterator`] implements a sorted set union.
 ///
 /// This iterator type represents an iterator over the combined values of a set
@@ -56,8 +105,6 @@ use crate::error::Error;
 /// # Examples
 ///
 /// ```ignore
-/// use eventric_stream_core::utils::iteration::or::SequentialOrIterator;
-///
 /// let a = vec![Ok(1), Ok(3), Ok(5)];
 /// let b = vec![Ok(2), Ok(3), Ok(4)];
 ///
@@ -100,47 +147,7 @@ where
     I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
-    #[inline]
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.0.is_empty() {
-            return None;
-        }
-
-        let mut max_value = None;
-        let mut indices: SmallVec<[usize; 8]> = SmallVec::new();
-
-        for (index, iter) in self.0.iter_mut().enumerate() {
-            match iter.peek_back() {
-                Some(Ok(next)) => {
-                    if let Some(current_max_value) = &mut max_value {
-                        match next.cmp(current_max_value) {
-                            Ordering::Greater => {
-                                *current_max_value = *next;
-
-                                indices.clear();
-                                indices.push(index);
-                            }
-                            Ordering::Equal => {
-                                indices.push(index);
-                            }
-                            Ordering::Less => {}
-                        }
-                    } else {
-                        max_value = Some(*next);
-                        indices.push(index);
-                    }
-                }
-                Some(Err(_)) => return iter.next_back(),
-                None => {}
-            }
-        }
-
-        max_value.map(Ok).inspect(|item| {
-            for &index in &indices {
-                self.0[index].next_back_if_eq(item);
-            }
-        })
-    }
+    impl_or_next!(peek_back, next_back, next_back_if_eq, Ordering::Greater);
 }
 
 impl<I, T> Iterator for SequentialOrIterator<I, T>
@@ -150,45 +157,7 @@ where
 {
     type Item = Result<T, Error>;
 
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.0.is_empty() {
-            return None;
-        }
-
-        let mut min_value = None;
-        let mut indices: SmallVec<[usize; 8]> = SmallVec::new();
-
-        for (index, iter) in self.0.iter_mut().enumerate() {
-            match iter.peek() {
-                Some(Ok(next)) => {
-                    if let Some(current_min_value) = &mut min_value {
-                        match next.cmp(current_min_value) {
-                            Ordering::Less => {
-                                *current_min_value = *next;
-
-                                indices.clear();
-                                indices.push(index);
-                            }
-                            Ordering::Equal => indices.push(index),
-                            Ordering::Greater => {}
-                        }
-                    } else {
-                        min_value = Some(*next);
-                        indices.push(index);
-                    }
-                }
-                Some(Err(_)) => return iter.next(),
-                None => {}
-            }
-        }
-
-        min_value.map(Ok).inspect(|item| {
-            for &index in &indices {
-                self.0[index].next_if_eq(item);
-            }
-        })
-    }
+    impl_or_next!(peek, next, next_if_eq, Ordering::Less);
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         if self.0.is_empty() {

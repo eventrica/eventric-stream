@@ -22,6 +22,60 @@ use crate::error::Error;
 // And
 // =================================================================================================
 
+/// Macro to implement `next()` or `next_back()` for [`SequentialAndIterator`].
+///
+/// The AND iterator uses a convergence algorithm where it seeks a value that
+/// exists in all input iterators.
+macro_rules! impl_and_next {
+    (
+        $peek:ident, $next:ident, $next_if_eq:ident, $update_ordering:path, $advance_ordering:path
+    ) => {
+        #[inline]
+        fn $next(&mut self) -> Option<Self::Item> {
+            if self.0.is_empty() {
+                return None;
+            }
+
+            let mut candidate = None;
+
+            loop {
+                let mut converged = true;
+
+                for iter in &mut self.0 {
+                    match iter.$peek() {
+                        Some(Ok(next)) => match &mut candidate {
+                            Some(current_candidate) => match next.cmp(current_candidate) {
+                                $update_ordering => {
+                                    *current_candidate = *next;
+                                    converged = false;
+                                }
+                                $advance_ordering => {
+                                    iter.$next();
+                                    converged = false;
+                                }
+                                Ordering::Equal => {}
+                            },
+                            None => candidate = Some(*next),
+                        },
+                        Some(Err(_)) => return iter.$next(),
+                        None => return None,
+                    }
+                }
+
+                if converged {
+                    break;
+                }
+            }
+
+            candidate.map(Ok).inspect(|item| {
+                for iter in &mut self.0 {
+                    iter.$next_if_eq(item);
+                }
+            })
+        }
+    };
+}
+
 /// The [`SequentialAndIterator`] implements a sorted set intersection.
 ///
 /// This iterator type represents an iterator over the combined values of a set
@@ -56,8 +110,6 @@ use crate::error::Error;
 /// # Examples
 ///
 /// ```ignore
-/// use eventric_stream_core::utils::iteration::and::SequentialAndIterator;
-///
 /// let a = vec![Ok(1), Ok(3), Ok(5)];
 /// let b = vec![Ok(3), Ok(5), Ok(7)];
 ///
@@ -100,49 +152,8 @@ where
     I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
-    #[inline]
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.0.is_empty() {
-            return None;
-        }
-
-        let mut candidate_value = None;
-
-        loop {
-            let mut converged = true;
-
-            for iter in &mut self.0 {
-                match iter.peek_back() {
-                    Some(Ok(next)) => match &mut candidate_value {
-                        Some(current_candidate_value) => match next.cmp(current_candidate_value) {
-                            Ordering::Greater => {
-                                iter.next_back();
-                                converged = false;
-                            }
-                            Ordering::Less => {
-                                *current_candidate_value = *next;
-                                converged = false;
-                            }
-                            Ordering::Equal => {}
-                        },
-                        None => candidate_value = Some(*next),
-                    },
-                    Some(Err(_)) => return iter.next_back(),
-                    None => return None,
-                }
-            }
-
-            if converged {
-                break;
-            }
-        }
-
-        candidate_value.map(Ok).inspect(|item| {
-            for iter in &mut self.0 {
-                iter.next_back_if_eq(item);
-            }
-        })
-    }
+    #[rustfmt::skip]
+    impl_and_next!(peek_back, next_back, next_back_if_eq, Ordering::Less, Ordering::Greater);
 }
 
 impl<I, T> Iterator for SequentialAndIterator<I, T>
@@ -152,49 +163,8 @@ where
 {
     type Item = Result<T, Error>;
 
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.0.is_empty() {
-            return None;
-        }
-
-        let mut candidate_value = None;
-
-        loop {
-            let mut converged = true;
-
-            for iter in &mut self.0 {
-                match iter.peek() {
-                    Some(Ok(next)) => match &mut candidate_value {
-                        Some(current_candidate_value) => match next.cmp(current_candidate_value) {
-                            Ordering::Greater => {
-                                *current_candidate_value = *next;
-                                converged = false;
-                            }
-                            Ordering::Less => {
-                                iter.next();
-                                converged = false;
-                            }
-                            Ordering::Equal => {}
-                        },
-                        None => candidate_value = Some(*next),
-                    },
-                    Some(Err(_)) => return iter.next(),
-                    None => return None,
-                }
-            }
-
-            if converged {
-                break;
-            }
-        }
-
-        candidate_value.map(Ok).inspect(|item| {
-            for iter in &mut self.0 {
-                iter.next_if_eq(item);
-            }
-        })
-    }
+    #[rustfmt::skip]
+    impl_and_next!(peek, next, next_if_eq, Ordering::Greater, Ordering::Less);
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         if self.0.is_empty() {
