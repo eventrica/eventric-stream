@@ -97,7 +97,7 @@ impl Validate for Query {
 /// [iterate_multi]: crate::stream::iterate::IterateMulti
 #[derive(new, AsRef, Debug)]
 #[as_ref([SelectorHash])]
-pub struct QueryHash(Vec<SelectorHash>);
+pub struct QueryHash(pub(crate) Vec<SelectorHash>);
 
 impl From<Query> for QueryHash {
     fn from(query: Query) -> Self {
@@ -127,7 +127,7 @@ impl From<&QueryHashRef<'_>> for QueryHash {
 
 #[derive(new, AsRef, Debug)]
 #[as_ref([SelectorHashRef<'a>])]
-pub(crate) struct QueryHashRef<'a>(Vec<SelectorHashRef<'a>>);
+pub(crate) struct QueryHashRef<'a>(pub(crate) Vec<SelectorHashRef<'a>>);
 
 impl<'a> From<&'a Query> for QueryHashRef<'a> {
     fn from(query: &'a Query) -> Self {

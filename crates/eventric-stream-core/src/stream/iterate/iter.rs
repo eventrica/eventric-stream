@@ -50,16 +50,8 @@ pub struct Iter {
 }
 
 impl Iter {
-    #[rustfmt::skip]
     fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
-        event.and_then(|event| {
-            let (data, identifier, position, tags, timestamp, version) = event.take();
-
-            self.retrieve
-                .get_identifier(&identifier)
-                .and_then(|identifier| self.retrieve.get_tags(&tags).map(|tags| (identifier, tags)))
-                .map(|(identifier, tags)| PersistentEvent::new(data, identifier, position, tags, timestamp, version))
-        })
+        event.and_then(|event| self.retrieve.get(event))
     }
 }
 
@@ -77,12 +69,14 @@ impl Iterator for Iter {
     }
 }
 
+// -------------------------------------------------------------------------------------------------
+
 // Iterator (Multiple)
 
 /// The [`IterMulti`] type provides an [`Iterator`]/[`DoubleEndedIterator`]
 /// over iteration results for a [`Stream`][stream], along with a matching mask
-/// for each result, indicating which of the supplied queries the returned event
-/// matches.
+/// for each result, indicating which of the iteration queries the returned
+/// event matches.
 ///
 /// [stream]: crate::stream::Stream
 #[derive(new, Debug)]
@@ -96,16 +90,15 @@ pub struct IterMulti {
 }
 
 impl IterMulti {
-    #[rustfmt::skip]
     fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| {
-            let mask = self.filters.iter().map(|filter| filter.matches(&event)).collect();
-            let (data, identifier, position, tags, timestamp, version) = event.take();
+            let mask = self
+                .filters
+                .iter()
+                .map(|filter| filter.matches(&event))
+                .collect();
 
-            self.retrieve
-                .get_identifier(&identifier)
-                .and_then(|identifier| self.retrieve.get_tags(&tags).map(|tags| (identifier, tags)))
-                .map(|(identifier, tags)| (PersistentEvent::new(data, identifier, position, tags, timestamp, version), mask))
+            self.retrieve.get(event).map(|event| (event, mask))
         })
     }
 }
@@ -133,6 +126,17 @@ impl Iterator for IterMulti {
 struct Retrieve {
     options: Options,
     references: References,
+}
+
+impl Retrieve {
+    #[rustfmt::skip]
+    fn get(&self, event: PersistentEventHash) -> Result<PersistentEvent, Error> {
+        let (data, identifier, position, tags, timestamp, version) = event.take();
+
+        self.get_identifier(&identifier)
+            .and_then(|identifier| self.get_tags(&tags).map(|tags| (identifier, tags)))
+            .map(|(identifier, tags)| PersistentEvent::new(data, identifier, position, tags, timestamp, version))
+    }
 }
 
 impl Retrieve {

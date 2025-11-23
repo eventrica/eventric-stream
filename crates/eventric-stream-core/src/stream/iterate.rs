@@ -185,25 +185,26 @@ impl IterateQueryMulti for Stream {
     ) -> (IterMulti, QueryHash) {
         let references = self.data.references.clone();
 
-        let filters = queries
+        let mut query_hashes = queries
             .iter()
-            .map(|query| Filter::new(&query.into()))
-            .collect();
+            .map(Into::<QueryHashRef<'_>>::into)
+            .inspect(|query_hash_ref| options.cache.populate(query_hash_ref))
+            .map(Into::<QueryHash>::into);
 
-        let selectors = queries
-            .into_iter()
-            .flat_map(|query| query.selectors)
+        let filters = query_hashes
+            .by_ref()
+            .map(|query_hash| Filter::new(&query_hash))
+            .collect::<Vec<_>>();
+
+        let selector_hashes = query_hashes
+            .flat_map(|query_hash| query_hash.0)
             .collect::<Vec<_>>();
 
         // TODO: Need to do some kind of merge/optimisation pass here, not simply bodge
-        // all the selectors together, even though that will technically work,
+        // all the selector hashess together, even though that will technically work,
         // it could be horribly inefficient.
 
-        let query = Query::new_unvalidated(selectors);
-        let query_hash_ref: QueryHashRef<'_> = (&query).into();
-        let query_hash: QueryHash = (&query_hash_ref).into();
-
-        options.cache.populate(&query_hash_ref);
+        let query_hash = QueryHash::new(selector_hashes);
 
         let iter = self.iter_indices(&query_hash, from);
         let iter = Exclusive::new(iter);
