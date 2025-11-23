@@ -101,7 +101,7 @@ impl IterMulti {
         event.and_then(|event| {
             let mask = self.filters.iter().map(|filter| filter.matches(&event)).collect();
             let (data, identifier, position, tags, timestamp, version) = event.take();
-            
+
             self.retrieve
                 .get_identifier(&identifier)
                 .and_then(|identifier| self.retrieve.get_tags(&tags).map(|tags| (identifier, tags)))
