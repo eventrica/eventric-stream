@@ -140,9 +140,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::iteration::{
-        and::SequentialAndIterator,
-        tests::TestIterator,
+    use crate::{
+        error::Error,
+        utils::iteration::{
+            and::SequentialAndIterator,
+            tests::TestIterator,
+        },
     };
 
     #[test]
@@ -156,18 +159,18 @@ mod tests {
         assert_eq!(None, iter.next());
 
         // No overlap - disjoint sets
-        let a = TestIterator::from([0, 1, 2]);
-        let b = TestIterator::from([3, 4, 5]);
-        let c = TestIterator::from([6, 7, 8]);
+        let a = TestIterator::from([Ok(0), Ok(1), Ok(2)]);
+        let b = TestIterator::from([Ok(3), Ok(4), Ok(5)]);
+        let c = TestIterator::from([Ok(6), Ok(7), Ok(8)]);
 
         let mut iter = SequentialAndIterator::combine([a, b, c]);
 
         assert_eq!(None, iter.next());
 
         // Partial overlap - only some values in all iterators
-        let a = TestIterator::from([0, 2, 4, 6]);
-        let b = TestIterator::from([2, 3, 4, 5]);
-        let c = TestIterator::from([1, 2, 4, 7]);
+        let a = TestIterator::from([Ok(0), Ok(2), Ok(4), Ok(6)]);
+        let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5)]);
+        let c = TestIterator::from([Ok(1), Ok(2), Ok(4), Ok(7)]);
 
         let mut iter = SequentialAndIterator::combine([a, b, c]);
 
@@ -176,9 +179,9 @@ mod tests {
         assert_eq!(None, iter.next());
 
         // Complete overlap - all iterators have same values
-        let a = TestIterator::from([1, 2, 3]);
-        let b = TestIterator::from([1, 2, 3]);
-        let c = TestIterator::from([1, 2, 3]);
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
+        let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
+        let c = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
         let mut iter = SequentialAndIterator::combine([a, b, c]);
 
@@ -188,9 +191,9 @@ mod tests {
         assert_eq!(None, iter.next());
 
         // Variable lengths with overlap
-        let a = TestIterator::from([0, 3, 4, 5]);
-        let b = TestIterator::from([1, 2, 3, 4]);
-        let c = TestIterator::from([0, 3, 4, 5, 6]);
+        let a = TestIterator::from([Ok(0), Ok(3), Ok(4), Ok(5)]);
+        let b = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4)]);
+        let c = TestIterator::from([Ok(0), Ok(3), Ok(4), Ok(5), Ok(6)]);
 
         let mut iter = SequentialAndIterator::combine([a, b, c]);
 
@@ -199,7 +202,7 @@ mod tests {
         assert_eq!(None, iter.next());
 
         // Single iterator
-        let a = TestIterator::from([1, 2, 3]);
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
         let mut iter = SequentialAndIterator::combine([a]);
 
@@ -209,7 +212,7 @@ mod tests {
         assert_eq!(None, iter.next());
 
         // Two iterators with one empty
-        let a = TestIterator::from([1, 2, 3]);
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let b = TestIterator::from([]);
 
         let mut iter = SequentialAndIterator::combine([a, b]);
@@ -217,9 +220,9 @@ mod tests {
         assert_eq!(None, iter.next());
 
         // Complex overlap pattern
-        let a = TestIterator::from([1, 2, 3, 5, 7, 9]);
-        let b = TestIterator::from([2, 3, 4, 5, 6, 7]);
-        let c = TestIterator::from([3, 5, 7, 8]);
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(5), Ok(7), Ok(9)]);
+        let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5), Ok(6), Ok(7)]);
+        let c = TestIterator::from([Ok(3), Ok(5), Ok(7), Ok(8)]);
 
         let mut iter = SequentialAndIterator::combine([a, b, c]);
 
@@ -240,18 +243,18 @@ mod tests {
         assert_eq!(None, iter.next_back());
 
         // No overlap - disjoint sets
-        let a = TestIterator::from([0, 1, 2]);
-        let b = TestIterator::from([3, 4, 5]);
-        let c = TestIterator::from([6, 7, 8]);
+        let a = TestIterator::from([Ok(0), Ok(1), Ok(2)]);
+        let b = TestIterator::from([Ok(3), Ok(4), Ok(5)]);
+        let c = TestIterator::from([Ok(6), Ok(7), Ok(8)]);
 
         let mut iter = SequentialAndIterator::combine([a, b, c]);
 
         assert_eq!(None, iter.next_back());
 
         // Partial overlap - only some values in all iterators
-        let a = TestIterator::from([0, 2, 4, 6]);
-        let b = TestIterator::from([2, 3, 4, 5]);
-        let c = TestIterator::from([1, 2, 4, 7]);
+        let a = TestIterator::from([Ok(0), Ok(2), Ok(4), Ok(6)]);
+        let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5)]);
+        let c = TestIterator::from([Ok(1), Ok(2), Ok(4), Ok(7)]);
 
         let mut iter = SequentialAndIterator::combine([a, b, c]);
 
@@ -260,9 +263,9 @@ mod tests {
         assert_eq!(None, iter.next_back());
 
         // Complete overlap - all iterators have same values
-        let a = TestIterator::from([1, 2, 3]);
-        let b = TestIterator::from([1, 2, 3]);
-        let c = TestIterator::from([1, 2, 3]);
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
+        let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
+        let c = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
         let mut iter = SequentialAndIterator::combine([a, b, c]);
 
@@ -272,9 +275,9 @@ mod tests {
         assert_eq!(None, iter.next_back());
 
         // Variable lengths with overlap
-        let a = TestIterator::from([0, 3, 4, 5]);
-        let b = TestIterator::from([1, 2, 3, 4]);
-        let c = TestIterator::from([0, 3, 4, 5, 6]);
+        let a = TestIterator::from([Ok(0), Ok(3), Ok(4), Ok(5)]);
+        let b = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4)]);
+        let c = TestIterator::from([Ok(0), Ok(3), Ok(4), Ok(5), Ok(6)]);
 
         let mut iter = SequentialAndIterator::combine([a, b, c]);
 
@@ -283,7 +286,7 @@ mod tests {
         assert_eq!(None, iter.next_back());
 
         // Single iterator
-        let a = TestIterator::from([1, 2, 3]);
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
         let mut iter = SequentialAndIterator::combine([a]);
 
@@ -293,7 +296,7 @@ mod tests {
         assert_eq!(None, iter.next_back());
 
         // Two iterators with one empty
-        let a = TestIterator::from([1, 2, 3]);
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let b = TestIterator::from([]);
 
         let mut iter = SequentialAndIterator::combine([a, b]);
@@ -301,9 +304,9 @@ mod tests {
         assert_eq!(None, iter.next_back());
 
         // Complex overlap pattern
-        let a = TestIterator::from([1, 2, 3, 5, 7, 9]);
-        let b = TestIterator::from([2, 3, 4, 5, 6, 7]);
-        let c = TestIterator::from([3, 5, 7, 8]);
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(5), Ok(7), Ok(9)]);
+        let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5), Ok(6), Ok(7)]);
+        let c = TestIterator::from([Ok(3), Ok(5), Ok(7), Ok(8)]);
 
         let mut iter = SequentialAndIterator::combine([a, b, c]);
 
@@ -316,9 +319,9 @@ mod tests {
     #[test]
     fn impl_iterator_and_double_ended_iterator() {
         // Partial overlap - alternating next and next_back
-        let a = TestIterator::from([0, 2, 4, 6, 8]);
-        let b = TestIterator::from([2, 3, 4, 5, 6]);
-        let c = TestIterator::from([1, 2, 4, 6, 7]);
+        let a = TestIterator::from([Ok(0), Ok(2), Ok(4), Ok(6), Ok(8)]);
+        let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5), Ok(6)]);
+        let c = TestIterator::from([Ok(1), Ok(2), Ok(4), Ok(6), Ok(7)]);
 
         let mut iter = SequentialAndIterator::combine([a, b, c]);
 
@@ -328,9 +331,9 @@ mod tests {
         assert_eq!(None, iter.next());
 
         // Complete overlap - mixed iteration
-        let a = TestIterator::from([1, 2, 3, 4, 5]);
-        let b = TestIterator::from([1, 2, 3, 4, 5]);
-        let c = TestIterator::from([1, 2, 3, 4, 5]);
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4), Ok(5)]);
+        let b = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4), Ok(5)]);
+        let c = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4), Ok(5)]);
 
         let mut iter = SequentialAndIterator::combine([a, b, c]);
 
@@ -342,9 +345,9 @@ mod tests {
         assert_eq!(None, iter.next());
 
         // Variable lengths - mixed iteration
-        let a = TestIterator::from([0, 3, 4, 5, 8]);
-        let b = TestIterator::from([1, 2, 3, 4, 5]);
-        let c = TestIterator::from([0, 3, 4, 5, 6]);
+        let a = TestIterator::from([Ok(0), Ok(3), Ok(4), Ok(5), Ok(8)]);
+        let b = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4), Ok(5)]);
+        let c = TestIterator::from([Ok(0), Ok(3), Ok(4), Ok(5), Ok(6)]);
 
         let mut iter = SequentialAndIterator::combine([a, b, c]);
 
@@ -354,9 +357,9 @@ mod tests {
         assert_eq!(None, iter.next());
 
         // Complex pattern - ensure correctness
-        let a = TestIterator::from([1, 2, 3, 5, 7, 9, 11]);
-        let b = TestIterator::from([2, 3, 4, 5, 6, 7, 10]);
-        let c = TestIterator::from([3, 5, 7, 8, 9]);
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(5), Ok(7), Ok(9), Ok(11)]);
+        let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5), Ok(6), Ok(7), Ok(10)]);
+        let c = TestIterator::from([Ok(3), Ok(5), Ok(7), Ok(8), Ok(9)]);
 
         let mut iter = SequentialAndIterator::combine([a, b, c]);
 
@@ -364,5 +367,75 @@ mod tests {
         assert_eq!(Some(Ok(7)), iter.next_back());
         assert_eq!(Some(Ok(5)), iter.next());
         assert_eq!(None, iter.next());
+    }
+
+    #[test]
+    fn impl_iterator_with_errors() {
+        // Error in first iterator - should return error immediately
+        let a = TestIterator::from([Ok(1), Err(Error::Concurrency), Ok(3)]);
+        let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
+
+        let mut iter = SequentialAndIterator::combine([a, b]);
+
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
+
+        // Error in second iterator
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
+        let b = TestIterator::from([Ok(1), Err(Error::Concurrency), Ok(3)]);
+
+        let mut iter = SequentialAndIterator::combine([a, b]);
+
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
+
+        // Error in third iterator
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
+        let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
+        let c = TestIterator::from([Ok(1), Err(Error::Concurrency), Ok(3)]);
+
+        let mut iter = SequentialAndIterator::combine([a, b, c]);
+
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
+
+        // Multiple errors - should return first encountered
+        let a = TestIterator::from([Ok(1), Err(Error::Concurrency)]);
+        let b = TestIterator::from([Ok(1), Err(Error::Concurrency)]);
+
+        let mut iter = SequentialAndIterator::combine([a, b]);
+
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
+    }
+
+    #[test]
+    fn impl_double_ended_iterator_with_errors() {
+        // Error at end of first iterator
+        let a = TestIterator::from([Ok(1), Ok(2), Err(Error::Concurrency)]);
+        let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
+
+        let mut iter = SequentialAndIterator::combine([a, b]);
+
+        assert!(matches!(iter.next_back(), Some(Err(Error::Concurrency))));
+
+        // Error at end of second iterator
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
+        let b = TestIterator::from([Ok(1), Ok(2), Err(Error::Concurrency)]);
+
+        let mut iter = SequentialAndIterator::combine([a, b]);
+
+        assert!(matches!(iter.next_back(), Some(Err(Error::Concurrency))));
+
+        // Error in middle - mixed iteration
+        let a = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4)]);
+        let b = TestIterator::from([Ok(1), Err(Error::Concurrency), Ok(3), Ok(4)]);
+
+        let mut iter = SequentialAndIterator::combine([a, b]);
+
+        assert_eq!(Some(Ok(4)), iter.next_back());
+        assert_eq!(Some(Ok(3)), iter.next_back());
+        assert_eq!(Some(Ok(1)), iter.next());
+        assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
     }
 }
