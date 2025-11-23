@@ -53,3 +53,132 @@ impl Default for Options {
         Self::new_inner()
     }
 }
+
+// -------------------------------------------------------------------------------------------------
+
+// Tests
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use crate::stream::iterate::{
+        cache::Cache,
+        options::Options,
+    };
+
+    // Options::default
+
+    #[test]
+    fn default_creates_options_with_defaults() {
+        let options = Options::default();
+
+        assert!(!options.retrieve_tags);
+        assert_eq!(0, options.cache.identifiers.len());
+        assert_eq!(0, options.cache.tags.len());
+    }
+
+    // Options::retrieve_tags
+
+    #[test]
+    fn retrieve_tags_sets_flag_to_true() {
+        let options = Options::default().retrieve_tags(true);
+
+        assert!(options.retrieve_tags);
+    }
+
+    #[test]
+    fn retrieve_tags_sets_flag_to_false() {
+        let options = Options::default().retrieve_tags(true).retrieve_tags(false);
+
+        assert!(!options.retrieve_tags);
+    }
+
+    #[test]
+    fn retrieve_tags_defaults_to_false() {
+        let options = Options::default();
+
+        assert!(!options.retrieve_tags);
+    }
+
+    // Options::with_shared_cache
+
+    #[test]
+    fn with_shared_cache_sets_cache() {
+        let cache = Arc::new(Cache::default());
+        let cache_clone = Arc::clone(&cache);
+
+        let options = Options::default().with_shared_cache(cache);
+
+        // Verify it's the same Arc (same pointer)
+        assert!(Arc::ptr_eq(&options.cache, &cache_clone));
+    }
+
+    #[test]
+    fn with_shared_cache_replaces_existing_cache() {
+        let cache1 = Arc::new(Cache::default());
+        let cache2 = Arc::new(Cache::default());
+        let cache2_clone = Arc::clone(&cache2);
+
+        let options = Options::default()
+            .with_shared_cache(cache1)
+            .with_shared_cache(cache2);
+
+        assert!(Arc::ptr_eq(&options.cache, &cache2_clone));
+    }
+
+    // Chaining
+
+    #[test]
+    fn methods_can_be_chained() {
+        let cache = Arc::new(Cache::default());
+        let cache_clone = Arc::clone(&cache);
+
+        let options = Options::default()
+            .retrieve_tags(true)
+            .with_shared_cache(cache);
+
+        assert!(options.retrieve_tags);
+        assert!(Arc::ptr_eq(&options.cache, &cache_clone));
+    }
+
+    #[test]
+    fn methods_can_be_chained_in_any_order() {
+        let cache = Arc::new(Cache::default());
+        let cache_clone = Arc::clone(&cache);
+
+        let options = Options::default()
+            .with_shared_cache(cache)
+            .retrieve_tags(true);
+
+        assert!(options.retrieve_tags);
+        assert!(Arc::ptr_eq(&options.cache, &cache_clone));
+    }
+
+    // Clone
+
+    #[test]
+    fn clone_creates_copy_with_same_values() {
+        let cache = Arc::new(Cache::default());
+        let options = Options::default()
+            .retrieve_tags(true)
+            .with_shared_cache(cache);
+
+        let cloned = options.clone();
+
+        assert_eq!(options.retrieve_tags, cloned.retrieve_tags);
+        assert!(Arc::ptr_eq(&options.cache, &cloned.cache));
+    }
+
+    #[test]
+    fn clone_shares_same_cache_arc() {
+        let cache = Arc::new(Cache::default());
+        let options = Options::default().with_shared_cache(cache);
+
+        let cloned = options.clone();
+
+        // Both should point to the same Arc
+        assert!(Arc::ptr_eq(&options.cache, &cloned.cache));
+        assert_eq!(2, Arc::strong_count(&options.cache));
+    }
+}
