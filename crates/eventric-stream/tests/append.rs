@@ -97,11 +97,14 @@ fn append_single_event_to_empty_stream() -> Result<(), Error> {
     let result = stream.append([event("test")?], None);
 
     assert!(result.is_ok());
+
     let position = result.unwrap();
+
     assert_eq!(Position::new(0), position);
 
     // Verify the event was appended
     let mut events = stream.iterate(None);
+
     assert_some_as_result!(events.next()).unwrap()?;
     assert!(events.next().is_none());
 
@@ -115,12 +118,15 @@ fn append_multiple_events_to_empty_stream() -> Result<(), Error> {
     let result = stream.append([event("a")?, event("b")?, event("c")?], None);
 
     assert!(result.is_ok());
+
     let position = result.unwrap();
+
     // Returns position of last event appended
     assert_eq!(Position::new(2), position);
 
     // Verify all events were appended
     let mut events = stream.iterate(None);
+
     assert_some_as_result!(events.next()).unwrap()?;
     assert_some_as_result!(events.next()).unwrap()?;
     assert_some_as_result!(events.next()).unwrap()?;
@@ -137,14 +143,18 @@ fn append_to_populated_stream() -> Result<(), Error> {
     let result = stream.append([event("new")?], None);
 
     assert!(result.is_ok());
+
     let position = result.unwrap();
+
     assert_eq!(Position::new(4), position);
 
     // Verify we now have 5 events
     let mut events = stream.iterate(None);
+
     for _ in 0..5 {
         assert_some_as_result!(events.next()).unwrap()?;
     }
+
     assert!(events.next().is_none());
 
     Ok(())
@@ -176,7 +186,9 @@ fn append_with_after_position_beyond_head() -> Result<(), Error> {
     let result = stream.append([event("new")?], Some(Position::new(10)));
 
     assert!(result.is_ok());
+
     let position = result.unwrap();
+
     assert_eq!(Position::new(4), position);
 
     Ok(())
@@ -191,7 +203,7 @@ fn append_with_after_position_in_middle() -> Result<(), Error> {
     // This should fail because we're appending before tail
     let result = stream.append([event("new")?], Some(Position::new(1)));
 
-    assert!(result.is_err());
+    assert!(matches!(result.unwrap_err(), Error::Concurrency));
 
     Ok(())
 }
@@ -201,12 +213,15 @@ fn append_returns_last_position() -> Result<(), Error> {
     let mut stream = stream(eventric_stream::temp_path(), false)?;
 
     let position1 = stream.append([event("a")?], None)?;
+
     assert_eq!(Position::new(0), position1);
 
     let position2 = stream.append([event("b")?, event("c")?], None)?;
+
     assert_eq!(Position::new(2), position2);
 
     let position3 = stream.append([event("d")?], None)?;
+
     assert_eq!(Position::new(3), position3);
 
     Ok(())
@@ -228,7 +243,9 @@ fn append_query_with_no_matching_events() -> Result<(), Error> {
     let result = stream.append_query([event("new")?], &query, None);
 
     assert!(result.is_ok());
+
     let position = result.unwrap();
+
     assert_eq!(Position::new(4), position);
 
     Ok(())
@@ -458,10 +475,12 @@ fn append_query_returns_correct_position() -> Result<(), Error> {
 
     // First append
     let position1 = stream.append_query([event("a")?], &query, None)?;
+
     assert_eq!(Position::new(0), position1);
 
     // Second append with multiple events
     let position2 = stream.append_query([event("b")?, event("c")?], &query, None)?;
+
     assert_eq!(Position::new(2), position2);
 
     Ok(())
@@ -484,6 +503,7 @@ fn append_and_query_integration() -> Result<(), Error> {
 
     let (mut events, _) = stream.iterate_query(query.clone(), None);
     let event = assert_some_as_result!(events.next()).unwrap()?;
+
     assert_eq!(&Data::new("data_initial")?, event.data());
 
     Ok(())
@@ -532,7 +552,9 @@ fn append_after_successful_concurrency_check() -> Result<(), Error> {
     let result = stream.append_query([event("new")?], &query, Some(current_head));
 
     assert!(result.is_ok());
+
     let position = result.unwrap();
+
     assert_eq!(Position::new(4), position);
 
     Ok(())
