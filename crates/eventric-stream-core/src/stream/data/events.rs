@@ -146,8 +146,7 @@ pub(crate) struct Iter {
 }
 
 impl Iter {
-    #[allow(clippy::unused_self)]
-    fn next_map(&self, guard: Guard) -> <Self as Iterator>::Item {
+    fn next_map(guard: Guard) -> <Self as Iterator>::Item {
         match guard.into_inner() {
             Ok((key, value)) => Ok(IntoPersistentEventHash(IntoPosition(key).into(), value).into()),
             Err(err) => Err(Error::from(err)),
@@ -157,7 +156,7 @@ impl Iter {
 
 impl DoubleEndedIterator for Iter {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back().map(|guard| self.next_map(guard))
+        self.iter.next_back().map(Self::next_map)
     }
 }
 
@@ -165,7 +164,7 @@ impl Iterator for Iter {
     type Item = Result<PersistentEventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|guard| self.next_map(guard))
+        self.iter.next().map(Self::next_map)
     }
 }
 

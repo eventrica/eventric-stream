@@ -101,9 +101,8 @@ pub(crate) struct Iter {
 }
 
 impl Iter {
-    #[allow(clippy::unused_self)]
     #[rustfmt::skip]
-    fn next_map(&self, guard: Guard) -> <Self as Iterator>::Item {
+    fn next_map(guard: Guard) -> <Self as Iterator>::Item {
         match guard.key() {
             Ok(key) => Ok(IntoPosition(key).into()),
             Err(err) => Err(Error::from(err)),
@@ -113,7 +112,7 @@ impl Iter {
 
 impl DoubleEndedIterator for Iter {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.next_back().map(|guard| self.next_map(guard))
+        self.iter.next_back().map(Self::next_map)
     }
 }
 
@@ -121,7 +120,7 @@ impl Iterator for Iter {
     type Item = Result<Position, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.next().map(|guard| self.next_map(guard))
+        self.iter.next().map(Self::next_map)
     }
 }
 
