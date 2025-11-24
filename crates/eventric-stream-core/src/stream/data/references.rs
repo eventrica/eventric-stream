@@ -43,7 +43,7 @@ pub(crate) struct References {
 
 impl References {
     pub fn open(database: &Database) -> Result<Self, Error> {
-        let keyspace = database.keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?;
+        let keyspace = database.keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default)?;
 
         let identifiers = Identifiers::new(keyspace.clone());
         let tags = Tags::new(keyspace);

@@ -1,5 +1,4 @@
 [dependencies]
-any-range.workspace             = true
 bytes.workspace                 = true
 dashmap.workspace               = true
 derive_more.workspace           = true

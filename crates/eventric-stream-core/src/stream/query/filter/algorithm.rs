@@ -1,4 +1,4 @@
-use any_range::AnyRange;
+use std::ops::Range;
 
 use crate::{
     event::version::Version,
@@ -17,7 +17,7 @@ use crate::{
 /// adjacent/overlapping version ranges are merged, and nested version ranges
 /// are subsumed).
 #[allow(dead_code)]
-pub fn normalize_version_ranges(ranges: &[AnyRange<Version>]) -> Vec<AnyRange<Version>> {
+pub fn normalize_version_ranges(ranges: &[Range<Version>]) -> Vec<Range<Version>> {
     if ranges.is_empty() {
         return Vec::new();
     }
@@ -44,7 +44,7 @@ pub fn normalize_version_ranges(ranges: &[AnyRange<Version>]) -> Vec<AnyRange<Ve
                 depth -= 1;
 
                 if depth == 0 {
-                    normalized.push((range_start.take().unwrap()..version).into());
+                    normalized.push(range_start.take().unwrap()..version);
                 }
             }
         }
@@ -59,225 +59,294 @@ pub fn normalize_version_ranges(ranges: &[AnyRange<Version>]) -> Vec<AnyRange<Ve
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Bound;
-
-    use any_range::AnyRange;
-
     use crate::{
-        event::Version,
+        event::version::Version,
         stream::query::filter::algorithm::normalize_version_ranges,
     };
 
-    // Normalize Version Ranges
+    // Empty and single ranges
 
     #[test]
-    fn normalize_version_ranges_single_range() {
-        let ranges = vec![AnyRange::from(Version::new(5)..Version::new(10))];
+    fn empty_input_returns_empty_output() {
+        let ranges = [];
+
         let result = normalize_version_ranges(&ranges);
 
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].start_bound(), Bound::Included(&Version::new(5)));
-        assert_eq!(result[0].end_bound(), Bound::Excluded(&Version::new(10)));
+        assert!(result.is_empty());
     }
 
     #[test]
-    fn normalize_version_ranges_non_overlapping_ranges() {
-        let ranges = vec![
-            AnyRange::from(Version::new(1)..Version::new(3)),
-            AnyRange::from(Version::new(5)..Version::new(7)),
-            AnyRange::from(Version::new(10)..Version::new(15)),
+    fn single_range_returns_same_range() {
+        let ranges = [Version::new(5)..Version::new(10)];
+
+        let result = normalize_version_ranges(&ranges);
+
+        assert_eq!(1, result.len());
+        assert_eq!(Version::new(5), result[0].start);
+        assert_eq!(Version::new(10), result[0].end);
+    }
+
+    #[test]
+    fn single_range_at_boundaries() {
+        let ranges = [Version::MIN..Version::MAX];
+
+        let result = normalize_version_ranges(&ranges);
+
+        assert_eq!(1, result.len());
+        assert_eq!(Version::MIN, result[0].start);
+        assert_eq!(Version::MAX, result[0].end);
+    }
+
+    // Non-overlapping ranges
+
+    #[test]
+    fn non_overlapping_ranges_remain_separate() {
+        let ranges = [Version::new(1)..Version::new(5), Version::new(10)..Version::new(15)];
+
+        let result = normalize_version_ranges(&ranges);
+
+        assert_eq!(2, result.len());
+        assert_eq!(Version::new(1), result[0].start);
+        assert_eq!(Version::new(5), result[0].end);
+        assert_eq!(Version::new(10), result[1].start);
+        assert_eq!(Version::new(15), result[1].end);
+    }
+
+    #[test]
+    fn three_non_overlapping_ranges_remain_separate() {
+        let ranges = [
+            Version::new(1)..Version::new(3),
+            Version::new(10)..Version::new(15),
+            Version::new(20)..Version::new(25),
         ];
+
         let result = normalize_version_ranges(&ranges);
 
-        assert_eq!(result.len(), 3);
-        assert_eq!(result[0].start_bound(), Bound::Included(&Version::new(1)));
-        assert_eq!(result[0].end_bound(), Bound::Excluded(&Version::new(3)));
-        assert_eq!(result[1].start_bound(), Bound::Included(&Version::new(5)));
-        assert_eq!(result[1].end_bound(), Bound::Excluded(&Version::new(7)));
-        assert_eq!(result[2].start_bound(), Bound::Included(&Version::new(10)));
-        assert_eq!(result[2].end_bound(), Bound::Excluded(&Version::new(15)));
+        assert_eq!(3, result.len());
+        assert_eq!(Version::new(1)..Version::new(3), result[0]);
+        assert_eq!(Version::new(10)..Version::new(15), result[1]);
+        assert_eq!(Version::new(20)..Version::new(25), result[2]);
+    }
+
+    // Adjacent ranges (should merge)
+
+    #[test]
+    fn adjacent_ranges_merge() {
+        let ranges = [Version::new(1)..Version::new(5), Version::new(5)..Version::new(10)];
+
+        let result = normalize_version_ranges(&ranges);
+
+        assert_eq!(1, result.len());
+        assert_eq!(Version::new(1), result[0].start);
+        assert_eq!(Version::new(10), result[0].end);
     }
 
     #[test]
-    fn normalize_version_ranges_overlapping_ranges() {
-        let ranges = vec![
-            AnyRange::from(Version::new(1)..Version::new(5)),
-            AnyRange::from(Version::new(3)..Version::new(7)),
+    fn three_adjacent_ranges_merge() {
+        let ranges = [
+            Version::new(1)..Version::new(5),
+            Version::new(5)..Version::new(10),
+            Version::new(10)..Version::new(15),
         ];
+
         let result = normalize_version_ranges(&ranges);
 
-        // Should merge into one range [1, 7)
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].start_bound(), Bound::Included(&Version::new(1)));
-        assert_eq!(result[0].end_bound(), Bound::Excluded(&Version::new(7)));
+        assert_eq!(1, result.len());
+        assert_eq!(Version::new(1)..Version::new(15), result[0]);
+    }
+
+    // Overlapping ranges (should merge)
+
+    #[test]
+    fn overlapping_ranges_merge() {
+        let ranges = [Version::new(1)..Version::new(10), Version::new(5)..Version::new(15)];
+
+        let result = normalize_version_ranges(&ranges);
+
+        assert_eq!(1, result.len());
+        assert_eq!(Version::new(1), result[0].start);
+        assert_eq!(Version::new(15), result[0].end);
     }
 
     #[test]
-    fn normalize_version_ranges_adjacent_ranges_exclusive() {
-        let ranges = vec![
-            AnyRange::from(Version::new(1)..Version::new(5)),
-            AnyRange::from(Version::new(5)..Version::new(10)),
+    fn multiple_overlapping_ranges_merge() {
+        let ranges = [
+            Version::new(1)..Version::new(5),
+            Version::new(3)..Version::new(7),
+            Version::new(6)..Version::new(10),
         ];
+
         let result = normalize_version_ranges(&ranges);
 
-        // Adjacent ranges with exclusive bounds should merge
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].start_bound(), Bound::Included(&Version::new(1)));
-        assert_eq!(result[0].end_bound(), Bound::Excluded(&Version::new(10)));
+        assert_eq!(1, result.len());
+        assert_eq!(Version::new(1)..Version::new(10), result[0]);
+    }
+
+    // Nested ranges (inner subsumed by outer)
+
+    #[test]
+    fn nested_range_subsumed_by_outer() {
+        let ranges = [Version::new(1)..Version::new(20), Version::new(5)..Version::new(10)];
+
+        let result = normalize_version_ranges(&ranges);
+
+        assert_eq!(1, result.len());
+        assert_eq!(Version::new(1), result[0].start);
+        assert_eq!(Version::new(20), result[0].end);
     }
 
     #[test]
-    fn normalize_version_ranges_adjacent_ranges_inclusive() {
-        let ranges = vec![
-            AnyRange::from(Version::new(1)..=Version::new(4)),
-            AnyRange::from(Version::new(5)..=Version::new(10)),
+    fn multiple_nested_ranges_subsumed() {
+        let ranges = [
+            Version::new(1)..Version::new(100),
+            Version::new(10)..Version::new(20),
+            Version::new(30)..Version::new(40),
+            Version::new(50)..Version::new(60),
         ];
+
         let result = normalize_version_ranges(&ranges);
 
-        // [1, 4] becomes [1, 5) and [5, 10] becomes [5, 11)
-        // These should merge into [1, 11)
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].start_bound(), Bound::Included(&Version::new(1)));
-        assert_eq!(result[0].end_bound(), Bound::Excluded(&Version::new(11)));
+        assert_eq!(1, result.len());
+        assert_eq!(Version::new(1)..Version::new(100), result[0]);
     }
 
+    // Complex scenarios
+
     #[test]
-    fn normalize_version_ranges_nested_ranges() {
-        let ranges = vec![
-            AnyRange::from(Version::new(1)..Version::new(10)),
-            AnyRange::from(Version::new(3)..Version::new(7)),
+    fn mix_of_overlapping_and_separate_ranges() {
+        let ranges = [
+            Version::new(1)..Version::new(5),
+            Version::new(3)..Version::new(8),
+            Version::new(15)..Version::new(20),
+            Version::new(18)..Version::new(25),
         ];
+
         let result = normalize_version_ranges(&ranges);
 
-        // Nested range should be absorbed
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].start_bound(), Bound::Included(&Version::new(1)));
-        assert_eq!(result[0].end_bound(), Bound::Excluded(&Version::new(10)));
+        assert_eq!(2, result.len());
+        assert_eq!(Version::new(1)..Version::new(8), result[0]);
+        assert_eq!(Version::new(15)..Version::new(25), result[1]);
     }
 
     #[test]
-    fn normalize_version_ranges_multiple_overlapping_ranges() {
-        let ranges = vec![
-            AnyRange::from(Version::new(1)..Version::new(5)),
-            AnyRange::from(Version::new(3)..Version::new(8)),
-            AnyRange::from(Version::new(6)..Version::new(10)),
-            AnyRange::from(Version::new(15)..Version::new(20)),
+    fn complex_with_adjacent_overlapping_and_nested() {
+        let ranges = [
+            Version::new(1)..Version::new(5),
+            Version::new(5)..Version::new(10), // Adjacent to first
+            Version::new(7)..Version::new(12), // Overlaps second
+            Version::new(20)..Version::new(30),
+            Version::new(22)..Version::new(25), // Nested in fourth
         ];
+
         let result = normalize_version_ranges(&ranges);
 
-        // First three should merge into [1, 10), last remains [15, 20)
-        assert_eq!(result.len(), 2);
-        assert_eq!(result[0].start_bound(), Bound::Included(&Version::new(1)));
-        assert_eq!(result[0].end_bound(), Bound::Excluded(&Version::new(10)));
-        assert_eq!(result[1].start_bound(), Bound::Included(&Version::new(15)));
-        assert_eq!(result[1].end_bound(), Bound::Excluded(&Version::new(20)));
+        assert_eq!(2, result.len());
+        assert_eq!(Version::new(1)..Version::new(12), result[0]);
+        assert_eq!(Version::new(20)..Version::new(30), result[1]);
     }
 
-    #[test]
-    fn normalize_version_ranges_empty_input() {
-        let ranges: Vec<AnyRange<Version>> = vec![];
-        let result = normalize_version_ranges(&ranges);
-
-        assert_eq!(result.len(), 0);
-    }
+    // Unsorted input
 
     #[test]
-    fn normalize_version_ranges_identical_ranges() {
-        let ranges = vec![
-            AnyRange::from(Version::new(5)..Version::new(10)),
-            AnyRange::from(Version::new(5)..Version::new(10)),
-            AnyRange::from(Version::new(5)..Version::new(10)),
+    fn unsorted_ranges_are_normalized() {
+        let ranges = [
+            Version::new(20)..Version::new(25),
+            Version::new(1)..Version::new(5),
+            Version::new(10)..Version::new(15),
         ];
+
         let result = normalize_version_ranges(&ranges);
 
-        // All identical ranges should collapse to one
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].start_bound(), Bound::Included(&Version::new(5)));
-        assert_eq!(result[0].end_bound(), Bound::Excluded(&Version::new(10)));
+        assert_eq!(3, result.len());
+        assert_eq!(Version::new(1)..Version::new(5), result[0]);
+        assert_eq!(Version::new(10)..Version::new(15), result[1]);
+        assert_eq!(Version::new(20)..Version::new(25), result[2]);
     }
 
     #[test]
-    fn normalize_version_ranges_complex_overlaps() {
-        let ranges = vec![
-            AnyRange::from(Version::new(1)..Version::new(3)),
-            AnyRange::from(Version::new(2)..Version::new(5)),
-            AnyRange::from(Version::new(4)..Version::new(6)),
-            AnyRange::from(Version::new(8)..Version::new(10)),
-            AnyRange::from(Version::new(9)..Version::new(12)),
+    fn unsorted_overlapping_ranges_merge_correctly() {
+        let ranges = [
+            Version::new(10)..Version::new(20),
+            Version::new(1)..Version::new(15),
+            Version::new(18)..Version::new(25),
         ];
+
         let result = normalize_version_ranges(&ranges);
 
-        // Should produce [1, 6) and [8, 12)
-        assert_eq!(result.len(), 2);
-        assert_eq!(result[0].start_bound(), Bound::Included(&Version::new(1)));
-        assert_eq!(result[0].end_bound(), Bound::Excluded(&Version::new(6)));
-        assert_eq!(result[1].start_bound(), Bound::Included(&Version::new(8)));
-        assert_eq!(result[1].end_bound(), Bound::Excluded(&Version::new(12)));
+        assert_eq!(1, result.len());
+        assert_eq!(Version::new(1)..Version::new(25), result[0]);
     }
 
+    // Edge cases
+
     #[test]
-    fn normalize_version_ranges_gap_between_ranges() {
-        let ranges = vec![
-            AnyRange::from(Version::new(1)..Version::new(3)),
-            AnyRange::from(Version::new(5)..Version::new(8)),
+    fn identical_ranges_merge_to_one() {
+        let ranges = [
+            Version::new(5)..Version::new(10),
+            Version::new(5)..Version::new(10),
+            Version::new(5)..Version::new(10),
         ];
+
         let result = normalize_version_ranges(&ranges);
 
-        // Gap at 3-5 should keep them separate
-        assert_eq!(result.len(), 2);
-        assert_eq!(result[0].start_bound(), Bound::Included(&Version::new(1)));
-        assert_eq!(result[0].end_bound(), Bound::Excluded(&Version::new(3)));
-        assert_eq!(result[1].start_bound(), Bound::Included(&Version::new(5)));
-        assert_eq!(result[1].end_bound(), Bound::Excluded(&Version::new(8)));
+        assert_eq!(1, result.len());
+        assert_eq!(Version::new(5)..Version::new(10), result[0]);
     }
 
     #[test]
-    fn normalize_version_ranges_full_range_unbounded() {
-        let ranges = vec![AnyRange::<Version>::from(..)];
+    fn ranges_with_version_min() {
+        let ranges = [Version::MIN..Version::new(10), Version::new(5)..Version::new(15)];
+
         let result = normalize_version_ranges(&ranges);
 
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].start_bound(), Bound::Included(&Version::MIN));
-        assert_eq!(result[0].end_bound(), Bound::Excluded(&Version::MAX));
+        assert_eq!(1, result.len());
+        assert_eq!(Version::MIN, result[0].start);
+        assert_eq!(Version::new(15), result[0].end);
     }
 
     #[test]
-    fn normalize_version_ranges_mixed_bound_types() {
-        let ranges = vec![
-            AnyRange::from(Version::new(1)..Version::new(5)),
-            AnyRange::from(Version::new(4)..=Version::new(8)),
-            AnyRange::from(Version::new(7)..Version::new(12)),
+    fn ranges_with_version_max() {
+        let ranges = [Version::new(10)..Version::new(20), Version::new(15)..Version::MAX];
+
+        let result = normalize_version_ranges(&ranges);
+
+        assert_eq!(1, result.len());
+        assert_eq!(Version::new(10), result[0].start);
+        assert_eq!(Version::MAX, result[0].end);
+    }
+
+    #[test]
+    fn single_version_ranges() {
+        let ranges = [
+            Version::new(1)..Version::new(2),
+            Version::new(3)..Version::new(4),
+            Version::new(5)..Version::new(6),
         ];
+
         let result = normalize_version_ranges(&ranges);
 
-        // All should merge into one continuous range
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].start_bound(), Bound::Included(&Version::new(1)));
-        assert_eq!(result[0].end_bound(), Bound::Excluded(&Version::new(12)));
+        assert_eq!(3, result.len());
+        assert_eq!(Version::new(1)..Version::new(2), result[0]);
+        assert_eq!(Version::new(3)..Version::new(4), result[1]);
+        assert_eq!(Version::new(5)..Version::new(6), result[2]);
     }
 
-    #[test]
-    fn normalize_version_ranges_single_point_range() {
-        let ranges = vec![AnyRange::from(Version::new(5)..=Version::new(5))];
-        let result = normalize_version_ranges(&ranges);
-
-        // Single point [5, 5] becomes [5, 6)
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].start_bound(), Bound::Included(&Version::new(5)));
-        assert_eq!(result[0].end_bound(), Bound::Excluded(&Version::new(6)));
-    }
+    // Already normalized input
 
     #[test]
-    fn normalize_version_ranges_touching_exclusive_inclusive() {
-        let ranges = vec![
-            AnyRange::from(Version::new(1)..Version::new(5)),
-            AnyRange::from(Version::new(5)..=Version::new(10)),
+    fn already_normalized_ranges_unchanged() {
+        let ranges = [
+            Version::new(1)..Version::new(5),
+            Version::new(10)..Version::new(15),
+            Version::new(20)..Version::new(25),
         ];
+
         let result = normalize_version_ranges(&ranges);
 
-        // [1, 5) and [5, 10] = [5, 11) should merge
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].start_bound(), Bound::Included(&Version::new(1)));
-        assert_eq!(result[0].end_bound(), Bound::Excluded(&Version::new(11)));
+        assert_eq!(ranges.len(), result.len());
+        for (original, normalized) in ranges.iter().zip(result.iter()) {
+            assert_eq!(original.start, normalized.start);
+            assert_eq!(original.end, normalized.end);
+        }
     }
 }

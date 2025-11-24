@@ -1,4 +1,8 @@
-use any_range::AnyRange;
+use std::ops::{
+    ControlFlow,
+    Range,
+};
+
 use bytes::{
     Buf,
     BufMut as _,
@@ -15,16 +19,12 @@ use fjall::{
 use crate::{
     error::Error,
     event::{
-        identifier::{
-            IdentifierHash,
-            IdentifierHashRef,
-        },
+        identifier::IdentifierHashRef,
         position::Position,
         specifier::SpecifierHash,
         version::Version,
     },
     stream::data::{
-        BoxedIterator,
         HASH_LEN,
         ID_LEN,
         POSITION_LEN,
@@ -55,6 +55,33 @@ pub(crate) struct Identifiers {
     keyspace: Keyspace,
 }
 
+// Iterate
+
+impl Identifiers {
+    #[rustfmt::skip]
+    pub fn iterate<'a, S>(&self, specifiers: S, from: Option<Position>) -> PositionIterator
+    where
+        S: Iterator<Item = &'a SpecifierHash>,
+    {
+        SequentialOrIterator::combine(specifiers.map(|specifier| {
+            let hash = specifier.identifier.hash();
+            let range = specifier.range.clone();
+
+            let iter = if let Some(from) = from {
+                self.keyspace
+                    .range(Into::<KeyBytes>::into(IntoKeyBytes(from, hash))
+                         ..Into::<KeyBytes>::into(IntoKeyBytes(Position::MAX, hash)),
+                )
+            } else {
+                self.keyspace
+                    .prefix(Into::<PrefixBytes>::into(IntoPrefixBytes(hash)))
+            };
+
+            PositionIterator::Identifiers(Iter::new(iter, range))
+        }))
+    }
+}
+
 // Put
 
 impl Identifiers {
@@ -65,91 +92,58 @@ impl Identifiers {
         identifier: &IdentifierHashRef<'_>,
         version: Version,
     ) {
-        let key: [u8; KEY_LEN] = PositionAndHash(at, identifier.hash()).into();
+        let key: [u8; KEY_LEN] = IntoKeyBytes(at, identifier.hash()).into();
         let value = version.to_be_bytes();
 
         batch.insert(&self.keyspace, key, value);
     }
 }
 
-// Query
+// -------------------------------------------------------------------------------------------------
 
-impl Identifiers {
-    pub fn query<'a, S>(&self, specifiers: S, from: Option<Position>) -> PositionIterator
-    where
-        S: Iterator<Item = &'a SpecifierHash>,
-    {
-        SequentialOrIterator::combine(
-            specifiers.map(|specifier| self.query_specifier(specifier, from)),
-        )
-    }
+// Iterator
 
-    fn query_specifier(
-        &self,
-        specifier: &SpecifierHash,
-        from: Option<Position>,
-    ) -> PositionIterator {
-        let identifier = specifier.identifier;
-        let range = specifier.range.clone();
+#[derive(new, Debug)]
+#[new(const_fn)]
+pub(crate) struct Iter {
+    #[debug("Iter")]
+    iter: fjall::Iter,
+    range: Range<Version>,
+}
 
-        match from {
-            Some(from) => PositionIterator::Iterator(self.query_range(identifier, from, range)),
-            None => PositionIterator::Iterator(self.query_prefix(identifier, range)),
-        }
-    }
-
-    fn query_prefix(
-        &self,
-        identifier: IdentifierHash,
-        range: Option<AnyRange<Version>>,
-    ) -> BoxedIterator<Position> {
-        let hash = identifier.hash();
-        let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
-
-        Box::new(
-            self.keyspace
-                .prefix(prefix)
-                .map(Guard::into_inner)
-                .filter_map(move |result| Self::query_filter_map(result, range.as_ref())),
-        )
-    }
-
-    fn query_range(
-        &self,
-        identifier: IdentifierHash,
-        from: Position,
-        range: Option<AnyRange<Version>>,
-    ) -> BoxedIterator<Position> {
-        let hash = identifier.hash();
-        let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
-        let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
-
-        Box::new(
-            self.keyspace
-                .range(lower..upper)
-                .map(Guard::into_inner)
-                .filter_map(move |result| Self::query_filter_map(result, range.as_ref())),
-        )
-    }
-
-    fn query_filter_map(
-        result: Result<(Slice, Slice), fjall::Error>,
-        range: Option<&AnyRange<Version>>,
-    ) -> Option<Result<Position, Error>> {
-        match result {
-            Ok((key, value)) => {
-                if let Some(range) = range {
-                    let version = Value(value).into();
-
-                    if !range.contains(&version) {
-                        return None;
-                    }
-                }
-
-                Some(Ok(Key(key).into()))
-            }
+impl Iter {
+    #[rustfmt::skip]
+    fn next_map(guard: Guard, range: &Range<Version>) -> Option<<Self as Iterator>::Item> {
+        match guard.into_inner() {
+            Ok((key, value)) => range.contains(&IntoVersion(value).into()).then(|| Ok(IntoPosition(key).into())),
             Err(err) => Some(Err(Error::from(err))),
         }
+    }
+}
+
+impl DoubleEndedIterator for Iter {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter
+            .try_rfold((), check(|x| Self::next_map(x, &self.range)))
+            .break_value()
+    }
+}
+
+impl Iterator for Iter {
+    type Item = Result<Position, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter
+            .try_fold((), check(|x| Self::next_map(x, &self.range)))
+            .break_value()
+    }
+}
+
+#[inline]
+fn check<T, U>(mut f: impl FnMut(T) -> Option<U>) -> impl FnMut((), T) -> ControlFlow<U> {
+    move |(), x| match f(x) {
+        Some(x) => ControlFlow::Break(x),
+        None => ControlFlow::Continue(()),
     }
 }
 
@@ -159,10 +153,12 @@ impl Identifiers {
 
 // Hash -> Prefix Byte Array
 
-struct Hash(u64);
+type PrefixBytes = [u8; PREFIX_LEN];
 
-impl From<Hash> for [u8; PREFIX_LEN] {
-    fn from(Hash(hash): Hash) -> Self {
+struct IntoPrefixBytes(u64);
+
+impl From<IntoPrefixBytes> for PrefixBytes {
+    fn from(IntoPrefixBytes(hash): IntoPrefixBytes) -> Self {
         let mut prefix = [0u8; PREFIX_LEN];
 
         {
@@ -178,10 +174,10 @@ impl From<Hash> for [u8; PREFIX_LEN] {
 
 // Key (Slice) -> Position
 
-struct Key(Slice);
+struct IntoPosition(Slice);
 
-impl From<Key> for Position {
-    fn from(Key(slice): Key) -> Self {
+impl From<IntoPosition> for Position {
+    fn from(IntoPosition(slice): IntoPosition) -> Self {
         let mut slice = &slice[..];
 
         slice.advance(ID_LEN + HASH_LEN);
@@ -192,10 +188,12 @@ impl From<Key> for Position {
 
 // Position & Hash -> Key Byte Array
 
-struct PositionAndHash(Position, u64);
+type KeyBytes = [u8; KEY_LEN];
 
-impl From<PositionAndHash> for [u8; KEY_LEN] {
-    fn from(PositionAndHash(position, hash): PositionAndHash) -> Self {
+struct IntoKeyBytes(Position, u64);
+
+impl From<IntoKeyBytes> for KeyBytes {
+    fn from(IntoKeyBytes(position, hash): IntoKeyBytes) -> Self {
         let mut key = [0u8; KEY_LEN];
 
         {
@@ -212,10 +210,10 @@ impl From<PositionAndHash> for [u8; KEY_LEN] {
 
 // Value (Slice) -> Version
 
-struct Value(Slice);
+struct IntoVersion(Slice);
 
-impl From<Value> for Version {
-    fn from(Value(slice): Value) -> Self {
+impl From<IntoVersion> for Version {
+    fn from(IntoVersion(slice): IntoVersion) -> Self {
         Version::new(slice.as_ref().get_u8())
     }
 }

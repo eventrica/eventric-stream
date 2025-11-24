@@ -1,9 +1,11 @@
 mod algorithm;
 mod point;
 
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    ops::Range,
+};
 
-use any_range::AnyRange;
 use fancy_constructor::new;
 
 use crate::{
@@ -51,9 +53,7 @@ impl Filter {
                             .entry(specifier.identifier.hash())
                             .or_insert_with(IdentifierLevelFilter::new);
 
-                        if let Some(range) = &specifier.range {
-                            filter.ranges.push(range.clone());
-                        }
+                        filter.ranges.push(specifier.range.clone());
                     }
                 }
                 SelectorHash::SpecifiersAndTags(_specifiers, _tags) => {}
@@ -85,19 +85,56 @@ impl Matches for Filter {
 #[derive(new, Debug)]
 struct IdentifierLevelFilter {
     #[new(default)]
-    ranges: Vec<AnyRange<Version>>,
+    ranges: Vec<Range<Version>>,
 }
 
 impl Matches for IdentifierLevelFilter {
+    #[rustfmt::skip]
     fn matches(&self, event: &PersistentEventHash) -> bool {
-        if self
-            .ranges
-            .iter()
-            .any(|range| range.contains(&event.version))
-        {
+        if self.ranges.is_empty() {
             return true;
+        }
+
+        for range in &self.ranges {
+            match event.version.relative(range) {
+                Relative::Equal => return true,
+                Relative::GreaterThan => break,
+                Relative::LessThan => {}
+            }
         }
 
         false
     }
+}
+
+trait RangeRelative {
+    fn relative(&self, range: &Range<Self>) -> Relative
+    where
+        Self: Sized;
+}
+
+impl<T> RangeRelative for T
+where
+    T: PartialOrd,
+{
+    fn relative(&self, range: &Range<Self>) -> Relative
+    where
+        Self: Sized,
+    {
+        if &range.start > self {
+            return Relative::LessThan;
+        }
+
+        if &range.end <= self {
+            return Relative::GreaterThan;
+        }
+
+        Relative::Equal
+    }
+}
+
+pub enum Relative {
+    LessThan,
+    Equal,
+    GreaterThan,
 }

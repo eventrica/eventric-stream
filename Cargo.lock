@@ -24,12 +24,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5192cca8006f1fd4f7237516f40fa183bb07f8fbdfedaa0036de5ea9b0b45e78"
 
 [[package]]
-name = "any-range"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0051fc32c88f2ae4928016edb69e686614fe0dad8aea937c36be071bcb71434"
-
-[[package]]
 name = "assertables"
 version = "9.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -67,9 +61,9 @@ checksum = "b35204fbdc0b3f4446b89fc1ac2cf84a8a68971995d0bf2e925ec7cd960f9cb3"
 
 [[package]]
 name = "byteview"
-version = "0.8.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e6b0e42e210b794e14b152c6fe1a55831e30ef4a0f5dc39d73d714fb5f1906c"
+checksum = "d6e3a2110d267b9881afe689e6eebcc7635534a827928bd69bef59a8f9db644a"
 
 [[package]]
 name = "cast"
@@ -365,7 +359,6 @@ dependencies = [
 name = "eventric-stream-core"
 version = "0.1.0"
 dependencies = [
- "any-range",
  "assertables",
  "bytes",
  "dashmap",
@@ -424,9 +417,9 @@ checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
 name = "fjall"
-version = "3.0.0-pre.7"
+version = "3.0.0-rc.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38fab709044a8e2caa4544c7b352360775967a833bfe6a20d3fc6248882b55d6"
+checksum = "91e1ca518f9bb71f845bcd3d8d556c202f9f9c75195deff725cd85b2421aa84a"
 dependencies = [
  "byteorder-lite",
  "byteview",
@@ -580,9 +573,9 @@ checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
 name = "lsm-tree"
-version = "3.0.0-pre.7"
+version = "3.0.0-rc.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16d54fa339f44103a194d3e7f208a33c666391a9d9ddb2621f956f4d223a407f"
+checksum = "f963f5e7b4f8f79fbb28d0fd49ab5f04939b31d1e65cb99577e17805fe25dde2"
 dependencies = [
  "byteorder-lite",
  "byteview",

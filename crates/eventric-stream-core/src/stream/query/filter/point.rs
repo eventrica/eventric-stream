@@ -1,9 +1,7 @@
 use std::{
     cmp::Ordering,
-    ops::Bound,
+    ops::Range,
 };
-
-use any_range::AnyRange;
 
 use crate::event::version::Version;
 
@@ -20,19 +18,8 @@ pub enum Point {
 
 impl Point {
     #[allow(dead_code)]
-    pub fn pair_from_range(range: &AnyRange<Version>) -> [Point; 2] {
-        [
-            Point::Open(match range.start_bound() {
-                Bound::Excluded(version) => *version - 1u8,
-                Bound::Included(version) => *version,
-                Bound::Unbounded => Version::MIN,
-            }),
-            Point::Close(match range.end_bound() {
-                Bound::Excluded(version) => *version,
-                Bound::Included(version) => *version + 1,
-                Bound::Unbounded => Version::MAX,
-            }),
-        ]
+    pub fn pair_from_range(range: &Range<Version>) -> [Point; 2] {
+        [Point::Open(range.start), Point::Close(range.end)]
     }
 }
 
@@ -62,168 +49,205 @@ impl PartialOrd for Point {
 mod tests {
     use std::cmp::Ordering;
 
-    use any_range::AnyRange;
-
     use crate::{
         event::version::Version,
         stream::query::filter::point::Point,
     };
 
-    // Point Creation
+    // pair_from_range
 
     #[test]
-    fn pair_from_range_inclusive_start_exclusive_end() {
-        let range = AnyRange::from(Version::new(5)..Version::new(10));
+    fn pair_from_range_creates_open_and_close_points() {
+        let range = Version::new(5)..Version::new(10);
+
         let [open, close] = Point::pair_from_range(&range);
 
-        assert_eq!(open, Point::Open(Version::new(5)));
-        assert_eq!(close, Point::Close(Version::new(10)));
+        assert_eq!(Point::Open(Version::new(5)), open);
+        assert_eq!(Point::Close(Version::new(10)), close);
     }
 
     #[test]
-    fn pair_from_range_inclusive_both_ends() {
-        let range = AnyRange::from(Version::new(5)..=Version::new(10));
+    fn pair_from_range_preserves_range_bounds() {
+        let range = Version::new(0)..Version::new(1);
+
         let [open, close] = Point::pair_from_range(&range);
 
-        assert_eq!(open, Point::Open(Version::new(5)));
-        assert_eq!(close, Point::Close(Version::new(11)));
+        assert_eq!(Point::Open(Version::new(0)), open);
+        assert_eq!(Point::Close(Version::new(1)), close);
     }
 
     #[test]
-    fn pair_from_range_unbounded_start_inclusive_end() {
-        let range = AnyRange::from(..=Version::new(10));
+    fn pair_from_range_with_version_max() {
+        let range = Version::new(100)..Version::MAX;
+
         let [open, close] = Point::pair_from_range(&range);
 
-        assert_eq!(open, Point::Open(Version::MIN));
-        assert_eq!(close, Point::Close(Version::new(11)));
+        assert_eq!(Point::Open(Version::new(100)), open);
+        assert_eq!(Point::Close(Version::MAX), close);
     }
 
-    #[test]
-    fn pair_from_range_from_unbounded_end() {
-        let range = AnyRange::from(Version::new(5)..);
-        let [open, close] = Point::pair_from_range(&range);
-
-        assert_eq!(open, Point::Open(Version::new(5)));
-        assert_eq!(close, Point::Close(Version::MAX));
-    }
+    // Ord implementation - Equal versions
 
     #[test]
-    fn pair_from_range_unbounded_start_exclusive_end() {
-        let range = AnyRange::from(..Version::new(10));
-        let [open, close] = Point::pair_from_range(&range);
-
-        assert_eq!(open, Point::Open(Version::MIN));
-        assert_eq!(close, Point::Close(Version::new(10)));
-    }
-
-    #[test]
-    fn pair_from_range_unbounded_both() {
-        let range = AnyRange::<Version>::from(..);
-        let [open, close] = Point::pair_from_range(&range);
-
-        assert_eq!(open, Point::Open(Version::MIN));
-        assert_eq!(close, Point::Close(Version::MAX));
-    }
-
-    #[test]
-    fn pair_from_range_single_version_inclusive() {
-        let range = AnyRange::from(Version::new(5)..=Version::new(5));
-        let [open, close] = Point::pair_from_range(&range);
-
-        assert_eq!(open, Point::Open(Version::new(5)));
-        assert_eq!(close, Point::Close(Version::new(6)));
-    }
-
-    // Point Ordering
-
-    #[test]
-    fn point_ordering_open_vs_close_same_version() {
+    fn open_is_less_than_close_at_same_version() {
         let open = Point::Open(Version::new(5));
         let close = Point::Close(Version::new(5));
 
-        assert!(open < close);
-        assert!(close > open);
-        assert_eq!(open.cmp(&close), Ordering::Less);
-        assert_eq!(close.cmp(&open), Ordering::Greater);
+        assert_eq!(Ordering::Less, open.cmp(&close));
     }
 
     #[test]
-    fn point_ordering_open_vs_open_different_versions() {
-        let open1 = Point::Open(Version::new(5));
-        let open2 = Point::Open(Version::new(10));
-
-        assert!(open1 < open2);
-        assert_eq!(open1.cmp(&open2), Ordering::Less);
-    }
-
-    #[test]
-    fn point_ordering_close_vs_close_different_versions() {
-        let close1 = Point::Close(Version::new(5));
-        let close2 = Point::Close(Version::new(10));
-
-        assert!(close1 < close2);
-        assert_eq!(close1.cmp(&close2), Ordering::Less);
-    }
-
-    #[test]
-    fn point_ordering_open_vs_close_different_versions() {
-        let open = Point::Open(Version::new(5));
-        let close = Point::Close(Version::new(10));
-
-        assert!(open < close);
-        assert_eq!(open.cmp(&close), Ordering::Less);
-    }
-
-    #[test]
-    fn point_ordering_close_before_open_different_versions() {
+    fn close_is_greater_than_open_at_same_version() {
         let close = Point::Close(Version::new(5));
-        let open = Point::Open(Version::new(10));
+        let open = Point::Open(Version::new(5));
 
-        assert!(close < open);
-        assert_eq!(close.cmp(&open), Ordering::Less);
+        assert_eq!(Ordering::Greater, close.cmp(&open));
     }
 
     #[test]
-    fn point_ordering_equality() {
+    fn open_equals_open_at_same_version() {
         let open1 = Point::Open(Version::new(5));
         let open2 = Point::Open(Version::new(5));
+
+        assert_eq!(Ordering::Equal, open1.cmp(&open2));
+    }
+
+    #[test]
+    fn close_equals_close_at_same_version() {
         let close1 = Point::Close(Version::new(5));
         let close2 = Point::Close(Version::new(5));
 
-        assert_eq!(open1.cmp(&open2), Ordering::Equal);
-        assert_eq!(close1.cmp(&close2), Ordering::Equal);
+        assert_eq!(Ordering::Equal, close1.cmp(&close2));
+    }
+
+    // Ord implementation - Different versions
+
+    #[test]
+    fn open_points_compared_by_version() {
+        let open_lower = Point::Open(Version::new(3));
+        let open_higher = Point::Open(Version::new(7));
+
+        assert_eq!(Ordering::Less, open_lower.cmp(&open_higher));
+        assert_eq!(Ordering::Greater, open_higher.cmp(&open_lower));
     }
 
     #[test]
-    fn point_sorting_mixed() {
+    fn close_points_compared_by_version() {
+        let close_lower = Point::Close(Version::new(3));
+        let close_higher = Point::Close(Version::new(7));
+
+        assert_eq!(Ordering::Less, close_lower.cmp(&close_higher));
+        assert_eq!(Ordering::Greater, close_higher.cmp(&close_lower));
+    }
+
+    #[test]
+    fn open_and_close_different_versions_compared_by_version() {
+        let open_lower = Point::Open(Version::new(3));
+        let close_higher = Point::Close(Version::new(7));
+
+        assert_eq!(Ordering::Less, open_lower.cmp(&close_higher));
+        assert_eq!(Ordering::Greater, close_higher.cmp(&open_lower));
+    }
+
+    #[test]
+    fn close_and_open_different_versions_compared_by_version() {
+        let close_lower = Point::Close(Version::new(3));
+        let open_higher = Point::Open(Version::new(7));
+
+        assert_eq!(Ordering::Less, close_lower.cmp(&open_higher));
+        assert_eq!(Ordering::Greater, open_higher.cmp(&close_lower));
+    }
+
+    // PartialOrd
+
+    #[test]
+    fn partial_cmp_returns_same_as_cmp() {
+        let open = Point::Open(Version::new(5));
+        let close = Point::Close(Version::new(5));
+
+        assert_eq!(Some(Ordering::Less), open.partial_cmp(&close));
+        assert_eq!(open.cmp(&close), open.partial_cmp(&close).unwrap());
+    }
+
+    // Eq and PartialEq
+
+    #[test]
+    fn open_points_equal_when_versions_equal() {
+        let open1 = Point::Open(Version::new(5));
+        let open2 = Point::Open(Version::new(5));
+
+        assert_eq!(open1, open2);
+    }
+
+    #[test]
+    fn close_points_equal_when_versions_equal() {
+        let close1 = Point::Close(Version::new(5));
+        let close2 = Point::Close(Version::new(5));
+
+        assert_eq!(close1, close2);
+    }
+
+    #[test]
+    fn open_and_close_not_equal_even_with_same_version() {
+        let open = Point::Open(Version::new(5));
+        let close = Point::Close(Version::new(5));
+
+        assert_ne!(open, close);
+    }
+
+    #[test]
+    fn points_not_equal_when_versions_differ() {
+        let open1 = Point::Open(Version::new(3));
+        let open2 = Point::Open(Version::new(7));
+
+        assert_ne!(open1, open2);
+    }
+
+    // Sorting behavior
+
+    #[test]
+    fn points_sort_by_version_then_type() {
         let mut points = vec![
             Point::Close(Version::new(5)),
             Point::Open(Version::new(3)),
             Point::Open(Version::new(5)),
             Point::Close(Version::new(3)),
-            Point::Open(Version::new(1)),
+            Point::Open(Version::new(7)),
         ];
 
         points.sort();
 
-        assert_eq!(points, vec![
-            Point::Open(Version::new(1)),
-            Point::Open(Version::new(3)),
-            Point::Close(Version::new(3)),
-            Point::Open(Version::new(5)),
-            Point::Close(Version::new(5)),
-        ]);
+        assert_eq!(
+            vec![
+                Point::Open(Version::new(3)),
+                Point::Close(Version::new(3)),
+                Point::Open(Version::new(5)),
+                Point::Close(Version::new(5)),
+                Point::Open(Version::new(7)),
+            ],
+            points
+        );
     }
 
     #[test]
-    fn point_equality() {
-        let open1 = Point::Open(Version::new(5));
-        let open2 = Point::Open(Version::new(5));
-        let close1 = Point::Close(Version::new(5));
-        let close2 = Point::Close(Version::new(5));
+    fn adjacent_ranges_sort_correctly() {
+        let range1 = Version::new(1)..Version::new(5);
+        let range2 = Version::new(5)..Version::new(10);
 
-        assert_eq!(open1, open2);
-        assert_eq!(close1, close2);
-        assert_ne!(open1, close1);
+        let mut points = Vec::new();
+        points.extend(Point::pair_from_range(&range1));
+        points.extend(Point::pair_from_range(&range2));
+        points.sort();
+
+        // Open(5) should come before Close(5) due to sorting rules
+        assert_eq!(
+            vec![
+                Point::Open(Version::new(1)),
+                Point::Open(Version::new(5)),
+                Point::Close(Version::new(5)),
+                Point::Close(Version::new(10)),
+            ],
+            points
+        );
     }
 }

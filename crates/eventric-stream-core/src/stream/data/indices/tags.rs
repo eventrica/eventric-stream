@@ -21,7 +21,6 @@ use crate::{
         },
     },
     stream::data::{
-        BoxedIterator,
         HASH_LEN,
         ID_LEN,
         POSITION_LEN,
@@ -52,12 +51,37 @@ pub(crate) struct Tags {
     keyspace: Keyspace,
 }
 
+// Iterate
+
+impl Tags {
+    pub fn iterate<'a, T>(&self, tags: T, from: Option<Position>) -> PositionIterator
+    where
+        T: Iterator<Item = &'a TagHash>,
+    {
+        SequentialAndIterator::combine(tags.map(|tag| {
+            let hash = tag.hash();
+
+            let iter = if let Some(from) = from {
+                self.keyspace.range(
+                    Into::<KeyBytes>::into(IntoKeyBytes(from, hash))
+                        ..Into::<KeyBytes>::into(IntoKeyBytes(Position::MAX, hash)),
+                )
+            } else {
+                self.keyspace
+                    .prefix(Into::<PrefixBytes>::into(IntoPrefixBytes(hash)))
+            };
+
+            PositionIterator::Tags(Iter::new(iter))
+        }))
+    }
+}
+
 // Put
 
 impl Tags {
     pub fn put(&self, batch: &mut WriteBatch, at: Position, tags: &[TagHashRef<'_>]) {
         for tag in tags {
-            let key: [u8; KEY_LEN] = PositionAndHash(at, tag.hash()).into();
+            let key: [u8; KEY_LEN] = IntoKeyBytes(at, tag.hash()).into();
             let value = [];
 
             batch.insert(&self.keyspace, key, value);
@@ -65,55 +89,43 @@ impl Tags {
     }
 }
 
-// Query
+// -------------------------------------------------------------------------------------------------
 
-impl Tags {
-    pub fn query<'a, T>(&self, tags: T, from: Option<Position>) -> PositionIterator
-    where
-        T: Iterator<Item = &'a TagHash>,
-    {
-        SequentialAndIterator::combine(tags.map(|tag| self.query_tag(*tag, from)))
-    }
+// Iterator
 
-    fn query_tag(&self, tag: TagHash, from: Option<Position>) -> PositionIterator {
-        match from {
-            Some(from) => PositionIterator::Iterator(self.query_range(tag, from)),
-            None => PositionIterator::Iterator(self.query_prefix(tag)),
-        }
-    }
+#[derive(new, Debug)]
+#[new(const_fn)]
+pub(crate) struct Iter {
+    #[debug("Iter")]
+    iter: fjall::Iter,
+}
 
-    fn query_prefix(&self, tag: TagHash) -> BoxedIterator<Position> {
-        let hash = tag.hash();
-        let prefix: [u8; PREFIX_LEN] = Hash(hash).into();
-
-        Box::new(
-            self.keyspace
-                .prefix(prefix)
-                .map(Guard::key)
-                .map(Self::query_map),
-        )
-    }
-
-    fn query_range(&self, tag: TagHash, from: Position) -> BoxedIterator<Position> {
-        let hash = tag.hash();
-        let lower: [u8; KEY_LEN] = PositionAndHash(from, hash).into();
-        let upper: [u8; KEY_LEN] = PositionAndHash(Position::MAX, hash).into();
-
-        Box::new(
-            self.keyspace
-                .range(lower..upper)
-                .map(Guard::key)
-                .map(Self::query_map),
-        )
-    }
-
-    fn query_map(result: Result<Slice, fjall::Error>) -> Result<Position, Error> {
-        match result {
-            Ok(key) => Ok(Key(key).into()),
+impl Iter {
+    #[allow(clippy::unused_self)]
+    #[rustfmt::skip]
+    fn next_map(&self, guard: Guard) -> <Self as Iterator>::Item {
+        match guard.key() {
+            Ok(key) => Ok(IntoPosition(key).into()),
             Err(err) => Err(Error::from(err)),
         }
     }
 }
+
+impl DoubleEndedIterator for Iter {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.next_back().map(|guard| self.next_map(guard))
+    }
+}
+
+impl Iterator for Iter {
+    type Item = Result<Position, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|guard| self.next_map(guard))
+    }
+}
+
+impl Iter {}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -121,10 +133,12 @@ impl Tags {
 
 // Hash -> Prefix Byte Array
 
-struct Hash(u64);
+type PrefixBytes = [u8; PREFIX_LEN];
 
-impl From<Hash> for [u8; PREFIX_LEN] {
-    fn from(Hash(hash): Hash) -> Self {
+struct IntoPrefixBytes(u64);
+
+impl From<IntoPrefixBytes> for PrefixBytes {
+    fn from(IntoPrefixBytes(hash): IntoPrefixBytes) -> Self {
         let mut prefix = [0u8; PREFIX_LEN];
 
         {
@@ -140,10 +154,10 @@ impl From<Hash> for [u8; PREFIX_LEN] {
 
 // Key (Slice) -> Position
 
-struct Key(Slice);
+struct IntoPosition(Slice);
 
-impl From<Key> for Position {
-    fn from(Key(slice): Key) -> Self {
+impl From<IntoPosition> for Position {
+    fn from(IntoPosition(slice): IntoPosition) -> Self {
         let mut slice = &slice[..];
 
         slice.advance(ID_LEN + HASH_LEN);
@@ -154,10 +168,12 @@ impl From<Key> for Position {
 
 // Position & Hash -> Key Byte Array
 
-struct PositionAndHash(Position, u64);
+type KeyBytes = [u8; KEY_LEN];
 
-impl From<PositionAndHash> for [u8; KEY_LEN] {
-    fn from(PositionAndHash(position, hash): PositionAndHash) -> Self {
+struct IntoKeyBytes(Position, u64);
+
+impl From<IntoKeyBytes> for KeyBytes {
+    fn from(IntoKeyBytes(position, hash): IntoKeyBytes) -> Self {
         let mut key = [0u8; KEY_LEN];
 
         {

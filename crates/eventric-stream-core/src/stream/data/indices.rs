@@ -18,13 +18,10 @@ use crate::{
         timestamp::Timestamp,
     },
     stream::{
-        data::{
-            BoxedIterator,
-            indices::{
-                identifiers::Identifiers,
-                tags::Tags,
-                timestamps::Timestamps,
-            },
+        data::indices::{
+            identifiers::Identifiers,
+            tags::Tags,
+            timestamps::Timestamps,
         },
         query::{
             QueryHash,
@@ -59,7 +56,7 @@ pub(crate) struct Indices {
 
 impl Indices {
     pub fn open(database: &Database) -> Result<Self, Error> {
-        let keyspace = database.keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default())?;
+        let keyspace = database.keyspace(KEYSPACE_NAME, KeyspaceCreateOptions::default)?;
 
         let identifiers = Identifiers::new(keyspace.clone());
         let tags = Tags::new(keyspace.clone());
@@ -101,10 +98,12 @@ impl Indices {
     #[must_use]
     pub fn query(&self, query: &QueryHash, from: Option<Position>) -> PositionIterator {
         SequentialOrIterator::combine(query.as_ref().iter().map(|selector| match selector {
-            SelectorHash::Specifiers(specifiers) => self.identifiers.query(specifiers.iter(), from),
+            SelectorHash::Specifiers(specifiers) => {
+                self.identifiers.iterate(specifiers.iter(), from)
+            }
             SelectorHash::SpecifiersAndTags(specifiers, tags) => SequentialAndIterator::combine([
-                self.identifiers.query(specifiers.iter(), from),
-                self.tags.query(tags.iter(), from),
+                self.identifiers.iterate(specifiers.iter(), from),
+                self.tags.iterate(tags.iter(), from),
             ]),
         }))
     }
@@ -118,7 +117,8 @@ impl Indices {
 pub enum PositionIterator {
     And(SequentialAndIterator<PositionIterator, Position>),
     Or(SequentialOrIterator<PositionIterator, Position>),
-    Iterator(#[debug("Position Iterator")] BoxedIterator<Position>),
+    Identifiers(identifiers::Iter),
+    Tags(tags::Iter),
 }
 
 impl DoubleEndedIterator for PositionIterator {
@@ -126,7 +126,8 @@ impl DoubleEndedIterator for PositionIterator {
         match self {
             Self::And(iter) => iter.next_back(),
             Self::Or(iter) => iter.next_back(),
-            Self::Iterator(iter) => iter.next_back(),
+            Self::Identifiers(iter) => iter.next_back(),
+            Self::Tags(iter) => iter.next_back(),
         }
     }
 }
@@ -138,7 +139,8 @@ impl Iterator for PositionIterator {
         match self {
             Self::And(iter) => iter.next(),
             Self::Or(iter) => iter.next(),
-            Self::Iterator(iter) => iter.next(),
+            Self::Identifiers(iter) => iter.next(),
+            Self::Tags(iter) => iter.next(),
         }
     }
 }

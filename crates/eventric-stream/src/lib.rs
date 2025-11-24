@@ -25,12 +25,12 @@ pub mod event {
     //! to specifying events within queries.
 
     pub use eventric_stream_core::event::{
-        AnyRange,
         Data,
         EphemeralEvent,
         Identifier,
         PersistentEvent,
         Position,
+        Range,
         Specifier,
         Tag,
         Timestamp,

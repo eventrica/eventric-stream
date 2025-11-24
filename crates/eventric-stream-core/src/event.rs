@@ -230,8 +230,8 @@ pub use self::{
     identifier::Identifier,
     position::Position,
     specifier::{
-        AnyRange,
         Specifier,
+        range::Range,
     },
     tag::Tag,
     timestamp::Timestamp,
