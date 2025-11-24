@@ -101,7 +101,10 @@ mod tests {
 
     #[test]
     fn non_overlapping_ranges_remain_separate() {
-        let ranges = [Version::new(1)..Version::new(5), Version::new(10)..Version::new(15)];
+        let ranges = [
+            Version::new(1)..Version::new(5),
+            Version::new(10)..Version::new(15),
+        ];
 
         let result = normalize_version_ranges(&ranges);
 
@@ -132,7 +135,10 @@ mod tests {
 
     #[test]
     fn adjacent_ranges_merge() {
-        let ranges = [Version::new(1)..Version::new(5), Version::new(5)..Version::new(10)];
+        let ranges = [
+            Version::new(1)..Version::new(5),
+            Version::new(5)..Version::new(10),
+        ];
 
         let result = normalize_version_ranges(&ranges);
 
@@ -159,7 +165,10 @@ mod tests {
 
     #[test]
     fn overlapping_ranges_merge() {
-        let ranges = [Version::new(1)..Version::new(10), Version::new(5)..Version::new(15)];
+        let ranges = [
+            Version::new(1)..Version::new(10),
+            Version::new(5)..Version::new(15),
+        ];
 
         let result = normalize_version_ranges(&ranges);
 
@@ -186,7 +195,10 @@ mod tests {
 
     #[test]
     fn nested_range_subsumed_by_outer() {
-        let ranges = [Version::new(1)..Version::new(20), Version::new(5)..Version::new(10)];
+        let ranges = [
+            Version::new(1)..Version::new(20),
+            Version::new(5)..Version::new(10),
+        ];
 
         let result = normalize_version_ranges(&ranges);
 
@@ -295,7 +307,10 @@ mod tests {
 
     #[test]
     fn ranges_with_version_min() {
-        let ranges = [Version::MIN..Version::new(10), Version::new(5)..Version::new(15)];
+        let ranges = [
+            Version::MIN..Version::new(10),
+            Version::new(5)..Version::new(15),
+        ];
 
         let result = normalize_version_ranges(&ranges);
 
@@ -306,7 +321,10 @@ mod tests {
 
     #[test]
     fn ranges_with_version_max() {
-        let ranges = [Version::new(10)..Version::new(20), Version::new(15)..Version::MAX];
+        let ranges = [
+            Version::new(10)..Version::new(20),
+            Version::new(15)..Version::MAX,
+        ];
 
         let result = normalize_version_ranges(&ranges);
 
