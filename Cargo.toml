@@ -21,7 +21,7 @@ eventric-stream        = { path = "crates/eventric-stream" }
 eventric-stream-core   = { path = "crates/eventric-stream-core" }
 eventric-stream-macros = { path = "crates/eventric-stream-macros" }
 fancy_constructor      = { version = "2" }
-fjall                  = { version = "=3.0.0-rc.0" }
+fjall                  = { version = "=3.0.0-rc.1" }
 include-utils          = { version = "0.2" }
 proc-macro2            = { version = "1" }
 quote                  = { version = "1" }
