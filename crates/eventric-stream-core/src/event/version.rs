@@ -1,8 +1,12 @@
-use std::ops::{
-    Add,
-    AddAssign,
-    Sub,
-    SubAssign,
+use std::{
+    cmp::Ordering,
+    ops::{
+        Add,
+        AddAssign,
+        Range,
+        Sub,
+        SubAssign,
+    },
 };
 
 use derive_more::Deref;
@@ -58,6 +62,22 @@ impl Default for Version {
     }
 }
 
+impl PartialEq<Range<Self>> for Version {
+    fn eq(&self, other: &Range<Self>) -> bool {
+        self >= &other.start && self < &other.end
+    }
+}
+
+impl PartialOrd<Range<Self>> for Version {
+    fn partial_cmp(&self, other: &Range<Self>) -> Option<Ordering> {
+        match self {
+            _ if self < &other.start => Some(Ordering::Less),
+            _ if self >= &other.end => Some(Ordering::Greater),
+            _ => Some(Ordering::Equal),
+        }
+    }
+}
+
 impl Sub<u8> for Version {
     type Output = Self;
 
@@ -78,6 +98,8 @@ impl SubAssign<u8> for Version {
 
 #[cfg(test)]
 mod tests {
+    use std::cmp::Ordering;
+
     use crate::event::version::Version;
 
     #[test]
@@ -259,5 +281,296 @@ mod tests {
         ver -= 1u8;
 
         assert_eq!(*ver, 8);
+    }
+
+    // PartialEq<Range<Self>>
+
+    #[test]
+    fn version_equal_to_range_when_inside() {
+        let ver = Version::new(5);
+        let range = Version::new(3)..Version::new(10);
+
+        assert_eq!(ver, range);
+        assert!(ver == range);
+    }
+
+    #[test]
+    fn version_not_equal_to_range_when_before_start() {
+        let ver = Version::new(2);
+        let range = Version::new(5)..Version::new(10);
+
+        assert_ne!(ver, range);
+        assert!(ver != range);
+    }
+
+    #[test]
+    fn version_not_equal_to_range_when_at_or_after_end() {
+        let ver = Version::new(10);
+        let range = Version::new(5)..Version::new(10);
+
+        assert_ne!(ver, range);
+        assert!(ver != range);
+    }
+
+    #[test]
+    fn version_equal_to_range_at_start() {
+        let ver = Version::new(5);
+        let range = Version::new(5)..Version::new(10);
+
+        assert_eq!(ver, range);
+    }
+
+    #[test]
+    fn version_not_equal_to_range_at_exclusive_end() {
+        let ver = Version::new(10);
+        let range = Version::new(5)..Version::new(10);
+
+        assert_ne!(ver, range);
+    }
+
+    #[test]
+    fn version_not_equal_to_range_one_before_start() {
+        let ver = Version::new(4);
+        let range = Version::new(5)..Version::new(10);
+
+        assert_ne!(ver, range);
+    }
+
+    #[test]
+    fn version_equal_to_range_one_after_start() {
+        let ver = Version::new(6);
+        let range = Version::new(5)..Version::new(10);
+
+        assert_eq!(ver, range);
+    }
+
+    #[test]
+    fn version_equal_to_range_one_before_end() {
+        let ver = Version::new(9);
+        let range = Version::new(5)..Version::new(10);
+
+        assert_eq!(ver, range);
+    }
+
+    #[test]
+    fn version_not_equal_to_range_one_after_end() {
+        let ver = Version::new(11);
+        let range = Version::new(5)..Version::new(10);
+
+        assert_ne!(ver, range);
+    }
+
+    #[test]
+    fn version_not_equal_to_empty_range() {
+        let ver = Version::new(5);
+        let range = Version::new(5)..Version::new(5);
+
+        assert_ne!(ver, range);
+    }
+
+    #[test]
+    fn version_equal_to_single_value_range() {
+        let ver = Version::new(5);
+        let range = Version::new(5)..Version::new(6);
+
+        assert_eq!(ver, range);
+    }
+
+    #[test]
+    fn version_not_equal_to_single_value_range_outside() {
+        let ver = Version::new(6);
+        let range = Version::new(5)..Version::new(6);
+
+        assert_ne!(ver, range);
+    }
+
+    #[test]
+    fn version_equal_to_full_range() {
+        let ver = Version::new(100);
+        let range = Version::MIN..Version::MAX;
+
+        assert_eq!(ver, range);
+    }
+
+    #[test]
+    fn version_max_not_equal_to_full_range() {
+        let ver = Version::MAX;
+        let range = Version::MIN..Version::MAX;
+
+        assert_ne!(ver, range);
+    }
+
+    #[test]
+    fn version_min_equal_to_range_starting_at_min() {
+        let ver = Version::MIN;
+        let range = Version::MIN..Version::new(10);
+
+        assert_eq!(ver, range);
+    }
+
+    // PartialOrd<Range<Self>>
+
+    #[test]
+    fn version_less_than_range_when_before_start() {
+        let ver = Version::new(2);
+        let range = Version::new(5)..Version::new(10);
+
+        assert!(ver < range);
+        assert_eq!(ver.partial_cmp(&range), Some(Ordering::Less));
+    }
+
+    #[test]
+    fn version_equal_to_range_when_inside_for_ordering() {
+        let ver = Version::new(7);
+        let range = Version::new(5)..Version::new(10);
+
+        assert!(ver >= range);
+        assert!(ver <= range);
+        assert_eq!(ver.partial_cmp(&range), Some(Ordering::Equal));
+    }
+
+    #[test]
+    fn version_greater_than_range_when_at_or_after_end() {
+        let ver = Version::new(10);
+        let range = Version::new(5)..Version::new(10);
+
+        assert!(ver > range);
+        assert_eq!(ver.partial_cmp(&range), Some(Ordering::Greater));
+    }
+
+    #[test]
+    fn version_equal_to_range_at_start_for_ordering() {
+        let ver = Version::new(5);
+        let range = Version::new(5)..Version::new(10);
+
+        assert_eq!(ver.partial_cmp(&range), Some(Ordering::Equal));
+        assert!(ver >= range);
+        assert!(ver <= range);
+    }
+
+    #[test]
+    fn version_greater_than_range_at_exclusive_end_for_ordering() {
+        let ver = Version::new(10);
+        let range = Version::new(5)..Version::new(10);
+
+        assert_eq!(ver.partial_cmp(&range), Some(Ordering::Greater));
+        assert!(ver > range);
+    }
+
+    #[test]
+    fn version_less_than_range_one_before_start() {
+        let ver = Version::new(4);
+        let range = Version::new(5)..Version::new(10);
+
+        assert_eq!(ver.partial_cmp(&range), Some(Ordering::Less));
+    }
+
+    #[test]
+    fn version_equal_to_range_one_after_start_for_ordering() {
+        let ver = Version::new(6);
+        let range = Version::new(5)..Version::new(10);
+
+        assert_eq!(ver.partial_cmp(&range), Some(Ordering::Equal));
+    }
+
+    #[test]
+    fn version_equal_to_range_one_before_end_for_ordering() {
+        let ver = Version::new(9);
+        let range = Version::new(5)..Version::new(10);
+
+        assert_eq!(ver.partial_cmp(&range), Some(Ordering::Equal));
+    }
+
+    #[test]
+    fn version_greater_than_range_one_after_end() {
+        let ver = Version::new(11);
+        let range = Version::new(5)..Version::new(10);
+
+        assert_eq!(ver.partial_cmp(&range), Some(Ordering::Greater));
+    }
+
+    #[test]
+    fn version_greater_than_empty_range() {
+        let ver = Version::new(5);
+        let range = Version::new(5)..Version::new(5);
+
+        assert!(ver > range);
+        assert_eq!(ver.partial_cmp(&range), Some(Ordering::Greater));
+    }
+
+    #[test]
+    fn version_equal_to_single_value_range_for_ordering() {
+        let ver = Version::new(5);
+        let range = Version::new(5)..Version::new(6);
+
+        assert_eq!(ver.partial_cmp(&range), Some(Ordering::Equal));
+    }
+
+    #[test]
+    fn version_greater_than_single_value_range_outside() {
+        let ver = Version::new(6);
+        let range = Version::new(5)..Version::new(6);
+
+        assert!(ver > range);
+        assert_eq!(ver.partial_cmp(&range), Some(Ordering::Greater));
+    }
+
+    #[test]
+    fn version_min_less_than_range_not_starting_at_min() {
+        let ver = Version::MIN;
+        let range = Version::new(1)..Version::new(10);
+
+        assert!(ver < range);
+        assert_eq!(ver.partial_cmp(&range), Some(Ordering::Less));
+    }
+
+    #[test]
+    fn version_max_greater_than_range_not_ending_at_max() {
+        let ver = Version::MAX;
+        let range = Version::new(0)..Version::new(100);
+
+        assert!(ver > range);
+        assert_eq!(ver.partial_cmp(&range), Some(Ordering::Greater));
+    }
+
+    #[test]
+    fn version_boundary_tests_with_min_max() {
+        assert!(Version::MIN < (Version::new(1)..Version::MAX));
+        assert!(Version::MAX > (Version::MIN..Version::MAX));
+        assert_eq!(
+            Version::new(50).partial_cmp(&(Version::MIN..Version::MAX)),
+            Some(Ordering::Equal)
+        );
+    }
+
+    #[test]
+    fn version_range_comparison_transitivity() {
+        let range = Version::new(10)..Version::new(20);
+        let ver_before = Version::new(5);
+        let ver_inside = Version::new(15);
+        let ver_after = Version::new(25);
+
+        assert!(ver_before < range);
+        assert_eq!(ver_inside.partial_cmp(&range), Some(Ordering::Equal));
+        assert!(ver_after > range);
+    }
+
+    #[test]
+    fn version_range_edge_cases_zero_and_max() {
+        let ver_zero = Version::new(0);
+        let ver_one = Version::new(1);
+        let ver_max = Version::MAX;
+        let ver_max_minus_one = Version::MAX - 1;
+
+        assert_eq!(
+            ver_zero.partial_cmp(&(Version::new(0)..Version::new(1))),
+            Some(Ordering::Equal)
+        );
+        assert!(ver_one > (Version::new(0)..Version::new(1)));
+        assert_eq!(
+            ver_max_minus_one.partial_cmp(&(Version::new(254)..Version::MAX)),
+            Some(Ordering::Equal)
+        );
+        assert!(ver_max > (Version::new(254)..Version::MAX));
     }
 }

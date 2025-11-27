@@ -112,10 +112,11 @@ pub(crate) struct Iter {
 }
 
 impl Iter {
-    #[rustfmt::skip]
     fn next_map(guard: Guard, range: &Range<Version>) -> Option<<Self as Iterator>::Item> {
         match guard.into_inner() {
-            Ok((key, value)) => range.contains(&IntoVersion(value).into()).then(|| Ok(IntoPosition(key).into())),
+            Ok((key, value)) => range
+                .contains::<Version>(&IntoVersion(value).into())
+                .then(|| Ok(IntoPosition(key).into())),
             Err(err) => Some(Err(Error::from(err))),
         }
     }
