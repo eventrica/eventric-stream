@@ -47,6 +47,8 @@ pub mod stream {
 
     pub use eventric_stream_core::stream::{
         Builder,
+        Multiple,
+        Single,
         Stream,
     };
 
@@ -68,7 +70,6 @@ pub mod stream {
 
         pub use eventric_stream_core::stream::iterate::{
             Iter,
-            IterMulti,
             Iterate,
             IterateQuery,
         };
@@ -81,9 +82,8 @@ pub mod stream {
         //! condition models.
 
         pub use eventric_stream_core::stream::query::{
+            Prepared,
             Query,
-            QueryMultiOptimized,
-            QueryOptimized,
             Selector,
             Source,
             Specifiers,

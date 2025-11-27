@@ -13,6 +13,7 @@ use std::sync::{
 use crate::{
     event::position::Position,
     stream::{
+        Single,
         Stream,
         data::events::{
             MappedPersistentEventHashIterator,
@@ -35,18 +36,18 @@ use crate::{
 /// .
 pub trait Iterate {
     /// .
-    fn iterate(&self, from: Option<Position>) -> Iter;
+    fn iterate(&self, from: Option<Position>) -> Iter<Single>;
 }
 
 impl Iterate for Stream {
-    fn iterate(&self, from: Option<Position>) -> Iter {
+    fn iterate(&self, from: Option<Position>) -> Iter<Single> {
         let cache = Arc::new(Cache::default());
         let references = self.data.references.clone();
 
         let iter = self.iter_events(from);
         let iter = Exclusive::new(iter);
 
-        Iter::new(cache, true, references, iter)
+        Iter::<Single>::new(cache, true, references, (), iter)
     }
 }
 
@@ -72,20 +73,20 @@ pub trait IterateQuery {
     /// [identifier]: crate::event::identifier::Identifier
     /// [tag]: crate::event::tag::Tag
     /// [issue]: https://github.com/eventrica/eventric-stream/issues/21
-    fn iterate_query<Q>(&self, query: Q, from: Option<Position>) -> (Q::Iterator, Q::Optimized)
+    fn iterate_query<Q>(&self, query: Q, from: Option<Position>) -> (Q::Iterator, Q::Prepared)
     where
         Q: Source,
-        Q::Iterator: Build<Q::Optimized>;
+        Q::Iterator: Build<Q::Prepared>;
 }
 
 impl IterateQuery for Stream {
-    fn iterate_query<Q>(&self, query: Q, from: Option<Position>) -> (Q::Iterator, Q::Optimized)
+    fn iterate_query<Q>(&self, query: Q, from: Option<Position>) -> (Q::Iterator, Q::Prepared)
     where
         Q: Source,
-        Q::Iterator: Build<Q::Optimized>,
+        Q::Iterator: Build<Q::Prepared>,
     {
         let references = self.data.references.clone();
-        let optimized = query.optimize();
+        let optimized = query.prepare();
 
         let iter = self.iter_indices(optimized.as_ref(), from);
         let iter = Q::Iterator::build(&optimized, iter, references);
@@ -125,8 +126,5 @@ impl Stream {
 
 pub use self::{
     build::Build,
-    iter::{
-        Iter,
-        IterMulti,
-    },
+    iter::Iter,
 };

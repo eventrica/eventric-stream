@@ -54,8 +54,7 @@ impl Append for Stream {
     where
         E: IntoIterator<Item = EphemeralEvent>,
     {
-        self.check(None, after)?;
-        self.put(events)
+        self.check(None, after).and_then(|()| self.put(events))
     }
 }
 
@@ -75,7 +74,7 @@ pub trait AppendQuery {
         events: E,
         fail_if_matches: Q,
         after: Option<Position>,
-    ) -> Result<(Position, Q::Optimized), Error>
+    ) -> Result<(Position, Q::Prepared), Error>
     where
         E: IntoIterator<Item = EphemeralEvent>,
         Q: Source;
@@ -87,15 +86,16 @@ impl AppendQuery for Stream {
         events: E,
         fail_if_matches: Q,
         after: Option<Position>,
-    ) -> Result<(Position, Q::Optimized), Error>
+    ) -> Result<(Position, Q::Prepared), Error>
     where
         E: IntoIterator<Item = EphemeralEvent>,
         Q: Source,
     {
-        let optimized = fail_if_matches.optimize();
+        let prepared = fail_if_matches.prepare();
 
-        self.check(Some(optimized.as_ref()), after)?;
-        self.put(events).map(|position| (position, optimized))
+        self.check(Some(prepared.as_ref()), after)
+            .and_then(|()| self.put(events))
+            .map(|position| (position, prepared))
     }
 }
 

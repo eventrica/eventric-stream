@@ -2,14 +2,11 @@
 //! module-level documentation.
 
 pub(crate) mod filter;
-pub(crate) mod preparation;
+pub(crate) mod prepared;
 pub(crate) mod selector;
 pub(crate) mod source;
 
-use std::{
-    borrow::Cow,
-    sync::Arc,
-};
+// use std::borrow::Cow;
 
 use derive_more::{
     AsRef,
@@ -25,13 +22,12 @@ use fancy_constructor::new;
 use crate::{
     error::Error,
     stream::{
-        iterate::cache::Cache,
-        query::{
-            filter::Filter,
-            selector::{
-                SelectorHash,
-                SelectorHashRef,
-            },
+        Multiple,
+        Single,
+        iterate::iter::Iter,
+        query::selector::{
+            SelectorHash,
+            SelectorHashRef,
         },
     },
 };
@@ -82,21 +78,27 @@ impl Query {
     }
 }
 
-impl<'a> From<&'a Query> for Cow<'a, Query> {
-    fn from(val: &'a Query) -> Self {
-        Cow::Borrowed(val)
-    }
-}
-
-impl From<Query> for Cow<'_, Query> {
-    fn from(val: Query) -> Self {
-        Cow::Owned(val)
-    }
-}
-
 impl From<Query> for Vec<Selector> {
     fn from(query: Query) -> Self {
         query.selectors
+    }
+}
+
+impl Source for Query {
+    type Iterator = Iter<Single>;
+    type Prepared = Prepared<Single>;
+
+    fn prepare(self) -> Self::Prepared {
+        self.into()
+    }
+}
+
+impl Source for Vec<Query> {
+    type Iterator = Iter<Multiple>;
+    type Prepared = Prepared<Multiple>;
+
+    fn prepare(self) -> Self::Prepared {
+        self.into()
     }
 }
 
@@ -124,18 +126,6 @@ impl Validate for Query {
 #[as_ref([SelectorHash])]
 pub(crate) struct QueryHash(pub(crate) Vec<SelectorHash>);
 
-impl From<Cow<'_, Query>> for QueryHash {
-    fn from(query: Cow<'_, Query>) -> Self {
-        Self::new(query.selectors.iter().map(Into::into).collect::<Vec<_>>())
-    }
-}
-
-impl From<Cow<'_, QueryHash>> for QueryHash {
-    fn from(query: Cow<'_, QueryHash>) -> Self {
-        query.into_owned()
-    }
-}
-
 impl From<Query> for QueryHash {
     fn from(query: Query) -> Self {
         (&query).into()
@@ -145,18 +135,6 @@ impl From<Query> for QueryHash {
 impl From<&Query> for QueryHash {
     fn from(query: &Query) -> Self {
         Self::new(query.as_ref().iter().map(Into::into).collect::<Vec<_>>())
-    }
-}
-
-impl<'a> From<&'a QueryHash> for Cow<'a, QueryHash> {
-    fn from(query: &'a QueryHash) -> Self {
-        Cow::Borrowed(query)
-    }
-}
-
-impl From<QueryHash> for Cow<'_, QueryHash> {
-    fn from(query: QueryHash) -> Self {
-        Cow::Owned(query)
     }
 }
 
@@ -186,42 +164,10 @@ impl<'a> From<&'a Query> for QueryHashRef<'a> {
 
 // -------------------------------------------------------------------------------------------------
 
-// Query [Multi] Optimized
-
-/// .
-#[derive(new, Debug)]
-#[new(const_fn, vis(pub(crate)))]
-pub struct QueryOptimized {
-    pub(crate) cache: Arc<Cache>,
-    pub(crate) query_hash: QueryHash,
-}
-
-impl AsRef<QueryHash> for QueryOptimized {
-    fn as_ref(&self) -> &QueryHash {
-        &self.query_hash
-    }
-}
-
-/// .
-#[derive(new, Debug)]
-#[new(const_fn, vis(pub(crate)))]
-pub struct QueryMultiOptimized {
-    pub(crate) cache: Arc<Cache>,
-    pub(crate) filters: Arc<Vec<Filter>>,
-    pub(crate) query_hash: QueryHash,
-}
-
-impl AsRef<QueryHash> for QueryMultiOptimized {
-    fn as_ref(&self) -> &QueryHash {
-        &self.query_hash
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
 // Re-Exports
 
 pub use self::{
+    prepared::Prepared,
     selector::{
         Selector,
         specifiers::Specifiers,

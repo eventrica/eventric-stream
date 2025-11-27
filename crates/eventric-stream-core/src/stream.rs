@@ -133,7 +133,9 @@ where
 // Arity
 
 /// .
-pub struct One;
+#[derive(Debug)]
+pub struct Single;
 
 /// .
-pub struct Many;
+#[derive(Debug)]
+pub struct Multiple;

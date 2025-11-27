@@ -21,6 +21,8 @@ use crate::{
         },
     },
     stream::{
+        Multiple,
+        Single,
         data::{
             events::PersistentEventHashIterator,
             references::References,
@@ -30,12 +32,11 @@ use crate::{
             cache::Cache,
         },
         query::{
-            QueryMultiOptimized,
-            QueryOptimized,
             filter::{
                 Filter,
                 Matches as _,
             },
+            prepared::Prepared,
         },
     },
 };
@@ -44,80 +45,50 @@ use crate::{
 // Iterator
 // =================================================================================================
 
+// Data
+
+pub(crate) trait Data {
+    type Data;
+}
+
+impl Data for Single {
+    type Data = ();
+}
+
+impl Data for Multiple {
+    type Data = Arc<Vec<Filter>>;
+}
+
+// -------------------------------------------------------------------------------------------------
+
 // Iterator
 
-/// The [`Iter`] type provides an [`Iterator`]/[`DoubleEndedIterator`]
-/// over iteration results for a [`Stream`][stream].
-///
-/// [stream]: crate::stream::Stream
+/// .
+#[allow(private_bounds)]
 #[derive(new, Debug)]
 #[new(args(cache: Arc<Cache>, fetch_tags: bool, references: References), const_fn, vis(pub(crate)))]
-pub struct Iter {
+pub struct Iter<T>
+where
+    T: Data,
+{
+    data: T::Data,
     #[allow(clippy::struct_field_names)]
     iter: Exclusive<PersistentEventHashIterator>,
     #[new(val(Retrieve::new(cache, fetch_tags, references)))]
     retrieve: Retrieve,
 }
 
-impl Iter {
+impl Iter<Single> {
     fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| self.retrieve.get(event))
     }
 }
 
-impl Build<QueryOptimized> for Iter {
-    #[allow(private_interfaces)]
-    fn build(
-        optimization: &QueryOptimized,
-        iter: PersistentEventHashIterator,
-        references: References,
-    ) -> Self {
-        let cache = optimization.cache.clone();
-        let iter = Exclusive::new(iter);
-
-        Self::new(cache, false, references, iter)
-    }
-}
-
-impl DoubleEndedIterator for Iter {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next_back().map(|event| self.map(event))
-    }
-}
-
-impl Iterator for Iter {
-    type Item = Result<PersistentEvent, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next().map(|event| self.map(event))
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Iterator (Multiple)
-
-/// The [`IterMulti`] type provides an [`Iterator`]/[`DoubleEndedIterator`]
-/// over iteration results for a [`Stream`][stream], along with a matching mask
-/// for each result, indicating which of the iteration queries the returned
-/// event matches.
-///
-/// [stream]: crate::stream::Stream
-#[derive(new, Debug)]
-#[new(args(cache: Arc<Cache>, fetch_tags: bool, references: References), const_fn, vis(pub(crate)))]
-pub struct IterMulti {
-    filters: Arc<Vec<Filter>>,
-    #[allow(clippy::struct_field_names)]
-    iter: Exclusive<PersistentEventHashIterator>,
-    #[new(val(Retrieve::new(cache, fetch_tags, references)))]
-    retrieve: Retrieve,
-}
-
-impl IterMulti {
+impl Iter<Multiple> {
     fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| {
             let mask = self
-                .filters
+                .data
                 .iter()
                 .map(|filter| filter.matches(&event))
                 .collect();
@@ -127,28 +98,56 @@ impl IterMulti {
     }
 }
 
-impl Build<QueryMultiOptimized> for IterMulti {
+impl Build<Prepared<Single>> for Iter<Single> {
     #[allow(private_interfaces)]
     fn build(
-        optimization: &QueryMultiOptimized,
+        optimization: &Prepared<Single>,
         iter: PersistentEventHashIterator,
         references: References,
     ) -> Self {
         let cache = optimization.cache.clone();
-        let filters = optimization.filters.clone();
+        let iter = Exclusive::new(iter);
+
+        Self::new(cache, false, references, (), iter)
+    }
+}
+
+impl Build<Prepared<Multiple>> for Iter<Multiple> {
+    #[allow(private_interfaces)]
+    fn build(
+        optimization: &Prepared<Multiple>,
+        iter: PersistentEventHashIterator,
+        references: References,
+    ) -> Self {
+        let cache = optimization.cache.clone();
+        let filters = optimization.data.clone();
         let iter = Exclusive::new(iter);
 
         Self::new(cache, false, references, filters, iter)
     }
 }
 
-impl DoubleEndedIterator for IterMulti {
+impl DoubleEndedIterator for Iter<Single> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next_back().map(|event| self.map(event))
     }
 }
 
-impl Iterator for IterMulti {
+impl DoubleEndedIterator for Iter<Multiple> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.get_mut().next_back().map(|event| self.map(event))
+    }
+}
+
+impl Iterator for Iter<Single> {
+    type Item = Result<PersistentEvent, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.get_mut().next().map(|event| self.map(event))
+    }
+}
+
+impl Iterator for Iter<Multiple> {
     type Item = Result<(PersistentEvent, Vec<bool>), Error>;
 
     fn next(&mut self) -> Option<Self::Item> {

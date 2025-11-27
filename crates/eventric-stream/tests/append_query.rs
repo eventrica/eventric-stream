@@ -114,7 +114,12 @@ fn append_query_detects_conflict() -> Result<(), Error> {
 fn append_query_with_identifier_check() -> Result<(), Error> {
     let mut stream = create_test_stream()?;
     stream.append_query(
-        [create_event("first", "StudentEnrolled", &["student:100"], 0)?],
+        [create_event(
+            "first",
+            "StudentEnrolled",
+            &["student:100"],
+            0,
+        )?],
         Query::new([Selector::specifiers(vec![Specifier::new(
             Identifier::new("CourseCreated")?,
         )])?])?,
@@ -253,11 +258,8 @@ fn append_query_returns_optimized_query() -> Result<(), Error> {
         Identifier::new("EventA")?,
     )])?])?;
 
-    let (_position, query_optimized) = stream.append_query(
-        [create_event("event1", "EventB", &[], 0)?],
-        query,
-        None,
-    )?;
+    let (_position, query_optimized) =
+        stream.append_query([create_event("event1", "EventB", &[], 0)?], query, None)?;
 
     assert!(
         !format!("{query_optimized:?}").is_empty(),
@@ -274,11 +276,8 @@ fn append_query_reuses_optimized_query() -> Result<(), Error> {
         Identifier::new("EventA")?,
     )])?])?;
 
-    let (position1, query_optimized) = stream.append_query(
-        [create_event("event1", "EventB", &[], 0)?],
-        query,
-        None,
-    )?;
+    let (position1, query_optimized) =
+        stream.append_query([create_event("event1", "EventB", &[], 0)?], query, None)?;
 
     assert_eq!(position1, Position::new(0));
 
@@ -317,11 +316,7 @@ fn append_query_with_multiple_identifiers() -> Result<(), Error> {
         Specifier::new(Identifier::new("EventB")?),
     ])?])?;
 
-    let result = stream.append_query(
-        [create_event("event3", "EventC", &[], 0)?],
-        query,
-        None,
-    );
+    let result = stream.append_query([create_event("event3", "EventC", &[], 0)?], query, None);
 
     assert!(
         matches!(result, Err(Error::Concurrency)),
@@ -352,17 +347,12 @@ fn append_query_with_multiple_selectors() -> Result<(), Error> {
 
     let query = Query::new([
         Selector::specifiers(vec![Specifier::new(Identifier::new("EventA")?)])?,
-        Selector::specifiers_and_tags(
-            vec![Specifier::new(Identifier::new("EventB")?)],
-            vec![Tag::new("tag:2")?],
-        )?,
+        Selector::specifiers_and_tags(vec![Specifier::new(Identifier::new("EventB")?)], vec![
+            Tag::new("tag:2")?,
+        ])?,
     ])?;
 
-    let result = stream.append_query(
-        [create_event("event3", "EventC", &[], 0)?],
-        query,
-        None,
-    );
+    let result = stream.append_query([create_event("event3", "EventC", &[], 0)?], query, None);
 
     assert!(
         matches!(result, Err(Error::Concurrency)),
@@ -414,11 +404,7 @@ fn append_query_preserves_existing_events() -> Result<(), Error> {
         Identifier::new("ExistingEvent")?,
     )])?])?;
 
-    let result = stream.append_query(
-        [create_event("new", "NewEvent", &[], 0)?],
-        query,
-        None,
-    );
+    let result = stream.append_query([create_event("new", "NewEvent", &[], 0)?], query, None);
 
     assert!(matches!(result, Err(Error::Concurrency)));
 
@@ -436,11 +422,8 @@ fn append_query_empty_stream() -> Result<(), Error> {
         Identifier::new("AnyEvent")?,
     )])?])?;
 
-    let (position, _) = stream.append_query(
-        [create_event("first", "FirstEvent", &[], 0)?],
-        query,
-        None,
-    )?;
+    let (position, _) =
+        stream.append_query([create_event("first", "FirstEvent", &[], 0)?], query, None)?;
 
     assert_eq!(position, Position::new(0));
 
@@ -501,19 +484,13 @@ fn append_query_sequential_operations() -> Result<(), Error> {
         Identifier::new("ConflictEvent")?,
     )])?])?;
 
-    let (pos1, query_opt) = stream.append_query(
-        [create_event("event1", "EventA", &[], 0)?],
-        query,
-        None,
-    )?;
+    let (pos1, query_opt) =
+        stream.append_query([create_event("event1", "EventA", &[], 0)?], query, None)?;
 
     assert_eq!(pos1, Position::new(0));
 
-    let (pos2, _) = stream.append_query(
-        [create_event("event2", "EventB", &[], 0)?],
-        query_opt,
-        None,
-    )?;
+    let (pos2, _) =
+        stream.append_query([create_event("event2", "EventB", &[], 0)?], query_opt, None)?;
 
     assert_eq!(pos2, Position::new(1));
 
@@ -536,11 +513,8 @@ fn append_query_no_false_positives() -> Result<(), Error> {
         vec![Tag::new("tag:2")?],
     )?])?;
 
-    let (position, _) = stream.append_query(
-        [create_event("event2", "EventB", &[], 0)?],
-        query,
-        None,
-    )?;
+    let (position, _) =
+        stream.append_query([create_event("event2", "EventB", &[], 0)?], query, None)?;
 
     assert_eq!(position, Position::new(1));
 
@@ -564,7 +538,12 @@ fn append_query_complex_scenario() -> Result<(), Error> {
     )?;
 
     stream.append_query(
-        [create_event("course_created", "CourseCreated", &["course:200"], 0)?],
+        [create_event(
+            "course_created",
+            "CourseCreated",
+            &["course:200"],
+            0,
+        )?],
         Query::new([Selector::specifiers(vec![Specifier::new(
             Identifier::new("CourseDeleted")?,
         )])?])?,
@@ -577,7 +556,12 @@ fn append_query_complex_scenario() -> Result<(), Error> {
     )?])?;
 
     let result = stream.append_query(
-        [create_event("enrollment2", "StudentEnrolled", &["student:101"], 0)?],
+        [create_event(
+            "enrollment2",
+            "StudentEnrolled",
+            &["student:101"],
+            0,
+        )?],
         query,
         None,
     );
@@ -613,11 +597,7 @@ fn append_query_with_version_variants() -> Result<(), Error> {
         Identifier::new("Event")?,
     )])?])?;
 
-    let result = stream.append_query(
-        [create_event("v2", "Event", &[], 2)?],
-        query,
-        None,
-    );
+    let result = stream.append_query([create_event("v2", "Event", &[], 2)?], query, None);
 
     assert!(
         matches!(result, Err(Error::Concurrency)),
@@ -641,11 +621,8 @@ fn append_query_with_vec_query_basic_usage() -> Result<(), Error> {
         )])?])?,
     ];
 
-    let (position, _query_multi_opt) = stream.append_query(
-        [create_event("event1", "EventC", &[], 0)?],
-        queries,
-        None,
-    )?;
+    let (position, _query_multi_opt) =
+        stream.append_query([create_event("event1", "EventC", &[], 0)?], queries, None)?;
 
     assert_eq!(position, Position::new(0));
 
@@ -664,11 +641,8 @@ fn append_query_with_vec_query_returns_multi_optimized() -> Result<(), Error> {
         )])?])?,
     ];
 
-    let (_position, query_multi_opt) = stream.append_query(
-        [create_event("event1", "EventC", &[], 0)?],
-        queries,
-        None,
-    )?;
+    let (_position, query_multi_opt) =
+        stream.append_query([create_event("event1", "EventC", &[], 0)?], queries, None)?;
 
     assert!(
         !format!("{query_multi_opt:?}").is_empty(),
@@ -690,11 +664,8 @@ fn append_query_reuses_multi_optimized_query() -> Result<(), Error> {
         )])?])?,
     ];
 
-    let (position1, query_multi_opt) = stream.append_query(
-        [create_event("event1", "EventC", &[], 0)?],
-        queries,
-        None,
-    )?;
+    let (position1, query_multi_opt) =
+        stream.append_query([create_event("event1", "EventC", &[], 0)?], queries, None)?;
 
     assert_eq!(position1, Position::new(0));
 
@@ -744,11 +715,8 @@ fn append_query_vec_query_with_single_query() -> Result<(), Error> {
         Identifier::new("EventA")?,
     )])?])?];
 
-    let (position, _) = stream.append_query(
-        [create_event("event1", "EventB", &[], 0)?],
-        queries,
-        None,
-    )?;
+    let (position, _) =
+        stream.append_query([create_event("event1", "EventB", &[], 0)?], queries, None)?;
 
     assert_eq!(position, Position::new(0));
 
@@ -814,11 +782,7 @@ fn append_query_vec_query_fails_if_first_query_matches() -> Result<(), Error> {
         )])?])?,
     ];
 
-    let result = stream.append_query(
-        [create_event("event2", "EventC", &[], 0)?],
-        queries,
-        None,
-    );
+    let result = stream.append_query([create_event("event2", "EventC", &[], 0)?], queries, None);
 
     assert!(
         matches!(result, Err(Error::Concurrency)),
@@ -848,11 +812,7 @@ fn append_query_vec_query_fails_if_second_query_matches() -> Result<(), Error> {
         )])?])?,
     ];
 
-    let result = stream.append_query(
-        [create_event("event2", "EventC", &[], 0)?],
-        queries,
-        None,
-    );
+    let result = stream.append_query([create_event("event2", "EventC", &[], 0)?], queries, None);
 
     assert!(
         matches!(result, Err(Error::Concurrency)),
@@ -901,11 +861,7 @@ fn append_query_vec_query_fails_if_any_query_matches() -> Result<(), Error> {
         )])?])?,
     ];
 
-    let result = stream.append_query(
-        [create_event("event4", "EventD", &[], 0)?],
-        queries,
-        None,
-    );
+    let result = stream.append_query([create_event("event4", "EventD", &[], 0)?], queries, None);
 
     assert!(
         matches!(result, Err(Error::Concurrency)),
@@ -946,11 +902,8 @@ fn append_query_vec_query_succeeds_if_no_queries_match() -> Result<(), Error> {
         )])?])?,
     ];
 
-    let (position, _) = stream.append_query(
-        [create_event("event3", "EventF", &[], 0)?],
-        queries,
-        None,
-    )?;
+    let (position, _) =
+        stream.append_query([create_event("event3", "EventF", &[], 0)?], queries, None)?;
 
     assert_eq!(position, Position::new(2));
 
@@ -978,11 +931,7 @@ fn append_query_vec_query_with_tags_any_match() -> Result<(), Error> {
         )])?])?,
     ];
 
-    let result = stream.append_query(
-        [create_event("event2", "EventC", &[], 0)?],
-        queries,
-        None,
-    );
+    let result = stream.append_query([create_event("event2", "EventC", &[], 0)?], queries, None);
 
     assert!(
         matches!(result, Err(Error::Concurrency)),
@@ -1062,7 +1011,8 @@ fn append_query_vec_query_or_semantics_demonstration() -> Result<(), Error> {
 
     assert!(
         matches!(result, Err(Error::Concurrency)),
-        "Vec<Query> uses OR semantics: fails if EventA OR EventB exists (only EventA exists, so it fails)"
+        "Vec<Query> uses OR semantics: fails if EventA OR EventB exists (only EventA exists, so \
+         it fails)"
     );
 
     Ok(())
