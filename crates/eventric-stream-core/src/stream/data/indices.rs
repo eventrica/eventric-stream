@@ -71,7 +71,24 @@ impl Indices {
 impl Indices {
     #[must_use]
     pub fn contains(&self, query: &QueryHash, from: Option<Position>) -> bool {
-        self.query(query, from).any(|_| true)
+        self.iterate(query, from).any(|_| true)
+    }
+}
+
+// Iterate
+
+impl Indices {
+    #[must_use]
+    pub fn iterate(&self, query: &QueryHash, from: Option<Position>) -> PositionIterator {
+        SequentialOrIterator::combine(query.as_ref().iter().map(|selector| match selector {
+            SelectorHash::Specifiers(specifiers) => {
+                self.identifiers.iterate(specifiers.iter(), from)
+            }
+            SelectorHash::SpecifiersAndTags(specifiers, tags) => SequentialAndIterator::combine([
+                self.identifiers.iterate(specifiers.iter(), from),
+                self.tags.iterate(tags.iter(), from),
+            ]),
+        }))
     }
 }
 
@@ -89,23 +106,6 @@ impl Indices {
         self.identifiers.put(batch, at, &event.identifier, event.version);
         self.tags.put(batch, at, &event.tags);
         self.timestamps.put(batch, at, timestamp);
-    }
-}
-
-// Query
-
-impl Indices {
-    #[must_use]
-    pub fn query(&self, query: &QueryHash, from: Option<Position>) -> PositionIterator {
-        SequentialOrIterator::combine(query.as_ref().iter().map(|selector| match selector {
-            SelectorHash::Specifiers(specifiers) => {
-                self.identifiers.iterate(specifiers.iter(), from)
-            }
-            SelectorHash::SpecifiersAndTags(specifiers, tags) => SequentialAndIterator::combine([
-                self.identifiers.iterate(specifiers.iter(), from),
-                self.tags.iterate(tags.iter(), from),
-            ]),
-        }))
     }
 }
 

@@ -72,23 +72,23 @@ pub trait IterateQuery {
     /// [identifier]: crate::event::identifier::Identifier
     /// [tag]: crate::event::tag::Tag
     /// [issue]: https://github.com/eventrica/eventric-stream/issues/21
-    fn iterate_query<Q>(&self, query: Q, from: Option<Position>) -> (Q::Iterator, Q::Prepared)
+    fn iterate_query<S>(&self, query: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
     where
-        Q: Source,
-        Q::Iterator: Build<Q::Prepared>;
+        S: Source,
+        S::Iterator: Build<S::Prepared>;
 }
 
 impl IterateQuery for Stream {
-    fn iterate_query<Q>(&self, query: Q, from: Option<Position>) -> (Q::Iterator, Q::Prepared)
+    fn iterate_query<S>(&self, query: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
     where
-        Q: Source,
-        Q::Iterator: Build<Q::Prepared>,
+        S: Source,
+        S::Iterator: Build<S::Prepared>,
     {
         let references = self.data.references.clone();
         let prepared = query.prepare();
 
         let iter = self.iterate_indices(prepared.as_ref(), from);
-        let iter = Q::Iterator::build(iter, &prepared, references);
+        let iter = S::Iterator::build(iter, &prepared, references);
 
         (iter, prepared)
     }
@@ -112,7 +112,7 @@ impl Stream {
     ) -> PersistentEventHashIterator {
         let events = self.data.events.clone();
 
-        let iter = self.data.indices.query(query, from);
+        let iter = self.data.indices.iterate(query, from);
         let iter = MappedPersistentEventHashIterator::new(events, iter);
 
         PersistentEventHashIterator::Mapped(iter)

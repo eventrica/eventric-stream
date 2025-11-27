@@ -69,27 +69,27 @@ pub trait AppendQuery {
     /// # Errors
     ///
     /// This function will return an error if .
-    fn append_query<E, Q>(
+    fn append_query<E, S>(
         &mut self,
         events: E,
-        fail_if_matches: Q,
+        fail_if_matches: S,
         after: Option<Position>,
-    ) -> Result<(Position, Q::Prepared), Error>
+    ) -> Result<(Position, S::Prepared), Error>
     where
         E: IntoIterator<Item = EphemeralEvent>,
-        Q: Source;
+        S: Source;
 }
 
 impl AppendQuery for Stream {
-    fn append_query<E, Q>(
+    fn append_query<E, S>(
         &mut self,
         events: E,
-        fail_if_matches: Q,
+        fail_if_matches: S,
         after: Option<Position>,
-    ) -> Result<(Position, Q::Prepared), Error>
+    ) -> Result<(Position, S::Prepared), Error>
     where
         E: IntoIterator<Item = EphemeralEvent>,
-        Q: Source,
+        S: Source,
     {
         let prepared = fail_if_matches.prepare();
 
