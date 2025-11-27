@@ -1,8 +1,10 @@
-use derive_more::AsRef;
+use std::collections::HashSet;
+
+use ::std::hash::BuildHasher;
 use eventric_core::validation::{
     Validate,
+    hashset,
     validate,
-    vec,
 };
 use fancy_constructor::new;
 
@@ -26,14 +28,9 @@ use crate::{
 /// instances within a [`Specifiers`] collection are always combined as a
 /// logical OR operation, so events that match *any* of the supplied
 /// [`Specifier`] instances will be returned.
-#[derive(new, AsRef, Clone, Debug)]
-#[as_ref([Specifier])]
+#[derive(new, Clone, Debug)]
 #[new(const_fn, name(new_inner), vis())]
-pub struct Specifiers {
-    /// The collection of one or more [`Specifier`]s which makes up the
-    /// [`Specifiers`] collection.
-    pub specifiers: Vec<Specifier>,
-}
+pub struct Specifiers(pub(crate) HashSet<Specifier>);
 
 impl Specifiers {
     /// Constructs a new [`Specifiers`] instance given any value which can be
@@ -46,27 +43,33 @@ impl Specifiers {
     /// - Min 1 Specifier (Non-Zero Length/Non-Empty)
     pub fn new<S>(specifiers: S) -> Result<Self, Error>
     where
-        S: Into<Vec<Specifier>>,
+        S: IntoIterator<Item = Specifier>,
     {
-        Self::new_unvalidated(specifiers.into()).validate()
+        Self::new_unvalidated(specifiers.into_iter().collect()).validate()
     }
 
     #[doc(hidden)]
     #[must_use]
-    pub fn new_unvalidated(specifiers: Vec<Specifier>) -> Self {
+    pub fn new_unvalidated(specifiers: HashSet<Specifier>) -> Self {
         Self::new_inner(specifiers)
     }
 }
 
-impl From<&Specifiers> for Vec<SpecifierHash> {
+impl<S> From<&Specifiers> for HashSet<SpecifierHash, S>
+where
+    S: BuildHasher + Default,
+{
     fn from(specifiers: &Specifiers) -> Self {
-        specifiers.as_ref().iter().map(Into::into).collect()
+        specifiers.0.iter().map(Into::into).collect()
     }
 }
 
-impl<'a> From<&'a Specifiers> for Vec<SpecifierHashRef<'a>> {
+impl<'a, S> From<&'a Specifiers> for HashSet<SpecifierHashRef<'a>, S>
+where
+    S: BuildHasher + Default,
+{
     fn from(specifiers: &'a Specifiers) -> Self {
-        specifiers.as_ref().iter().map(Into::into).collect()
+        specifiers.0.iter().map(Into::into).collect()
     }
 }
 
@@ -74,7 +77,7 @@ impl Validate for Specifiers {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.specifiers, "specifiers", &[&vec::IsEmpty])?;
+        validate(&self.0, "specifiers", &[&hashset::IsEmpty])?;
 
         Ok(self)
     }
@@ -86,6 +89,8 @@ impl Validate for Specifiers {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use eventric_core::validation::Validate;
 
     use crate::{
@@ -108,7 +113,7 @@ mod tests {
 
         assert!(result.is_ok());
         let specifiers = result.unwrap();
-        assert_eq!(1, specifiers.specifiers.len());
+        assert_eq!(1, specifiers.0.len());
     }
 
     #[test]
@@ -125,7 +130,7 @@ mod tests {
 
         assert!(result.is_ok());
         let specifiers = result.unwrap();
-        assert_eq!(3, specifiers.specifiers.len());
+        assert_eq!(3, specifiers.0.len());
     }
 
     #[test]
@@ -139,10 +144,10 @@ mod tests {
     // Specifiers::new_unvalidated
 
     #[test]
-    fn new_unvalidated_allows_empty_vec() {
-        let specifiers = Specifiers::new_unvalidated(vec![]);
+    fn new_unvalidated_allows_empty_set() {
+        let specifiers = Specifiers::new_unvalidated(HashSet::new());
 
-        assert_eq!(0, specifiers.specifiers.len());
+        assert_eq!(0, specifiers.0.len());
     }
 
     #[test]
@@ -150,22 +155,9 @@ mod tests {
         let identifier = Identifier::new("TestEvent").unwrap();
         let specifier = Specifier::new(identifier);
 
-        let specifiers = Specifiers::new_unvalidated(vec![specifier]);
+        let specifiers = Specifiers::new_unvalidated(HashSet::from_iter([specifier]));
 
-        assert_eq!(1, specifiers.specifiers.len());
-    }
-
-    // AsRef<[Specifier]>
-
-    #[test]
-    fn as_ref_returns_slice() {
-        let id = Identifier::new("TestEvent").unwrap();
-        let spec = Specifier::new(id);
-        let specifiers = Specifiers::new(vec![spec]).unwrap();
-
-        let slice: &[Specifier] = specifiers.as_ref();
-
-        assert_eq!(1, slice.len());
+        assert_eq!(1, specifiers.0.len());
     }
 
     // Clone
@@ -178,7 +170,7 @@ mod tests {
 
         let cloned = specifiers.clone();
 
-        assert_eq!(specifiers.specifiers.len(), cloned.specifiers.len());
+        assert_eq!(specifiers.0.len(), cloned.0.len());
     }
 
     // From<&Specifiers> for Vec<SpecifierHash>
@@ -195,7 +187,7 @@ mod tests {
 
         let specifiers = Specifiers::new(vec![spec1, spec2]).unwrap();
 
-        let hashes: Vec<SpecifierHash> = (&specifiers).into();
+        let hashes: HashSet<SpecifierHash> = (&specifiers).into();
 
         assert_eq!(2, hashes.len());
     }
@@ -214,7 +206,7 @@ mod tests {
 
         let specifiers = Specifiers::new(vec![spec1, spec2]).unwrap();
 
-        let hash_refs: Vec<SpecifierHashRef<'_>> = (&specifiers).into();
+        let hash_refs: HashSet<SpecifierHashRef<'_>> = (&specifiers).into();
 
         assert_eq!(2, hash_refs.len());
     }
@@ -225,7 +217,7 @@ mod tests {
     fn validate_succeeds_for_non_empty() {
         let id = Identifier::new("TestEvent").unwrap();
         let spec = Specifier::new(id);
-        let specifiers = Specifiers::new_unvalidated(vec![spec]);
+        let specifiers = Specifiers::new_unvalidated(HashSet::from_iter([spec]));
 
         let result = specifiers.validate();
 
@@ -234,7 +226,7 @@ mod tests {
 
     #[test]
     fn validate_fails_for_empty() {
-        let specifiers = Specifiers::new_unvalidated(vec![]);
+        let specifiers = Specifiers::new_unvalidated(HashSet::new());
 
         let result = specifiers.validate();
 

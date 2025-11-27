@@ -166,7 +166,7 @@ fn iterate_preserves_event_data() -> Result<(), Error> {
     let original_event = create_event("test data", "TestEvent", &["tag:a", "tag:b"], 3)?;
     let expected_data = original_event.data().clone();
     let expected_identifier = original_event.identifier().clone();
-    let expected_tags = original_event.tags().to_vec();
+    let expected_tags = original_event.tags().clone();
     let expected_version = *original_event.version();
 
     stream.append([original_event], None)?;
@@ -176,7 +176,7 @@ fn iterate_preserves_event_data() -> Result<(), Error> {
     assert_eq!(events.len(), 1);
     assert_eq!(events[0].data(), &expected_data);
     assert_eq!(events[0].identifier(), &expected_identifier);
-    assert_eq!(events[0].tags(), expected_tags.as_slice());
+    assert_eq!(events[0].tags(), &expected_tags);
     assert_eq!(events[0].version(), &expected_version);
 
     Ok(())

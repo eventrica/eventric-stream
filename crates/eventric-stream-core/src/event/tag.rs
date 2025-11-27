@@ -1,3 +1,8 @@
+use std::hash::{
+    Hash,
+    Hasher,
+};
+
 use derive_more::{
     AsRef,
     Deref,
@@ -58,8 +63,14 @@ impl Tag {
 
 impl Tag {
     #[must_use]
-    pub(crate) fn hash(&self) -> u64 {
+    pub(crate) fn hash_val(&self) -> u64 {
         hash(self)
+    }
+}
+
+impl Hash for Tag {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.hash_val().hash(state);
     }
 }
 
@@ -80,20 +91,20 @@ impl Validate for Tag {
 
 // Hash
 
-#[derive(new, Clone, Copy, Debug)]
+#[derive(new, Clone, Copy, Debug, Eq, PartialEq)]
 #[new(const_fn)]
 pub(crate) struct TagHash(u64);
 
 impl TagHash {
     #[must_use]
-    pub fn hash(self) -> u64 {
+    pub fn hash_val(self) -> u64 {
         self.0
     }
 }
 
 impl From<&Tag> for TagHash {
     fn from(tag: &Tag) -> Self {
-        let hash = tag.hash();
+        let hash = tag.hash_val();
 
         Self::new(hash)
     }
@@ -101,30 +112,48 @@ impl From<&Tag> for TagHash {
 
 impl From<&TagHashRef<'_>> for TagHash {
     fn from(tag: &TagHashRef<'_>) -> Self {
-        let hash = tag.hash();
+        let hash = tag.hash_val();
 
         Self::new(hash)
     }
 }
 
+impl Hash for TagHash {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}
+
 // Hash Ref
 
-#[derive(new, Debug, Deref)]
+#[derive(new, Debug, Deref, Eq)]
 #[new(const_fn)]
 pub(crate) struct TagHashRef<'a>(u64, #[deref] &'a Tag);
 
 impl TagHashRef<'_> {
     #[must_use]
-    pub fn hash(&self) -> u64 {
+    pub fn hash_val(&self) -> u64 {
         self.0
     }
 }
 
 impl<'a> From<&'a Tag> for TagHashRef<'a> {
     fn from(tag: &'a Tag) -> Self {
-        let hash = tag.hash();
+        let hash = tag.hash_val();
 
         Self::new(hash, tag)
+    }
+}
+
+impl Hash for TagHashRef<'_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}
+
+impl PartialEq for TagHashRef<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
     }
 }
 
@@ -195,7 +224,7 @@ mod tests {
         let tag_0 = Tag::new("student:123")?;
         let tag_1 = Tag::new("student:123")?;
 
-        assert_eq!(tag_0.hash(), tag_1.hash());
+        assert_eq!(tag_0.hash_val(), tag_1.hash_val());
 
         Ok(())
     }
@@ -205,7 +234,7 @@ mod tests {
         let tag_0 = Tag::new("student:123")?;
         let tag_1 = Tag::new("student:456")?;
 
-        assert_ne!(tag_0.hash(), tag_1.hash());
+        assert_ne!(tag_0.hash_val(), tag_1.hash_val());
 
         Ok(())
     }

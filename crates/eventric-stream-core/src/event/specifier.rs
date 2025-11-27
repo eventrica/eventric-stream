@@ -1,4 +1,10 @@
-use std::ops::Range;
+use std::{
+    hash::{
+        Hash,
+        Hasher,
+    },
+    ops::Range,
+};
 
 use fancy_constructor::new;
 
@@ -27,11 +33,10 @@ use crate::event::{
 /// given type, rather than **NO** versions.
 #[derive(new, Clone, Debug, Eq, PartialEq)]
 #[new(name(new_inner), vis())]
-pub struct Specifier {
-    identifier: Identifier,
-    #[new(val(Version::MIN..Version::MAX))]
-    range: Range<Version>,
-}
+pub struct Specifier(
+    pub(crate) Identifier,
+    #[new(val(Version::MIN..Version::MAX))] pub(crate) Range<Version>,
+);
 
 impl Specifier {
     /// Constructs a new [`Specifier`] instance given an [`Identifier`].
@@ -48,24 +53,29 @@ impl Specifier {
     where
         R: Into<range::Range>,
     {
-        self.range = range.into().into();
+        self.1 = range.into().into();
         self
+    }
+}
+
+impl Hash for Specifier {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+        self.1.start.hash(state);
+        self.1.end.hash(state);
     }
 }
 
 // Hash
 
-#[derive(new, Clone, Debug)]
+#[derive(new, Clone, Debug, Eq, PartialEq)]
 #[new(const_fn)]
-pub(crate) struct SpecifierHash {
-    pub identifier: IdentifierHash,
-    pub range: Range<Version>,
-}
+pub(crate) struct SpecifierHash(pub IdentifierHash, pub Range<Version>);
 
 impl From<&Specifier> for SpecifierHash {
     fn from(specifier: &Specifier) -> Self {
-        let identifier = (&specifier.identifier).into();
-        let range = specifier.range.clone();
+        let identifier = (&specifier.0).into();
+        let range = specifier.1.clone();
 
         Self::new(identifier, range)
     }
@@ -73,27 +83,40 @@ impl From<&Specifier> for SpecifierHash {
 
 impl From<&SpecifierHashRef<'_>> for SpecifierHash {
     fn from(specifier: &SpecifierHashRef<'_>) -> Self {
-        let identifier = (&specifier.identifier).into();
-        let range = specifier.range.clone();
+        let identifier = (&specifier.0).into();
+        let range = specifier.1.clone();
 
         Self::new(identifier, range)
     }
 }
 
+impl Hash for SpecifierHash {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+        self.1.start.hash(state);
+        self.1.end.hash(state);
+    }
+}
+
 // Hash Ref
 
-#[derive(new, Debug)]
+#[derive(new, Debug, Eq, PartialEq)]
 #[new(const_fn)]
-pub(crate) struct SpecifierHashRef<'a> {
-    pub identifier: IdentifierHashRef<'a>,
-    pub range: Range<Version>,
-}
+pub(crate) struct SpecifierHashRef<'a>(pub IdentifierHashRef<'a>, pub Range<Version>);
 
 impl<'a> From<&'a Specifier> for SpecifierHashRef<'a> {
     fn from(specifier: &'a Specifier) -> Self {
-        let identifier = (&specifier.identifier).into();
-        let range = specifier.range.clone();
+        let identifier = (&specifier.0).into();
+        let range = specifier.1.clone();
 
         Self::new(identifier, range)
+    }
+}
+
+impl Hash for SpecifierHashRef<'_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+        self.1.start.hash(state);
+        self.1.end.hash(state);
     }
 }

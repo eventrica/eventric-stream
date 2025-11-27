@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use bytes::{
     Buf as _,
     BufMut as _,
@@ -59,7 +61,7 @@ impl Tags {
         T: Iterator<Item = &'a TagHash>,
     {
         SequentialAndIterator::combine(tags.map(|tag| {
-            let hash = tag.hash();
+            let hash = tag.hash_val();
 
             let iter = if let Some(from) = from {
                 self.keyspace.range(
@@ -79,9 +81,9 @@ impl Tags {
 // Put
 
 impl Tags {
-    pub fn put(&self, batch: &mut WriteBatch, at: Position, tags: &[TagHashRef<'_>]) {
+    pub fn put(&self, batch: &mut WriteBatch, at: Position, tags: &HashSet<TagHashRef<'_>>) {
         for tag in tags {
-            let key: [u8; KEY_LEN] = IntoKeyBytes(at, tag.hash()).into();
+            let key: [u8; KEY_LEN] = IntoKeyBytes(at, tag.hash_val()).into();
             let value = [];
 
             batch.insert(&self.keyspace, key, value);

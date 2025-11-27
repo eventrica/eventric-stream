@@ -9,6 +9,8 @@ pub(crate) mod tag;
 pub(crate) mod timestamp;
 pub(crate) mod version;
 
+use std::collections::HashSet;
+
 use fancy_constructor::new;
 
 use crate::event::{
@@ -39,7 +41,7 @@ use crate::event::{
 pub struct EphemeralEvent {
     data: Data,
     identifier: Identifier,
-    tags: Vec<Tag>,
+    tags: HashSet<Tag>,
     version: Version,
 }
 
@@ -77,7 +79,7 @@ impl EphemeralEvent {
     /// Returns a reference to the collection of [`Tag`] values of the event
     /// (which may be empty).
     #[must_use]
-    pub fn tags(&self) -> &[Tag] {
+    pub fn tags(&self) -> &HashSet<Tag> {
         &self.tags
     }
 
@@ -95,7 +97,7 @@ impl EphemeralEvent {
 pub(crate) struct EphemeralEventHashRef<'a> {
     pub data: &'a Data,
     pub identifier: IdentifierHashRef<'a>,
-    pub tags: Vec<TagHashRef<'a>>,
+    pub tags: HashSet<TagHashRef<'a>>,
     pub version: Version,
 }
 
@@ -132,7 +134,7 @@ pub struct PersistentEvent {
     data: Data,
     identifier: Identifier,
     position: Position,
-    tags: Vec<Tag>,
+    tags: HashSet<Tag>,
     timestamp: Timestamp,
     version: Version,
 }
@@ -175,7 +177,7 @@ impl PersistentEvent {
     /// [query]: crate::stream::Stream::query
     /// [options]: crate::stream::query::Options
     #[must_use]
-    pub fn tags(&self) -> &[Tag] {
+    pub fn tags(&self) -> &HashSet<Tag> {
         &self.tags
     }
 
@@ -201,7 +203,7 @@ pub(crate) struct PersistentEventHash {
     pub data: Data,
     pub identifier: IdentifierHash,
     pub position: Position,
-    pub tags: Vec<TagHash>,
+    pub tags: HashSet<TagHash>,
     pub timestamp: Timestamp,
     pub version: Version,
 }
@@ -209,7 +211,7 @@ pub(crate) struct PersistentEventHash {
 impl PersistentEventHash {
     #[must_use]
     #[rustfmt::skip]
-    pub fn take(self) -> (Data, IdentifierHash, Position, Vec<TagHash>, Timestamp, Version) {
+    pub fn take(self) -> (Data, IdentifierHash, Position, HashSet<TagHash>, Timestamp, Version) {
         (
             self.data,
             self.identifier,

@@ -332,7 +332,7 @@ dependencies = [
 [[package]]
 name = "eventric-core"
 version = "0.1.0"
-source = "git+https://github.com/eventrica/eventric-core.git#735125023193228540ff430e9ae904b302e19e37"
+source = "git+https://github.com/eventrica/eventric-core.git#20426d08b7f171e6141fae3fa73c4066da0ff7f8"
 dependencies = [
  "thiserror",
 ]
@@ -417,9 +417,9 @@ checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
 name = "fjall"
-version = "3.0.0-rc.1"
+version = "3.0.0-rc.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f178081b9d22e6c51b51926a5d77d09843397ea8fea7578d6e061f031f9655c6"
+checksum = "01bb8eb92dbc28a7d88067f8cea62efb55077c71fcc49768f89e71932872de0d"
 dependencies = [
  "byteorder-lite",
  "byteview",
@@ -573,9 +573,9 @@ checksum = "34080505efa8e45a4b816c349525ebe327ceaa8559756f0356cba97ef3bf7432"
 
 [[package]]
 name = "lsm-tree"
-version = "3.0.0-rc.1"
+version = "3.0.0-rc.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4db8671a570defc37d381c90b3c5adc6e757a0c2595c7335ed4689189d2c954"
+checksum = "a30a998e3e8165bcc466e6c13a1e7de6c8431dd41a78a60f5cf426720241aef8"
 dependencies = [
  "byteorder-lite",
  "byteview",
@@ -584,6 +584,7 @@ dependencies = [
  "interval-heap",
  "log",
  "lz4_flex",
+ "mutants",
  "quick_cache",
  "rustc-hash",
  "self_cell",
@@ -678,6 +679,12 @@ name = "memchr"
 version = "2.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
+
+[[package]]
+name = "mutants"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc0287524726960e07b119cebd01678f852f147742ae0d925e6a520dca956126"
 
 [[package]]
 name = "num-traits"
@@ -1225,18 +1232,18 @@ checksum = "fdd20c5420375476fbd4394763288da7eb0cc0b8c11deed431a91562af7335d3"
 
 [[package]]
 name = "zerocopy"
-version = "0.8.28"
+version = "0.8.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43fa6694ed34d6e57407afbccdeecfa268c470a7d2a5b0cf49ce9fcc345afb90"
+checksum = "4ea879c944afe8a2b25fef16bb4ba234f47c694565e97383b36f3a878219065c"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.28"
+version = "0.8.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c640b22cd9817fae95be82f0d2f90b11f7605f6c319d16705c459b27ac2cbc26"
+checksum = "cf955aa904d6040f70dc8e9384444cb1030aed272ba3cb09bbc4ab9e7c1f34f5"
 dependencies = [
  "proc-macro2",
  "quote",

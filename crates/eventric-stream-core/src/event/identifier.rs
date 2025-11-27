@@ -1,3 +1,8 @@
+use std::hash::{
+    Hash,
+    Hasher,
+};
+
 use derive_more::{
     AsRef,
     Deref,
@@ -60,8 +65,14 @@ impl Identifier {
 
 impl Identifier {
     #[must_use]
-    pub(crate) fn hash(&self) -> u64 {
+    pub(crate) fn hash_val(&self) -> u64 {
         hash(self)
+    }
+}
+
+impl Hash for Identifier {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.hash_val().hash(state);
     }
 }
 
@@ -82,20 +93,20 @@ impl Validate for Identifier {
 
 // Hash
 
-#[derive(new, Clone, Copy, Debug)]
+#[derive(new, Clone, Copy, Debug, Eq, PartialEq)]
 #[new(const_fn)]
 pub(crate) struct IdentifierHash(u64);
 
 impl IdentifierHash {
     #[must_use]
-    pub fn hash(self) -> u64 {
+    pub fn hash_val(self) -> u64 {
         self.0
     }
 }
 
 impl From<&Identifier> for IdentifierHash {
     fn from(identifier: &Identifier) -> Self {
-        let hash = identifier.hash();
+        let hash = identifier.hash_val();
 
         Self::new(hash)
     }
@@ -103,30 +114,48 @@ impl From<&Identifier> for IdentifierHash {
 
 impl From<&IdentifierHashRef<'_>> for IdentifierHash {
     fn from(identifier: &IdentifierHashRef<'_>) -> Self {
-        let hash = identifier.hash();
+        let hash = identifier.hash_val();
 
         Self::new(hash)
     }
 }
 
+impl Hash for IdentifierHash {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}
+
 // Hash Ref
 
-#[derive(new, Debug, Deref)]
+#[derive(new, Debug, Deref, Eq)]
 #[new(const_fn)]
 pub(crate) struct IdentifierHashRef<'a>(u64, #[deref] &'a Identifier);
 
 impl IdentifierHashRef<'_> {
     #[must_use]
-    pub fn hash(&self) -> u64 {
+    pub fn hash_val(&self) -> u64 {
         self.0
     }
 }
 
 impl<'a> From<&'a Identifier> for IdentifierHashRef<'a> {
     fn from(identifier: &'a Identifier) -> Self {
-        let hash = identifier.hash();
+        let hash = identifier.hash_val();
 
         Self::new(hash, identifier)
+    }
+}
+
+impl Hash for IdentifierHashRef<'_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}
+
+impl PartialEq for IdentifierHashRef<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
     }
 }
 
@@ -197,7 +226,7 @@ mod tests {
         let id_0 = Identifier::new("id")?;
         let id_1 = Identifier::new("id")?;
 
-        assert_eq!(id_0.hash(), id_1.hash());
+        assert_eq!(id_0.hash_val(), id_1.hash_val());
 
         Ok(())
     }
@@ -207,7 +236,7 @@ mod tests {
         let id_0 = Identifier::new("id_0")?;
         let id_1 = Identifier::new("id_1")?;
 
-        assert_ne!(id_0.hash(), id_1.hash());
+        assert_ne!(id_0.hash_val(), id_1.hash_val());
 
         Ok(())
     }

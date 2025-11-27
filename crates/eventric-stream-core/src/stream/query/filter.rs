@@ -2,6 +2,7 @@ mod algorithm;
 mod point;
 
 use std::{
+    cmp::Ordering,
     collections::HashMap,
     ops::Range,
 };
@@ -47,22 +48,41 @@ impl Filter {
 
         for selector in &query.0 {
             match selector {
+                // Add a plain version range to the first vector, containing ranges with no tag
+                // specifier
                 SelectorHash::Specifiers(specifiers) => {
                     for specifier in specifiers {
-                        let filter = filters
-                            .entry(specifier.identifier.hash())
-                            .or_insert_with(IdentifierLevelFilter::new);
+                        let (untagged, _) = filters
+                            .entry(specifier.0.hash_val())
+                            .or_insert_with(|| (Vec::new(), Vec::new()));
 
-                        filter.ranges.push(specifier.range.clone());
+                        untagged.push(specifier.1.clone());
                     }
                 }
-                SelectorHash::SpecifiersAndTags(_specifiers, _tags) => {}
+
+                // Add a version range to the second vector, containing version ranges paired with a
+                // set of Tag hashes.
+                SelectorHash::SpecifiersAndTags(specifiers, tags) => {
+                    for specifier in specifiers {
+                        let (_, tagged) = filters
+                            .entry(specifier.0.hash_val())
+                            .or_insert_with(|| (Vec::new(), Vec::new()));
+
+                        tagged.push((specifier.1.clone(), tags.clone()));
+                    }
+                }
             }
         }
 
-        for filter in filters.values_mut() {
-            filter.ranges = algorithm::normalize_version_ranges(&filter.ranges);
-        }
+        let filters = filters
+            .into_iter()
+            .map(|(key, (untagged, _))| {
+                let untagged = algorithm::normalize_version_ranges(&untagged);
+                let filter = IdentifierLevelFilter::new(untagged);
+
+                (key, filter)
+            })
+            .collect();
 
         Self { filters }
     }
@@ -70,7 +90,7 @@ impl Filter {
 
 impl Matches for Filter {
     fn matches(&self, event: &PersistentEventHash) -> bool {
-        match self.filters.get(&event.identifier.hash()) {
+        match self.filters.get(&event.identifier.hash_val()) {
             Some(filter) => filter.matches(event),
             None => false,
         }
@@ -83,8 +103,8 @@ impl Matches for Filter {
 
 #[allow(dead_code)]
 #[derive(new, Debug)]
+#[new(const_fn, vis())]
 struct IdentifierLevelFilter {
-    #[new(default)]
     ranges: Vec<Range<Version>>,
 }
 
@@ -96,45 +116,13 @@ impl Matches for IdentifierLevelFilter {
         }
 
         for range in &self.ranges {
-            match event.version.relative(range) {
-                Relative::Equal => return true,
-                Relative::GreaterThan => break,
-                Relative::LessThan => {}
+            match event.version.partial_cmp(range).unwrap() {
+                Ordering::Equal => return true,
+                Ordering::Greater => break,
+                Ordering::Less => {}
             }
         }
 
         false
     }
-}
-
-trait RangeRelative {
-    fn relative(&self, range: &Range<Self>) -> Relative
-    where
-        Self: Sized;
-}
-
-impl<T> RangeRelative for T
-where
-    T: PartialOrd,
-{
-    fn relative(&self, range: &Range<Self>) -> Relative
-    where
-        Self: Sized,
-    {
-        if &range.start > self {
-            return Relative::LessThan;
-        }
-
-        if &range.end <= self {
-            return Relative::GreaterThan;
-        }
-
-        Relative::Equal
-    }
-}
-
-pub enum Relative {
-    LessThan,
-    Equal,
-    GreaterThan,
 }

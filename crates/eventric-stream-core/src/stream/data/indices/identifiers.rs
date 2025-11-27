@@ -64,8 +64,8 @@ impl Identifiers {
         S: Iterator<Item = &'a SpecifierHash>,
     {
         SequentialOrIterator::combine(specifiers.map(|specifier| {
-            let hash = specifier.identifier.hash();
-            let range = specifier.range.clone();
+            let hash = specifier.0.hash_val();
+            let range = specifier.1.clone();
 
             let iter = if let Some(from) = from {
                 self.keyspace
@@ -92,7 +92,7 @@ impl Identifiers {
         identifier: &IdentifierHashRef<'_>,
         version: Version,
     ) {
-        let key: [u8; KEY_LEN] = IntoKeyBytes(at, identifier.hash()).into();
+        let key: [u8; KEY_LEN] = IntoKeyBytes(at, identifier.hash_val()).into();
         let value = version.to_be_bytes();
 
         batch.insert(&self.keyspace, key, value);

@@ -1,6 +1,9 @@
-use std::sync::{
-    Arc,
-    Exclusive,
+use std::{
+    collections::HashSet,
+    sync::{
+        Arc,
+        Exclusive,
+    },
 };
 
 use derive_more::Debug;
@@ -212,8 +215,8 @@ impl Retrieve {
         let identifiers = &self.cache.identifiers;
 
         identifiers
-            .entry(identifier.hash())
-            .or_try_insert_with(|| self.fetch_identifier(identifier.hash()))
+            .entry(identifier.hash_val())
+            .or_try_insert_with(|| self.fetch_identifier(identifier.hash_val()))
             .map(|entry| entry.value().clone())
     }
 
@@ -226,7 +229,7 @@ impl Retrieve {
 }
 
 impl Retrieve {
-    fn get_tags(&self, tags: &[TagHash]) -> Result<Vec<Tag>, Error> {
+    fn get_tags(&self, tags: &HashSet<TagHash>) -> Result<HashSet<Tag>, Error> {
         tags.iter().filter_map(|tag| self.get_tag(*tag)).collect()
     }
 
@@ -237,11 +240,11 @@ impl Retrieve {
 
         fetch_tags
             .then(|| Some(
-                tags.entry(tag.hash())
-                    .or_try_insert_with(|| self.fetch_tag(tag.hash()))
+                tags.entry(tag.hash_val())
+                    .or_try_insert_with(|| self.fetch_tag(tag.hash_val()))
                     .map(|entry| entry.value().clone())))
             .unwrap_or_else(||
-                tags.get(&tag.hash())
+                tags.get(&tag.hash_val())
                     .map(|entry| Ok(entry.value().clone())))
     }
 

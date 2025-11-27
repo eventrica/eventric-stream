@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::{
     error::Error,
     event::{
@@ -53,7 +55,7 @@ impl Selector {
     /// on construction.
     pub fn specifiers<S>(specifiers: S) -> Result<Self, Error>
     where
-        S: Into<Vec<Specifier>>,
+        S: IntoIterator<Item = Specifier>,
     {
         Ok(Self::Specifiers(Specifiers::new(specifiers)?))
     }
@@ -68,8 +70,8 @@ impl Selector {
     /// return an error on construction.
     pub fn specifiers_and_tags<S, T>(specifiers: S, tags: T) -> Result<Self, Error>
     where
-        S: Into<Vec<Specifier>>,
-        T: Into<Vec<Tag>>,
+        S: IntoIterator<Item = Specifier>,
+        T: IntoIterator<Item = Tag>,
     {
         Ok(Self::SpecifiersAndTags(
             Specifiers::new(specifiers)?,
@@ -80,8 +82,8 @@ impl Selector {
 
 #[derive(Clone, Debug)]
 pub(crate) enum SelectorHash {
-    Specifiers(Vec<SpecifierHash>),
-    SpecifiersAndTags(Vec<SpecifierHash>, Vec<TagHash>),
+    Specifiers(HashSet<SpecifierHash>),
+    SpecifiersAndTags(HashSet<SpecifierHash>, HashSet<TagHash>),
 }
 
 impl From<&Selector> for SelectorHash {
@@ -110,8 +112,8 @@ impl From<&SelectorHashRef<'_>> for SelectorHash {
 
 #[derive(Debug)]
 pub(crate) enum SelectorHashRef<'a> {
-    Specifiers(Vec<SpecifierHashRef<'a>>),
-    SpecifiersAndTags(Vec<SpecifierHashRef<'a>>, Vec<TagHashRef<'a>>),
+    Specifiers(HashSet<SpecifierHashRef<'a>>),
+    SpecifiersAndTags(HashSet<SpecifierHashRef<'a>>, HashSet<TagHashRef<'a>>),
 }
 
 impl<'a> From<&'a Selector> for SelectorHashRef<'a> {
@@ -167,7 +169,7 @@ mod tests {
 
         match result.unwrap() {
             Selector::Specifiers(specifiers) => {
-                assert_eq!(2, specifiers.specifiers.len());
+                assert_eq!(2, specifiers.0.len());
             }
             Selector::SpecifiersAndTags(..) => panic!("Expected Specifiers variant"),
         }
@@ -211,8 +213,8 @@ mod tests {
         assert!(result.is_ok());
         match result.unwrap() {
             Selector::SpecifiersAndTags(specifiers, tags) => {
-                assert_eq!(2, specifiers.specifiers.len());
-                assert_eq!(2, tags.tags.len());
+                assert_eq!(2, specifiers.0.len());
+                assert_eq!(2, tags.0.len());
             }
             Selector::Specifiers(_) => panic!("Expected SpecifiersAndTags variant"),
         }

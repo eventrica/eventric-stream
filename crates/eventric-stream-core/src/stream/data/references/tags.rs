@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use bytes::BufMut as _;
 use derive_more::Debug;
 use fancy_constructor::new;
@@ -54,9 +56,9 @@ impl Tags {
         }
     }
 
-    pub fn put(&self, batch: &mut WriteBatch, tags: &[TagHashRef<'_>]) {
+    pub fn put(&self, batch: &mut WriteBatch, tags: &HashSet<TagHashRef<'_>>) {
         for tag in tags {
-            let key: [u8; KEY_LEN] = Hash(tag.hash()).into();
+            let key: [u8; KEY_LEN] = Hash(tag.hash_val()).into();
             let value: &[u8] = tag.as_ref();
 
             batch.insert(&self.keyspace, key, value);

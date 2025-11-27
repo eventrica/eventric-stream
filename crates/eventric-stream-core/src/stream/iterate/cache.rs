@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use dashmap::DashMap;
 use derive_more::Debug;
 
@@ -52,18 +54,18 @@ impl Cache {
         }
     }
 
-    fn populate_identifiers(&self, specifiers: &[SpecifierHashRef<'_>]) {
+    fn populate_identifiers(&self, specifiers: &HashSet<SpecifierHashRef<'_>>) {
         for specifier in specifiers {
             self.identifiers
-                .entry(specifier.identifier.hash())
-                .or_insert_with(|| specifier.identifier.clone());
+                .entry(specifier.0.hash_val())
+                .or_insert_with(|| specifier.0.clone());
         }
     }
 
-    fn populate_tags(&self, tags: &[TagHashRef<'_>]) {
+    fn populate_tags(&self, tags: &HashSet<TagHashRef<'_>>) {
         for tag in tags {
             self.tags
-                .entry(tag.hash())
+                .entry(tag.hash_val())
                 .or_insert_with(|| (*tag).clone());
         }
     }
