@@ -1,8 +1,6 @@
 //! See the `eventric-stream` crate for full documentation, including
 //! module-level documentation.
 
-use std::borrow::Cow;
-
 use crate::{
     error::Error,
     event::{
@@ -12,7 +10,10 @@ use crate::{
     },
     stream::{
         Stream,
-        query::QueryHash,
+        query::{
+            QueryHash,
+            source::Source,
+        },
     },
 };
 
@@ -69,37 +70,32 @@ pub trait AppendQuery {
     /// # Errors
     ///
     /// This function will return an error if .
-    fn append_query<'a, E, T, Q>(
+    fn append_query<E, Q>(
         &mut self,
         events: E,
-        fail_if_matches: T,
+        fail_if_matches: Q,
         after: Option<Position>,
-    ) -> Result<Position, Error>
+    ) -> Result<(Position, Q::Optimized), Error>
     where
         E: IntoIterator<Item = EphemeralEvent>,
-        T: Into<Cow<'a, Q>>,
-        Q: Clone + 'a,
-        Cow<'a, Q>: Into<QueryHash>;
+        Q: Source;
 }
 
 impl AppendQuery for Stream {
-    fn append_query<'a, E, T, Q>(
+    fn append_query<E, Q>(
         &mut self,
         events: E,
-        fail_if_matches: T,
+        fail_if_matches: Q,
         after: Option<Position>,
-    ) -> Result<Position, Error>
+    ) -> Result<(Position, Q::Optimized), Error>
     where
         E: IntoIterator<Item = EphemeralEvent>,
-        T: Into<Cow<'a, Q>>,
-        Q: Clone + 'a,
-        Cow<'a, Q>: Into<QueryHash>,
+        Q: Source,
     {
-        let query = fail_if_matches.into();
-        let query = query.into();
+        let optimized = fail_if_matches.optimize();
 
-        self.check(Some(query), after)?;
-        self.put(events)
+        self.check(Some(optimized.as_ref()), after)?;
+        self.put(events).map(|position| (position, optimized))
     }
 }
 
@@ -110,7 +106,7 @@ impl AppendQuery for Stream {
 impl Stream {
     fn check(
         &self,
-        fail_if_matches: Option<QueryHash>,
+        fail_if_matches: Option<&QueryHash>,
         after: Option<Position>,
     ) -> Result<(), Error> {
         // Shortcut the append concurrency check if the "after" position is at least the
@@ -134,7 +130,7 @@ impl Stream {
             // implementation only needs to check if there is any matching event in the
             // resultant query stream - contains avoids mapping positions to events, etc.
 
-            if self.data.indices.contains(&query, from) {
+            if self.data.indices.contains(query, from) {
                 return Err(Error::Concurrency);
             }
         } else if let Some(from) = from

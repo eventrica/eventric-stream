@@ -1,4 +1,7 @@
-use std::sync::Exclusive;
+use std::sync::{
+    Arc,
+    Exclusive,
+};
 
 use derive_more::Debug;
 use fancy_constructor::new;
@@ -22,10 +25,17 @@ use crate::{
             events::PersistentEventHashIterator,
             references::References,
         },
-        iterate::options::Options,
-        query::filter::{
-            Filter,
-            Matches as _,
+        iterate::{
+            Build,
+            cache::Cache,
+        },
+        query::{
+            QueryMultiOptimized,
+            QueryOptimized,
+            filter::{
+                Filter,
+                Matches as _,
+            },
         },
     },
 };
@@ -41,17 +51,31 @@ use crate::{
 ///
 /// [stream]: crate::stream::Stream
 #[derive(new, Debug)]
-#[new(args(options: Options, references: References), const_fn, vis(pub(crate)))]
+#[new(args(cache: Arc<Cache>, fetch_tags: bool, references: References), const_fn, vis(pub(crate)))]
 pub struct Iter {
     #[allow(clippy::struct_field_names)]
     iter: Exclusive<PersistentEventHashIterator>,
-    #[new(val(Retrieve::new(options, references)))]
+    #[new(val(Retrieve::new(cache, fetch_tags, references)))]
     retrieve: Retrieve,
 }
 
 impl Iter {
     fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| self.retrieve.get(event))
+    }
+}
+
+impl Build<QueryOptimized> for Iter {
+    #[allow(private_interfaces)]
+    fn build(
+        optimization: &QueryOptimized,
+        iter: PersistentEventHashIterator,
+        references: References,
+    ) -> Self {
+        let cache = optimization.cache.clone();
+        let iter = Exclusive::new(iter);
+
+        Self::new(cache, false, references, iter)
     }
 }
 
@@ -80,12 +104,12 @@ impl Iterator for Iter {
 ///
 /// [stream]: crate::stream::Stream
 #[derive(new, Debug)]
-#[new(args(options: Options, references: References), const_fn, vis(pub(crate)))]
+#[new(args(cache: Arc<Cache>, fetch_tags: bool, references: References), const_fn, vis(pub(crate)))]
 pub struct IterMulti {
-    filters: Vec<Filter>,
+    filters: Arc<Vec<Filter>>,
     #[allow(clippy::struct_field_names)]
     iter: Exclusive<PersistentEventHashIterator>,
-    #[new(val(Retrieve::new(options, references)))]
+    #[new(val(Retrieve::new(cache, fetch_tags, references)))]
     retrieve: Retrieve,
 }
 
@@ -100,6 +124,21 @@ impl IterMulti {
 
             self.retrieve.get(event).map(|event| (event, mask))
         })
+    }
+}
+
+impl Build<QueryMultiOptimized> for IterMulti {
+    #[allow(private_interfaces)]
+    fn build(
+        optimization: &QueryMultiOptimized,
+        iter: PersistentEventHashIterator,
+        references: References,
+    ) -> Self {
+        let cache = optimization.cache.clone();
+        let filters = optimization.filters.clone();
+        let iter = Exclusive::new(iter);
+
+        Self::new(cache, false, references, filters, iter)
     }
 }
 
@@ -124,7 +163,8 @@ impl Iterator for IterMulti {
 #[derive(new, Debug)]
 #[new(const_fn)]
 struct Retrieve {
-    options: Options,
+    cache: Arc<Cache>,
+    fetch_tags: bool,
     references: References,
 }
 
@@ -141,7 +181,7 @@ impl Retrieve {
 
 impl Retrieve {
     fn get_identifier(&self, identifier: IdentifierHash) -> Result<Identifier, Error> {
-        let identifiers = &self.options.cache.identifiers;
+        let identifiers = &self.cache.identifiers;
 
         identifiers
             .entry(identifier.hash())
@@ -163,12 +203,11 @@ impl Retrieve {
     }
 
     #[rustfmt::skip]
-    #[allow(clippy::obfuscated_if_else)]
     fn get_tag(&self, tag: TagHash) -> Option<Result<Tag, Error>> {
-        let retrieve_tags = &self.options.retrieve_tags;
-        let tags = &self.options.cache.tags;
+        let fetch_tags = &self.fetch_tags;
+        let tags = &self.cache.tags;
 
-        retrieve_tags
+        fetch_tags
             .then(|| Some(
                 tags.entry(tag.hash())
                     .or_try_insert_with(|| self.fetch_tag(tag.hash()))

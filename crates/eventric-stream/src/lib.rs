@@ -67,13 +67,10 @@ pub mod stream {
         //! of operation.
 
         pub use eventric_stream_core::stream::iterate::{
-            Cache,
             Iter,
             IterMulti,
             Iterate,
             IterateQuery,
-            IterateQueryMulti,
-            Options,
         };
     }
 
@@ -85,8 +82,10 @@ pub mod stream {
 
         pub use eventric_stream_core::stream::query::{
             Query,
-            QueryHash,
+            QueryMultiOptimized,
+            QueryOptimized,
             Selector,
+            Source,
             Specifiers,
             Tags,
         };

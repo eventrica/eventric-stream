@@ -2,9 +2,14 @@
 //! module-level documentation.
 
 pub(crate) mod filter;
+pub(crate) mod preparation;
 pub(crate) mod selector;
+pub(crate) mod source;
 
-use std::borrow::Cow;
+use std::{
+    borrow::Cow,
+    sync::Arc,
+};
 
 use derive_more::{
     AsRef,
@@ -19,9 +24,15 @@ use fancy_constructor::new;
 
 use crate::{
     error::Error,
-    stream::query::selector::{
-        SelectorHash,
-        SelectorHashRef,
+    stream::{
+        iterate::cache::Cache,
+        query::{
+            filter::Filter,
+            selector::{
+                SelectorHash,
+                SelectorHashRef,
+            },
+        },
     },
 };
 
@@ -111,7 +122,7 @@ impl Validate for Query {
 /// [iterate_multi]: crate::stream::iterate::IterateMulti
 #[derive(new, AsRef, Clone, Debug)]
 #[as_ref([SelectorHash])]
-pub struct QueryHash(pub(crate) Vec<SelectorHash>);
+pub(crate) struct QueryHash(pub(crate) Vec<SelectorHash>);
 
 impl From<Cow<'_, Query>> for QueryHash {
     fn from(query: Cow<'_, Query>) -> Self {
@@ -175,12 +186,48 @@ impl<'a> From<&'a Query> for QueryHashRef<'a> {
 
 // -------------------------------------------------------------------------------------------------
 
+// Query [Multi] Optimized
+
+/// .
+#[derive(new, Debug)]
+#[new(const_fn, vis(pub(crate)))]
+pub struct QueryOptimized {
+    pub(crate) cache: Arc<Cache>,
+    pub(crate) query_hash: QueryHash,
+}
+
+impl AsRef<QueryHash> for QueryOptimized {
+    fn as_ref(&self) -> &QueryHash {
+        &self.query_hash
+    }
+}
+
+/// .
+#[derive(new, Debug)]
+#[new(const_fn, vis(pub(crate)))]
+pub struct QueryMultiOptimized {
+    pub(crate) cache: Arc<Cache>,
+    pub(crate) filters: Arc<Vec<Filter>>,
+    pub(crate) query_hash: QueryHash,
+}
+
+impl AsRef<QueryHash> for QueryMultiOptimized {
+    fn as_ref(&self) -> &QueryHash {
+        &self.query_hash
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
 // Re-Exports
 
-pub use self::selector::{
-    Selector,
-    specifiers::Specifiers,
-    tags::Tags,
+pub use self::{
+    selector::{
+        Selector,
+        specifiers::Specifiers,
+        tags::Tags,
+    },
+    source::Source,
 };
 
 // -------------------------------------------------------------------------------------------------
