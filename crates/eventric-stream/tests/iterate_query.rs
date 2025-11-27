@@ -50,13 +50,33 @@ fn create_event(
 /// Creates a diverse set of events for query testing
 fn create_diverse_events() -> Result<Vec<EphemeralEvent>, Error> {
     Ok(vec![
-        create_event("event1", "StudentEnrolled", &["student:100", "course:200"], 0)?,
+        create_event(
+            "event1",
+            "StudentEnrolled",
+            &["student:100", "course:200"],
+            0,
+        )?,
         create_event("event2", "CourseCreated", &["course:200"], 0)?,
-        create_event("event3", "StudentEnrolled", &["student:101", "course:200"], 0)?,
+        create_event(
+            "event3",
+            "StudentEnrolled",
+            &["student:101", "course:200"],
+            0,
+        )?,
         create_event("event4", "CourseUpdated", &["course:200"], 0)?,
-        create_event("event5", "StudentEnrolled", &["student:102", "course:201"], 0)?,
+        create_event(
+            "event5",
+            "StudentEnrolled",
+            &["student:102", "course:201"],
+            0,
+        )?,
         create_event("event6", "CourseCreated", &["course:201"], 0)?,
-        create_event("event7", "StudentDropped", &["student:100", "course:200"], 0)?,
+        create_event(
+            "event7",
+            "StudentDropped",
+            &["student:100", "course:200"],
+            0,
+        )?,
     ])
 }
 
@@ -95,7 +115,11 @@ fn iterate_query_by_multiple_identifiers() -> Result<(), Error> {
     let (events, _query_opt) = stream.iterate_query(query, None);
     let events = events.collect::<Result<Vec<_>, _>>()?;
 
-    assert_eq!(events.len(), 3, "Should match CourseCreated and CourseUpdated events");
+    assert_eq!(
+        events.len(),
+        3,
+        "Should match CourseCreated and CourseUpdated events"
+    );
     assert_eq!(events[0].position(), &Position::new(1));
     assert_eq!(events[1].position(), &Position::new(3));
     assert_eq!(events[2].position(), &Position::new(5));

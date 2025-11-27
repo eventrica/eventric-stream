@@ -78,23 +78,11 @@ where
     retrieve: Retrieve,
 }
 
+// Single
+
 impl Iter<Single> {
     fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| self.retrieve.get(event))
-    }
-}
-
-impl Iter<Multiple> {
-    fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
-        event.and_then(|event| {
-            let mask = self
-                .data
-                .iter()
-                .map(|filter| filter.matches(&event))
-                .collect();
-
-            self.retrieve.get(event).map(|event| (event, mask))
-        })
     }
 }
 
@@ -109,6 +97,36 @@ impl Build<Prepared<Single>> for Iter<Single> {
         let iter = Exclusive::new(iter);
 
         Self::new(cache, false, references, (), iter)
+    }
+}
+
+impl DoubleEndedIterator for Iter<Single> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.get_mut().next_back().map(|event| self.map(event))
+    }
+}
+
+impl Iterator for Iter<Single> {
+    type Item = Result<PersistentEvent, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.get_mut().next().map(|event| self.map(event))
+    }
+}
+
+// Multiple
+
+impl Iter<Multiple> {
+    fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
+        event.and_then(|event| {
+            let mask = self
+                .data
+                .iter()
+                .map(|filter| filter.matches(&event))
+                .collect();
+
+            self.retrieve.get(event).map(|event| (event, mask))
+        })
     }
 }
 
@@ -127,23 +145,9 @@ impl Build<Prepared<Multiple>> for Iter<Multiple> {
     }
 }
 
-impl DoubleEndedIterator for Iter<Single> {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next_back().map(|event| self.map(event))
-    }
-}
-
 impl DoubleEndedIterator for Iter<Multiple> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next_back().map(|event| self.map(event))
-    }
-}
-
-impl Iterator for Iter<Single> {
-    type Item = Result<PersistentEvent, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next().map(|event| self.map(event))
     }
 }
 
