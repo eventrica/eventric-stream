@@ -332,7 +332,7 @@ dependencies = [
 [[package]]
 name = "eventric-core"
 version = "0.1.0"
-source = "git+https://github.com/eventrica/eventric-core.git#20426d08b7f171e6141fae3fa73c4066da0ff7f8"
+source = "git+https://github.com/eventrica/eventric-core.git#d5c619962ac715b1cce527d8e2c7199a5b51bb7d"
 dependencies = [
  "thiserror",
 ]

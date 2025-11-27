@@ -4,8 +4,8 @@ mod point;
 use std::{
     cmp::Ordering,
     collections::{
+        BTreeSet,
         HashMap,
-        HashSet,
     },
     ops::Range,
 };
@@ -39,7 +39,7 @@ pub trait Matches {
 // Event Level Filter
 
 type Filters = Vec<(Range<Version>, Predicate)>;
-type Predicate = Option<HashSet<TagHash>>;
+type Predicate = Option<BTreeSet<TagHash>>;
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -82,11 +82,13 @@ impl Filter {
 
         let filters = filters
             .into_iter()
-            .map(|(key, (untagged, _))| {
+            .map(|(key, (untagged, _tagged))| {
                 let untagged = algorithm::normalize_version_ranges(&untagged)
                     .into_iter()
                     .map(|range| (range, None))
                     .collect();
+
+                // let tagged = tagged.iter().into_group_map_by(|(range, tags)| tags);
 
                 (key, untagged)
             })

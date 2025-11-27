@@ -1,5 +1,5 @@
 use std::{
-    collections::HashSet,
+    collections::BTreeSet,
     sync::{
         Arc,
         Exclusive,
@@ -229,7 +229,7 @@ impl Retrieve {
 }
 
 impl Retrieve {
-    fn get_tags(&self, tags: &HashSet<TagHash>) -> Result<HashSet<Tag>, Error> {
+    fn get_tags(&self, tags: &BTreeSet<TagHash>) -> Result<BTreeSet<Tag>, Error> {
         tags.iter().filter_map(|tag| self.get_tag(*tag)).collect()
     }
 

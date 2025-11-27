@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use dashmap::DashMap;
 use derive_more::Debug;
@@ -54,7 +54,7 @@ impl Cache {
         }
     }
 
-    fn populate_identifiers(&self, specifiers: &HashSet<SpecifierHashRef<'_>>) {
+    fn populate_identifiers(&self, specifiers: &BTreeSet<SpecifierHashRef<'_>>) {
         for specifier in specifiers {
             self.identifiers
                 .entry(specifier.0.hash_val())
@@ -62,7 +62,7 @@ impl Cache {
         }
     }
 
-    fn populate_tags(&self, tags: &HashSet<TagHashRef<'_>>) {
+    fn populate_tags(&self, tags: &BTreeSet<TagHashRef<'_>>) {
         for tag in tags {
             self.tags
                 .entry(tag.hash_val())

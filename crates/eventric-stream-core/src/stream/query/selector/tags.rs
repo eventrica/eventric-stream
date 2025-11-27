@@ -1,11 +1,8 @@
-use std::{
-    collections::HashSet,
-    hash::BuildHasher,
-};
+use std::collections::BTreeSet;
 
 use eventric_core::validation::{
     Validate,
-    hashset,
+    b_tree_set,
     validate,
 };
 use fancy_constructor::new;
@@ -33,7 +30,7 @@ use crate::{
 /// [`Tag`] instances will be returned.
 #[derive(new, Clone, Debug)]
 #[new(const_fn, name(new_inner), vis())]
-pub struct Tags(pub(crate) HashSet<Tag>);
+pub struct Tags(pub(crate) BTreeSet<Tag>);
 
 impl Tags {
     /// Constructs a new [`Tags`] instance given any value which can be
@@ -53,24 +50,18 @@ impl Tags {
 
     #[doc(hidden)]
     #[must_use]
-    pub fn new_unvalidated(tags: HashSet<Tag>) -> Self {
+    pub fn new_unvalidated(tags: BTreeSet<Tag>) -> Self {
         Self::new_inner(tags)
     }
 }
 
-impl<S> From<&Tags> for HashSet<TagHash, S>
-where
-    S: BuildHasher + Default,
-{
+impl From<&Tags> for BTreeSet<TagHash> {
     fn from(tags: &Tags) -> Self {
         tags.0.iter().map_into().collect()
     }
 }
 
-impl<'a, S> From<&'a Tags> for HashSet<TagHashRef<'a>, S>
-where
-    S: BuildHasher + Default,
-{
+impl<'a> From<&'a Tags> for BTreeSet<TagHashRef<'a>> {
     fn from(tags: &'a Tags) -> Self {
         tags.0.iter().map_into().collect()
     }
@@ -80,7 +71,7 @@ impl Validate for Tags {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.0, "tags", &[&hashset::IsEmpty])?;
+        validate(&self.0, "tags", &[&b_tree_set::IsEmpty])?;
 
         Ok(self)
     }
@@ -92,7 +83,7 @@ impl Validate for Tags {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::collections::BTreeSet;
 
     use eventric_core::validation::Validate;
 
@@ -143,7 +134,7 @@ mod tests {
 
     #[test]
     fn new_unvalidated_allows_empty() {
-        let tags = Tags::new_unvalidated(HashSet::new());
+        let tags = Tags::new_unvalidated(BTreeSet::new());
 
         assert_eq!(0, tags.0.len());
     }
@@ -152,7 +143,7 @@ mod tests {
     fn new_unvalidated_with_tags() {
         let tag = Tag::new("user:123").unwrap();
 
-        let tags = Tags::new_unvalidated(HashSet::from_iter([tag]));
+        let tags = Tags::new_unvalidated(BTreeSet::from_iter([tag]));
 
         assert_eq!(1, tags.0.len());
     }
@@ -181,7 +172,7 @@ mod tests {
 
         let tags = Tags::new(vec![tag1, tag2]).unwrap();
 
-        let hashes: HashSet<TagHash> = (&tags).into();
+        let hashes: BTreeSet<TagHash> = (&tags).into();
 
         assert_eq!(2, hashes.len());
     }
@@ -198,7 +189,7 @@ mod tests {
 
         let tags = Tags::new(vec![tag1, tag2]).unwrap();
 
-        let hash_refs: HashSet<TagHashRef<'_>> = (&tags).into();
+        let hash_refs: BTreeSet<TagHashRef<'_>> = (&tags).into();
 
         assert_eq!(2, hash_refs.len());
     }
@@ -208,7 +199,7 @@ mod tests {
     #[test]
     fn validate_succeeds_for_non_empty() {
         let tag = Tag::new("user:123").unwrap();
-        let tags = Tags::new_unvalidated(HashSet::from_iter([tag]));
+        let tags = Tags::new_unvalidated(BTreeSet::from_iter([tag]));
 
         let result = tags.validate();
 
@@ -217,7 +208,7 @@ mod tests {
 
     #[test]
     fn validate_fails_for_empty() {
-        let tags = Tags::new_unvalidated(HashSet::new());
+        let tags = Tags::new_unvalidated(BTreeSet::new());
 
         let result = tags.validate();
 

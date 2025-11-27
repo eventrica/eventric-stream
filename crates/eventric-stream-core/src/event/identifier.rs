@@ -29,7 +29,7 @@ use crate::{
 /// logical versioned *type* of an event).
 ///
 /// [version]: crate::event::version::Version
-#[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
+#[derive(new, AsRef, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 #[as_ref(str, [u8])]
 #[new(const_fn, name(new_inner), vis())]
 pub struct Identifier(String);
@@ -93,7 +93,7 @@ impl Validate for Identifier {
 
 // Hash
 
-#[derive(new, Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 #[new(const_fn)]
 pub(crate) struct IdentifierHash(u64);
 

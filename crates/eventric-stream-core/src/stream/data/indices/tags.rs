@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use bytes::{
     Buf as _,
@@ -81,7 +81,7 @@ impl Tags {
 // Put
 
 impl Tags {
-    pub fn put(&self, batch: &mut WriteBatch, at: Position, tags: &HashSet<TagHashRef<'_>>) {
+    pub fn put(&self, batch: &mut WriteBatch, at: Position, tags: &BTreeSet<TagHashRef<'_>>) {
         for tag in tags {
             let key: [u8; KEY_LEN] = IntoKeyBytes(at, tag.hash_val()).into();
             let value = [];

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use bytes::BufMut as _;
 use derive_more::Debug;
@@ -56,7 +56,7 @@ impl Tags {
         }
     }
 
-    pub fn put(&self, batch: &mut WriteBatch, tags: &HashSet<TagHashRef<'_>>) {
+    pub fn put(&self, batch: &mut WriteBatch, tags: &BTreeSet<TagHashRef<'_>>) {
         for tag in tags {
             let key: [u8; KEY_LEN] = Hash(tag.hash_val()).into();
             let value: &[u8] = tag.as_ref();

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use itertools::Itertools as _;
 
@@ -84,8 +84,8 @@ impl Selector {
 
 #[derive(Clone, Debug)]
 pub(crate) enum SelectorHash {
-    Specifiers(HashSet<SpecifierHash>),
-    SpecifiersAndTags(HashSet<SpecifierHash>, HashSet<TagHash>),
+    Specifiers(BTreeSet<SpecifierHash>),
+    SpecifiersAndTags(BTreeSet<SpecifierHash>, BTreeSet<TagHash>),
 }
 
 impl From<&Selector> for SelectorHash {
@@ -114,8 +114,8 @@ impl From<&SelectorHashRef<'_>> for SelectorHash {
 
 #[derive(Debug)]
 pub(crate) enum SelectorHashRef<'a> {
-    Specifiers(HashSet<SpecifierHashRef<'a>>),
-    SpecifiersAndTags(HashSet<SpecifierHashRef<'a>>, HashSet<TagHashRef<'a>>),
+    Specifiers(BTreeSet<SpecifierHashRef<'a>>),
+    SpecifiersAndTags(BTreeSet<SpecifierHashRef<'a>>, BTreeSet<TagHashRef<'a>>),
 }
 
 impl<'a> From<&'a Selector> for SelectorHashRef<'a> {

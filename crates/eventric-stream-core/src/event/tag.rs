@@ -1,6 +1,9 @@
-use std::hash::{
-    Hash,
-    Hasher,
+use std::{
+    cmp::Ordering,
+    hash::{
+        Hash,
+        Hasher,
+    },
 };
 
 use derive_more::{
@@ -27,7 +30,7 @@ use crate::{
 /// tag for an event (an event can have zero or more tags which may be used as
 /// part of queries, and which form part of a dynamic consistency boundary in
 /// doing so).
-#[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
+#[derive(new, AsRef, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 #[as_ref(str, [u8])]
 #[new(const_fn, name(new_inner), vis())]
 pub struct Tag(String);
@@ -91,7 +94,7 @@ impl Validate for Tag {
 
 // Hash
 
-#[derive(new, Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 #[new(const_fn)]
 pub(crate) struct TagHash(u64);
 
@@ -151,9 +154,21 @@ impl Hash for TagHashRef<'_> {
     }
 }
 
+impl Ord for TagHashRef<'_> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
 impl PartialEq for TagHashRef<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
+    }
+}
+
+impl PartialOrd for TagHashRef<'_> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 

@@ -1,9 +1,8 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
-use ::std::hash::BuildHasher;
 use eventric_core::validation::{
     Validate,
-    hashset,
+    b_tree_set,
     validate,
 };
 use fancy_constructor::new;
@@ -31,7 +30,7 @@ use crate::{
 /// [`Specifier`] instances will be returned.
 #[derive(new, Clone, Debug)]
 #[new(const_fn, name(new_inner), vis())]
-pub struct Specifiers(pub(crate) HashSet<Specifier>);
+pub struct Specifiers(pub(crate) BTreeSet<Specifier>);
 
 impl Specifiers {
     /// Constructs a new [`Specifiers`] instance given any value which can be
@@ -51,24 +50,18 @@ impl Specifiers {
 
     #[doc(hidden)]
     #[must_use]
-    pub fn new_unvalidated(specifiers: HashSet<Specifier>) -> Self {
+    pub fn new_unvalidated(specifiers: BTreeSet<Specifier>) -> Self {
         Self::new_inner(specifiers)
     }
 }
 
-impl<S> From<&Specifiers> for HashSet<SpecifierHash, S>
-where
-    S: BuildHasher + Default,
-{
+impl From<&Specifiers> for BTreeSet<SpecifierHash> {
     fn from(specifiers: &Specifiers) -> Self {
         specifiers.0.iter().map_into().collect()
     }
 }
 
-impl<'a, S> From<&'a Specifiers> for HashSet<SpecifierHashRef<'a>, S>
-where
-    S: BuildHasher + Default,
-{
+impl<'a> From<&'a Specifiers> for BTreeSet<SpecifierHashRef<'a>> {
     fn from(specifiers: &'a Specifiers) -> Self {
         specifiers.0.iter().map_into().collect()
     }
@@ -78,7 +71,7 @@ impl Validate for Specifiers {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.0, "specifiers", &[&hashset::IsEmpty])?;
+        validate(&self.0, "specifiers", &[&b_tree_set::IsEmpty])?;
 
         Ok(self)
     }
@@ -90,7 +83,7 @@ impl Validate for Specifiers {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::collections::BTreeSet;
 
     use eventric_core::validation::Validate;
 
@@ -146,7 +139,7 @@ mod tests {
 
     #[test]
     fn new_unvalidated_allows_empty_set() {
-        let specifiers = Specifiers::new_unvalidated(HashSet::new());
+        let specifiers = Specifiers::new_unvalidated(BTreeSet::new());
 
         assert_eq!(0, specifiers.0.len());
     }
@@ -156,7 +149,7 @@ mod tests {
         let identifier = Identifier::new("TestEvent").unwrap();
         let specifier = Specifier::new(identifier);
 
-        let specifiers = Specifiers::new_unvalidated(HashSet::from_iter([specifier]));
+        let specifiers = Specifiers::new_unvalidated(BTreeSet::from_iter([specifier]));
 
         assert_eq!(1, specifiers.0.len());
     }
@@ -188,7 +181,7 @@ mod tests {
 
         let specifiers = Specifiers::new(vec![spec1, spec2]).unwrap();
 
-        let hashes: HashSet<SpecifierHash> = (&specifiers).into();
+        let hashes: BTreeSet<SpecifierHash> = (&specifiers).into();
 
         assert_eq!(2, hashes.len());
     }
@@ -207,7 +200,7 @@ mod tests {
 
         let specifiers = Specifiers::new(vec![spec1, spec2]).unwrap();
 
-        let hash_refs: HashSet<SpecifierHashRef<'_>> = (&specifiers).into();
+        let hash_refs: BTreeSet<SpecifierHashRef<'_>> = (&specifiers).into();
 
         assert_eq!(2, hash_refs.len());
     }
@@ -218,7 +211,7 @@ mod tests {
     fn validate_succeeds_for_non_empty() {
         let id = Identifier::new("TestEvent").unwrap();
         let spec = Specifier::new(id);
-        let specifiers = Specifiers::new_unvalidated(HashSet::from_iter([spec]));
+        let specifiers = Specifiers::new_unvalidated(BTreeSet::from_iter([spec]));
 
         let result = specifiers.validate();
 
@@ -227,7 +220,7 @@ mod tests {
 
     #[test]
     fn validate_fails_for_empty() {
-        let specifiers = Specifiers::new_unvalidated(HashSet::new());
+        let specifiers = Specifiers::new_unvalidated(BTreeSet::new());
 
         let result = specifiers.validate();
 

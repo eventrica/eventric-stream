@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     hash::{
         Hash,
         Hasher,
@@ -66,6 +67,24 @@ impl Hash for Specifier {
     }
 }
 
+impl Ord for Specifier {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.0.cmp(&other.0) {
+            Ordering::Equal => match self.1.start.cmp(&other.1.start) {
+                Ordering::Equal => self.1.end.cmp(&other.1.end),
+                ordering => ordering,
+            },
+            ordering => ordering,
+        }
+    }
+}
+
+impl PartialOrd for Specifier {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 // Hash
 
 #[derive(new, Clone, Debug, Eq, PartialEq)]
@@ -98,6 +117,24 @@ impl Hash for SpecifierHash {
     }
 }
 
+impl Ord for SpecifierHash {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.0.cmp(&other.0) {
+            Ordering::Equal => match self.1.start.cmp(&other.1.start) {
+                Ordering::Equal => self.1.end.cmp(&other.1.end),
+                ordering => ordering,
+            },
+            ordering => ordering,
+        }
+    }
+}
+
+impl PartialOrd for SpecifierHash {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 // Hash Ref
 
 #[derive(new, Debug, Eq, PartialEq)]
@@ -118,5 +155,23 @@ impl Hash for SpecifierHashRef<'_> {
         self.0.hash(state);
         self.1.start.hash(state);
         self.1.end.hash(state);
+    }
+}
+
+impl Ord for SpecifierHashRef<'_> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.0.cmp(&other.0) {
+            Ordering::Equal => match self.1.start.cmp(&other.1.start) {
+                Ordering::Equal => self.1.end.cmp(&other.1.end),
+                ordering => ordering,
+            },
+            ordering => ordering,
+        }
+    }
+}
+
+impl PartialOrd for SpecifierHashRef<'_> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
