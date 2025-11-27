@@ -25,9 +25,7 @@ use crate::{
 #[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
 #[as_ref(str, [u8])]
 #[new(const_fn, name(new_inner), vis())]
-pub struct Tag {
-    tag: String,
-}
+pub struct Tag(String);
 
 impl Tag {
     /// Constructs a new instance of [`Tag`] given any value which
@@ -45,13 +43,16 @@ impl Tag {
     where
         T: Into<String>,
     {
-        Self::new_unvalidated(tag.into()).validate()
+        Self::new_unvalidated(tag).validate()
     }
 
     #[doc(hidden)]
     #[must_use]
-    pub fn new_unvalidated(tag: String) -> Self {
-        Self::new_inner(tag)
+    pub fn new_unvalidated<T>(tag: T) -> Self
+    where
+        T: Into<String>,
+    {
+        Self::new_inner(tag.into())
     }
 }
 
@@ -66,7 +67,7 @@ impl Validate for Tag {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.tag, "identifier", &[
+        validate(&self.0, "identifier", &[
             &string::IsEmpty,
             &string::PrecedingWhitespace,
             &string::TrailingWhitespace,

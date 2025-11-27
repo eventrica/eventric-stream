@@ -59,13 +59,13 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         Tags::new([Tag::new("course:523")?])?,
     )])?;
 
-    let (events, query_optimized) = stream.iterate_query(query, None);
+    let (events, prepared) = stream.iterate_query(query, None);
 
     for event in events {
         println!("event: {event:#?}");
     }
 
-    println!("query: {query_optimized:#?}");
+    println!("prepared: {prepared:#?}");
 
     Ok(())
 }

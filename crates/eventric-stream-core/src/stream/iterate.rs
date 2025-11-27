@@ -86,12 +86,12 @@ impl IterateQuery for Stream {
         Q::Iterator: Build<Q::Prepared>,
     {
         let references = self.data.references.clone();
-        let optimized = query.prepare();
+        let prepared = query.prepare();
 
-        let iter = self.iter_indices(optimized.as_ref(), from);
-        let iter = Q::Iterator::build(&optimized, iter, references);
+        let iter = self.iter_indices(prepared.as_ref(), from);
+        let iter = Q::Iterator::build(iter, &prepared, references);
 
-        (iter, optimized)
+        (iter, prepared)
     }
 }
 

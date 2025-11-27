@@ -14,5 +14,5 @@ where
 {
     /// .
     #[allow(private_interfaces)]
-    fn build(optimization: &T, iter: PersistentEventHashIterator, references: References) -> Self;
+    fn build(iter: PersistentEventHashIterator, prepared: &T, references: References) -> Self;
 }

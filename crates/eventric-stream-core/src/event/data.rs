@@ -22,9 +22,7 @@ use crate::error::Error;
 #[derive(new, AsRef, Clone, Deref, Debug, Eq, PartialEq)]
 #[as_ref([u8])]
 #[new(const_fn, name(new_inner), vis())]
-pub struct Data {
-    data: Vec<u8>,
-}
+pub struct Data(Vec<u8>);
 
 impl Data {
     /// Constructs a new instance of [`Data`] given a value which can be
@@ -40,13 +38,16 @@ impl Data {
     where
         D: Into<Vec<u8>>,
     {
-        Self::new_unvalidated(data.into()).validate()
+        Self::new_unvalidated(data).validate()
     }
 
     #[doc(hidden)]
     #[must_use]
-    pub fn new_unvalidated(data: Vec<u8>) -> Self {
-        Self::new_inner(data)
+    pub fn new_unvalidated<D>(data: D) -> Self
+    where
+        D: Into<Vec<u8>>,
+    {
+        Self::new_inner(data.into())
     }
 }
 
@@ -54,7 +55,7 @@ impl Validate for Data {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.data, "data", &[&vec::IsEmpty])?;
+        validate(&self.0, "data", &[&vec::IsEmpty])?;
 
         Ok(self)
     }

@@ -89,11 +89,11 @@ impl Iter<Single> {
 impl Build<Prepared<Single>> for Iter<Single> {
     #[allow(private_interfaces)]
     fn build(
-        optimization: &Prepared<Single>,
         iter: PersistentEventHashIterator,
+        prepared: &Prepared<Single>,
         references: References,
     ) -> Self {
-        let cache = optimization.cache.clone();
+        let cache = prepared.cache.clone();
         let iter = Exclusive::new(iter);
 
         Self::new(cache, false, references, (), iter)
@@ -133,15 +133,15 @@ impl Iter<Multiple> {
 impl Build<Prepared<Multiple>> for Iter<Multiple> {
     #[allow(private_interfaces)]
     fn build(
-        optimization: &Prepared<Multiple>,
         iter: PersistentEventHashIterator,
+        prepared: &Prepared<Multiple>,
         references: References,
     ) -> Self {
-        let cache = optimization.cache.clone();
-        let filters = optimization.data.clone();
+        let cache = prepared.cache.clone();
+        let data = prepared.data.clone();
         let iter = Exclusive::new(iter);
 
-        Self::new(cache, false, references, filters, iter)
+        Self::new(cache, false, references, data, iter)
     }
 }
 

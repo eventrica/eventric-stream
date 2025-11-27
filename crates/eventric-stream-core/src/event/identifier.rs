@@ -27,9 +27,7 @@ use crate::{
 #[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
 #[as_ref(str, [u8])]
 #[new(const_fn, name(new_inner), vis())]
-pub struct Identifier {
-    identifier: String,
-}
+pub struct Identifier(String);
 
 impl Identifier {
     /// Constructs a new instance of [`Identifier`] given any value which
@@ -47,13 +45,16 @@ impl Identifier {
     where
         I: Into<String>,
     {
-        Self::new_unvalidated(identifier.into()).validate()
+        Self::new_unvalidated(identifier).validate()
     }
 
     #[doc(hidden)]
     #[must_use]
-    pub fn new_unvalidated(identifier: String) -> Self {
-        Self::new_inner(identifier)
+    pub fn new_unvalidated<T>(identifier: T) -> Self
+    where
+        T: Into<String>,
+    {
+        Self::new_inner(identifier.into())
     }
 }
 
@@ -68,7 +69,7 @@ impl Validate for Identifier {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.identifier, "identifier", &[
+        validate(&self.0, "identifier", &[
             &string::IsEmpty,
             &string::PrecedingWhitespace,
             &string::TrailingWhitespace,
