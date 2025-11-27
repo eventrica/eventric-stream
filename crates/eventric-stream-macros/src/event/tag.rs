@@ -1,3 +1,4 @@
+use itertools::Itertools as _;
 use proc_macro2::{
     TokenStream,
     TokenTree,
@@ -21,7 +22,7 @@ pub struct Tag {
 impl Tag {
     #[rustfmt::skip]
     pub fn new(input: TokenStream) -> darling::Result<Self> {
-        let tokens = input.into_iter().collect::<Vec<_>>();
+        let tokens = input.into_iter().collect_vec();
 
         match &tokens[..] {
             [TokenTree::Ident(ident), TokenTree::Punct(punct), tokens @ ..] if punct.as_char() == ',' => {

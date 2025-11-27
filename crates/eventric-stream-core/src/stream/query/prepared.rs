@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fancy_constructor::new;
+use itertools::Itertools;
 
 use crate::stream::{
     iterate::{
@@ -90,12 +91,12 @@ impl From<Vec<Query>> for Prepared<Vec<Query>> {
         let cache = Arc::new(Cache::default());
         let query_hashes = queries
             .iter()
-            .map(Into::<QueryHashRef<'_>>::into)
+            .map_into()
             .inspect(|query_hash_ref| cache.populate(query_hash_ref))
-            .map(Into::<QueryHash>::into)
-            .collect::<Vec<_>>();
+            .map_into()
+            .collect_vec();
 
-        let filters = query_hashes.iter().map(Filter::new).collect::<Vec<_>>();
+        let filters = query_hashes.iter().map(Filter::new).collect();
         let filters = Arc::new(filters);
 
         // TODO: Need to do some kind of merge/optimisation pass here, not simply bodge
@@ -106,10 +107,10 @@ impl From<Vec<Query>> for Prepared<Vec<Query>> {
             query_hashes
                 .into_iter()
                 .flat_map(|query_hash| query_hash.0)
-                .collect::<Vec<_>>(),
+                .collect(),
         );
 
-        Prepared::<Vec<Query>>::new(cache, filters, query_hash)
+        Self::new(cache, filters, query_hash)
     }
 }
 

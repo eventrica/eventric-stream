@@ -7,6 +7,7 @@ use eventric_core::validation::{
     validate,
 };
 use fancy_constructor::new;
+use itertools::Itertools as _;
 
 use crate::{
     error::Error,
@@ -60,7 +61,7 @@ where
     S: BuildHasher + Default,
 {
     fn from(specifiers: &Specifiers) -> Self {
-        specifiers.0.iter().map(Into::into).collect()
+        specifiers.0.iter().map_into().collect()
     }
 }
 
@@ -69,7 +70,7 @@ where
     S: BuildHasher + Default,
 {
     fn from(specifiers: &'a Specifiers) -> Self {
-        specifiers.0.iter().map(Into::into).collect()
+        specifiers.0.iter().map_into().collect()
     }
 }
 

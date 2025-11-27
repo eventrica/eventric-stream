@@ -18,6 +18,7 @@ use eventric_core::validation::{
     vec,
 };
 use fancy_constructor::new;
+use itertools::Itertools as _;
 
 use crate::{
     error::Error,
@@ -132,7 +133,7 @@ impl From<Query> for QueryHash {
 
 impl From<&Query> for QueryHash {
     fn from(query: &Query) -> Self {
-        Self::new(query.as_ref().iter().map(Into::into).collect::<Vec<_>>())
+        Self::new(query.as_ref().iter().map_into().collect())
     }
 }
 
@@ -144,7 +145,7 @@ impl From<QueryHashRef<'_>> for QueryHash {
 
 impl From<&QueryHashRef<'_>> for QueryHash {
     fn from(query: &QueryHashRef<'_>) -> Self {
-        Self::new(query.as_ref().iter().map(Into::into).collect::<Vec<_>>())
+        Self::new(query.as_ref().iter().map_into().collect())
     }
 }
 
@@ -156,7 +157,7 @@ pub(crate) struct QueryHashRef<'a>(pub(crate) Vec<SelectorHashRef<'a>>);
 
 impl<'a> From<&'a Query> for QueryHashRef<'a> {
     fn from(query: &'a Query) -> Self {
-        Self::new(query.as_ref().iter().map(Into::into).collect::<Vec<_>>())
+        Self::new(query.as_ref().iter().map_into().collect())
     }
 }
 

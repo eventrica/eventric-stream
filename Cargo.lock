@@ -155,7 +155,7 @@ dependencies = [
  "ciborium",
  "clap",
  "criterion-plot",
- "itertools",
+ "itertools 0.13.0",
  "num-traits",
  "oorandom",
  "plotters",
@@ -174,7 +174,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9b1bcc0dc7dfae599d84ad0b1a55f80cde8af3725da8313b528da95ef783e338"
 dependencies = [
  "cast",
- "itertools",
+ "itertools 0.13.0",
 ]
 
 [[package]]
@@ -367,6 +367,7 @@ dependencies = [
  "eventric-core",
  "fancy_constructor",
  "fjall",
+ "itertools 0.14.0",
  "rand",
  "rapidhash",
  "smallvec",
@@ -385,6 +386,7 @@ name = "eventric-stream-macros"
 version = "0.1.0"
 dependencies = [
  "darling",
+ "itertools 0.14.0",
  "proc-macro2",
  "quote",
  "syn",
@@ -503,7 +505,7 @@ version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0a2c76d2506581ed9ead2afacb6b8164e4cac323427fd67102b59225d35b49cb"
 dependencies = [
- "itertools",
+ "itertools 0.13.0",
  "manyhow",
  "proc-macro2",
  "quote",
@@ -524,6 +526,15 @@ name = "itertools"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b192c782037fadd9cfa75548310488aabdbf3d2da73885b31bd0abd03351285"
 dependencies = [
  "either",
 ]
