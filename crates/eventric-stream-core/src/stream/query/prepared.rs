@@ -3,8 +3,6 @@ use std::sync::Arc;
 use fancy_constructor::new;
 
 use crate::stream::{
-    Multiple,
-    Single,
     iterate::{
         cache::Cache,
         iter::Iter,
@@ -28,11 +26,11 @@ pub(crate) trait Data {
     type Data;
 }
 
-impl Data for Single {
+impl Data for Query {
     type Data = ();
 }
 
-impl Data for Multiple {
+impl Data for Vec<Query> {
     type Data = Arc<Vec<Filter>>;
 }
 
@@ -64,7 +62,7 @@ where
 
 // Single
 
-impl From<Query> for Prepared<Single> {
+impl From<Query> for Prepared<Query> {
     fn from(query: Query) -> Self {
         let cache = Arc::new(Cache::default());
         let query_hash_ref: QueryHashRef<'_> = (&query).into();
@@ -76,8 +74,8 @@ impl From<Query> for Prepared<Single> {
     }
 }
 
-impl Source for Prepared<Single> {
-    type Iterator = Iter<Single>;
+impl Source for Prepared<Query> {
+    type Iterator = Iter<Query>;
     type Prepared = Self;
 
     fn prepare(self) -> Self::Prepared {
@@ -87,7 +85,7 @@ impl Source for Prepared<Single> {
 
 // Multiple
 
-impl From<Vec<Query>> for Prepared<Multiple> {
+impl From<Vec<Query>> for Prepared<Vec<Query>> {
     fn from(queries: Vec<Query>) -> Self {
         let cache = Arc::new(Cache::default());
         let query_hashes = queries
@@ -111,12 +109,12 @@ impl From<Vec<Query>> for Prepared<Multiple> {
                 .collect::<Vec<_>>(),
         );
 
-        Prepared::<Multiple>::new(cache, filters, query_hash)
+        Prepared::<Vec<Query>>::new(cache, filters, query_hash)
     }
 }
 
-impl Source for Prepared<Multiple> {
-    type Iterator = Iter<Multiple>;
+impl Source for Prepared<Vec<Query>> {
+    type Iterator = Iter<Vec<Query>>;
     type Prepared = Self;
 
     fn prepare(self) -> Self::Prepared {

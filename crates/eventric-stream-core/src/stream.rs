@@ -127,15 +127,3 @@ where
         self
     }
 }
-
-// -------------------------------------------------------------------------------------------------
-
-// Arity
-
-/// .
-#[derive(Debug)]
-pub struct Single;
-
-/// .
-#[derive(Debug)]
-pub struct Multiple;

@@ -13,7 +13,6 @@ use std::sync::{
 use crate::{
     event::position::Position,
     stream::{
-        Single,
         Stream,
         data::events::{
             MappedPersistentEventHashIterator,
@@ -36,18 +35,18 @@ use crate::{
 /// .
 pub trait Iterate {
     /// .
-    fn iterate(&self, from: Option<Position>) -> Iter<Single>;
+    fn iterate(&self, from: Option<Position>) -> Iter<()>;
 }
 
 impl Iterate for Stream {
-    fn iterate(&self, from: Option<Position>) -> Iter<Single> {
+    fn iterate(&self, from: Option<Position>) -> Iter<()> {
         let cache = Arc::new(Cache::default());
         let references = self.data.references.clone();
 
-        let iter = self.iter_events(from);
+        let iter = self.iterate_events(from);
         let iter = Exclusive::new(iter);
 
-        Iter::<Single>::new(cache, true, references, (), iter)
+        Iter::<()>::new(cache, true, references, (), iter)
     }
 }
 
@@ -88,7 +87,7 @@ impl IterateQuery for Stream {
         let references = self.data.references.clone();
         let prepared = query.prepare();
 
-        let iter = self.iter_indices(prepared.as_ref(), from);
+        let iter = self.iterate_indices(prepared.as_ref(), from);
         let iter = Q::Iterator::build(iter, &prepared, references);
 
         (iter, prepared)
@@ -100,13 +99,13 @@ impl IterateQuery for Stream {
 // Stream
 
 impl Stream {
-    fn iter_events(&self, from: Option<Position>) -> PersistentEventHashIterator {
+    fn iterate_events(&self, from: Option<Position>) -> PersistentEventHashIterator {
         let iter = self.data.events.iterate(from);
 
         PersistentEventHashIterator::Direct(iter)
     }
 
-    fn iter_indices(
+    fn iterate_indices(
         &self,
         query: &QueryHash,
         from: Option<Position>,

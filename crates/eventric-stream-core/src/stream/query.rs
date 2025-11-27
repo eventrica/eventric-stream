@@ -22,8 +22,6 @@ use fancy_constructor::new;
 use crate::{
     error::Error,
     stream::{
-        Multiple,
-        Single,
         iterate::iter::Iter,
         query::selector::{
             SelectorHash,
@@ -85,8 +83,8 @@ impl From<Query> for Vec<Selector> {
 }
 
 impl Source for Query {
-    type Iterator = Iter<Single>;
-    type Prepared = Prepared<Single>;
+    type Iterator = Iter<Query>;
+    type Prepared = Prepared<Query>;
 
     fn prepare(self) -> Self::Prepared {
         self.into()
@@ -94,8 +92,8 @@ impl Source for Query {
 }
 
 impl Source for Vec<Query> {
-    type Iterator = Iter<Multiple>;
-    type Prepared = Prepared<Multiple>;
+    type Iterator = Iter<Vec<Query>>;
+    type Prepared = Prepared<Vec<Query>>;
 
     fn prepare(self) -> Self::Prepared {
         self.into()
@@ -124,7 +122,7 @@ impl Validate for Query {
 /// [iterate_multi]: crate::stream::iterate::IterateMulti
 #[derive(new, AsRef, Clone, Debug)]
 #[as_ref([SelectorHash])]
-pub(crate) struct QueryHash(pub(crate) Vec<SelectorHash>);
+pub struct QueryHash(pub(crate) Vec<SelectorHash>);
 
 impl From<Query> for QueryHash {
     fn from(query: Query) -> Self {
