@@ -60,7 +60,7 @@ where
     }
 }
 
-// Single
+// Query
 
 impl From<Query> for Prepared<Query> {
     fn from(query: Query) -> Self {
@@ -83,7 +83,7 @@ impl Source for Prepared<Query> {
     }
 }
 
-// Multiple
+// Vec<Query>
 
 impl From<Vec<Query>> for Prepared<Vec<Query>> {
     fn from(queries: Vec<Query>) -> Self {

@@ -3,16 +3,19 @@ mod point;
 
 use std::{
     cmp::Ordering,
-    collections::HashMap,
+    collections::{
+        HashMap,
+        HashSet,
+    },
     ops::Range,
 };
-
-use fancy_constructor::new;
 
 use crate::{
     event::{
         PersistentEventHash,
         Version,
+        identifier::IdentifierHash,
+        tag::TagHash,
     },
     stream::query::{
         QueryHash,
@@ -35,10 +38,13 @@ pub trait Matches {
 
 // Event Level Filter
 
+type Filters = Vec<(Range<Version>, Predicate)>;
+type Predicate = Option<HashSet<TagHash>>;
+
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct Filter {
-    filters: HashMap<u64, IdentifierLevelFilter>,
+    filters: HashMap<IdentifierHash, Filters>,
 }
 
 impl Filter {
@@ -53,7 +59,7 @@ impl Filter {
                 SelectorHash::Specifiers(specifiers) => {
                     for specifier in specifiers {
                         let (untagged, _) = filters
-                            .entry(specifier.0.hash_val())
+                            .entry(specifier.0)
                             .or_insert_with(|| (Vec::new(), Vec::new()));
 
                         untagged.push(specifier.1.clone());
@@ -65,7 +71,7 @@ impl Filter {
                 SelectorHash::SpecifiersAndTags(specifiers, tags) => {
                     for specifier in specifiers {
                         let (_, tagged) = filters
-                            .entry(specifier.0.hash_val())
+                            .entry(specifier.0)
                             .or_insert_with(|| (Vec::new(), Vec::new()));
 
                         tagged.push((specifier.1.clone(), tags.clone()));
@@ -77,10 +83,12 @@ impl Filter {
         let filters = filters
             .into_iter()
             .map(|(key, (untagged, _))| {
-                let untagged = algorithm::normalize_version_ranges(&untagged);
-                let filter = IdentifierLevelFilter::new(untagged);
+                let untagged = algorithm::normalize_version_ranges(&untagged)
+                    .into_iter()
+                    .map(|range| (range, None))
+                    .collect();
 
-                (key, filter)
+                (key, untagged)
             })
             .collect();
 
@@ -90,35 +98,22 @@ impl Filter {
 
 impl Matches for Filter {
     fn matches(&self, event: &PersistentEventHash) -> bool {
-        match self.filters.get(&event.identifier.hash_val()) {
-            Some(filter) => filter.matches(event),
+        match self.filters.get(&event.identifier) {
+            Some(ranges) => ranges.matches(event),
             None => false,
         }
     }
 }
 
-// -------------------------------------------------------------------------------------------------
-
-// Identifier Level Filter
-
-#[allow(dead_code)]
-#[derive(new, Debug)]
-#[new(const_fn, vis())]
-struct IdentifierLevelFilter {
-    ranges: Vec<Range<Version>>,
-}
-
-impl Matches for IdentifierLevelFilter {
+impl Matches for Filters {
     #[rustfmt::skip]
     fn matches(&self, event: &PersistentEventHash) -> bool {
-        if self.ranges.is_empty() {
-            return true;
-        }
-
-        for range in &self.ranges {
+        for (range, tags) in self {
             match event.version.partial_cmp(range).unwrap() {
-                Ordering::Equal => return true,
-                Ordering::Greater => break,
+                Ordering::Equal => if tags.as_ref().is_none_or(|tags| tags.is_subset(&event.tags)) {
+                    return true;
+                }
+                Ordering::Greater => return false,
                 Ordering::Less => {}
             }
         }
