@@ -1,7 +1,5 @@
 use std::collections::BTreeSet;
 
-use itertools::Itertools as _;
-
 use crate::{
     error::Error,
     event::{
@@ -102,11 +100,11 @@ impl From<&SelectorHashRef<'_>> for SelectorHash {
     fn from(selector: &SelectorHashRef<'_>) -> Self {
         match selector {
             SelectorHashRef::Specifiers(specifiers) => {
-                Self::Specifiers(specifiers.iter().map_into().collect())
+                Self::Specifiers(specifiers.iter().map(Into::into).collect())
             }
             SelectorHashRef::SpecifiersAndTags(specifiers, tags) => Self::SpecifiersAndTags(
-                specifiers.iter().map_into().collect(),
-                tags.iter().map_into().collect(),
+                specifiers.iter().map(Into::into).collect(),
+                tags.iter().map(Into::into).collect(),
             ),
         }
     }

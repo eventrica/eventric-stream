@@ -58,11 +58,11 @@ impl Filter {
                 // specifier
                 SelectorHash::Specifiers(specifiers) => {
                     for specifier in specifiers {
-                        let (untagged, _) = filters
+                        filters
                             .entry(specifier.0)
-                            .or_insert_with(|| (Vec::new(), Vec::new()));
-
-                        untagged.push(specifier.1.clone());
+                            .or_insert_with(|| (Vec::new(), Vec::new()))
+                            .0
+                            .push(specifier.1.clone());
                     }
                 }
 
@@ -70,11 +70,11 @@ impl Filter {
                 // set of Tag hashes.
                 SelectorHash::SpecifiersAndTags(specifiers, tags) => {
                     for specifier in specifiers {
-                        let (_, tagged) = filters
+                        filters
                             .entry(specifier.0)
-                            .or_insert_with(|| (Vec::new(), Vec::new()));
-
-                        tagged.push((specifier.1.clone(), tags.clone()));
+                            .or_insert_with(|| (Vec::new(), Vec::new()))
+                            .1
+                            .push((specifier.1.clone(), tags.clone()));
                     }
                 }
             }
@@ -82,15 +82,35 @@ impl Filter {
 
         let filters = filters
             .into_iter()
-            .map(|(key, (untagged, _tagged))| {
-                let untagged = algorithm::normalize_version_ranges(&untagged)
-                    .into_iter()
-                    .map(|range| (range, None))
-                    .collect();
+            .map(|(key, (untagged, tagged))| {
+                let mut filters = Vec::new();
 
-                // let tagged = tagged.iter().into_group_map_by(|(range, tags)| tags);
+                filters.append(
+                    &mut algorithm::normalize_version_ranges(&untagged)
+                        .into_iter()
+                        .map(|range| (range, None))
+                        .collect(),
+                );
 
-                (key, untagged)
+                let mut tagged_map = HashMap::new();
+
+                for (range, tags) in tagged {
+                    tagged_map.entry(tags).or_insert_with(Vec::new).push(range);
+                }
+
+                filters.append(
+                    &mut tagged_map
+                        .into_iter()
+                        .flat_map(|(tags, ranges)| {
+                            algorithm::normalize_version_ranges(&ranges)
+                                .into_iter()
+                                .map(move |range| (range, Some(tags.clone())))
+                                .collect::<Vec<_>>()
+                        })
+                        .collect(),
+                );
+
+                (key, filters)
             })
             .collect();
 

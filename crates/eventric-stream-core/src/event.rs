@@ -12,7 +12,6 @@ pub(crate) mod version;
 use std::collections::BTreeSet;
 
 use fancy_constructor::new;
-use itertools::Itertools as _;
 
 use crate::event::{
     identifier::{
@@ -107,7 +106,7 @@ impl<'a> From<&'a EphemeralEvent> for EphemeralEventHashRef<'a> {
         Self::new(
             event.data(),
             event.identifier().into(),
-            event.tags().iter().map_into().collect(),
+            event.tags().iter().map(Into::into).collect(),
             *event.version(),
         )
     }

@@ -12,7 +12,6 @@ use fjall::{
     Slice,
     WriteBatch,
 };
-use itertools::Itertools as _;
 
 use crate::{
     error::Error,
@@ -236,7 +235,7 @@ impl From<IntoPersistentEventHash> for PersistentEventHash {
             .collect();
 
         let timestamp = Timestamp::new(value.get_u64());
-        let data = Data::new_unvalidated(value.iter().map(ToOwned::to_owned).collect_vec());
+        let data = Data::new_unvalidated(value.iter().map(ToOwned::to_owned).collect::<Vec<_>>());
 
         Self::new(data, identifier, position, tags, timestamp, version)
     }

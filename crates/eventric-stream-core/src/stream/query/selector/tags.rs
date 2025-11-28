@@ -6,7 +6,6 @@ use eventric_core::validation::{
     validate,
 };
 use fancy_constructor::new;
-use itertools::Itertools as _;
 
 use crate::{
     error::Error,
@@ -57,13 +56,13 @@ impl Tags {
 
 impl From<&Tags> for BTreeSet<TagHash> {
     fn from(tags: &Tags) -> Self {
-        tags.0.iter().map_into().collect()
+        tags.0.iter().map(Into::into).collect()
     }
 }
 
 impl<'a> From<&'a Tags> for BTreeSet<TagHashRef<'a>> {
     fn from(tags: &'a Tags) -> Self {
-        tags.0.iter().map_into().collect()
+        tags.0.iter().map(Into::into).collect()
     }
 }
 

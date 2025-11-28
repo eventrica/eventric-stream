@@ -6,7 +6,6 @@ use eventric_core::validation::{
     validate,
 };
 use fancy_constructor::new;
-use itertools::Itertools as _;
 
 use crate::{
     error::Error,
@@ -57,13 +56,13 @@ impl Specifiers {
 
 impl From<&Specifiers> for BTreeSet<SpecifierHash> {
     fn from(specifiers: &Specifiers) -> Self {
-        specifiers.0.iter().map_into().collect()
+        specifiers.0.iter().map(Into::into).collect()
     }
 }
 
 impl<'a> From<&'a Specifiers> for BTreeSet<SpecifierHashRef<'a>> {
     fn from(specifiers: &'a Specifiers) -> Self {
-        specifiers.0.iter().map_into().collect()
+        specifiers.0.iter().map(Into::into).collect()
     }
 }
 

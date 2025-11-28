@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use fancy_constructor::new;
-use itertools::Itertools;
 
 use crate::stream::{
     iterate::{
@@ -91,10 +90,10 @@ impl From<Vec<Query>> for Prepared<Vec<Query>> {
         let cache = Arc::new(Cache::default());
         let query_hashes = queries
             .iter()
-            .map_into()
+            .map(Into::into)
             .inspect(|query_hash_ref| cache.populate(query_hash_ref))
-            .map_into()
-            .collect_vec();
+            .map(Into::into)
+            .collect::<Vec<_>>();
 
         let filters = query_hashes.iter().map(Filter::new).collect();
         let filters = Arc::new(filters);
