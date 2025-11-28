@@ -165,6 +165,12 @@ impl PartialEq for IdentifierHashRef<'_> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{
+        Hash,
+        Hasher,
+    };
+
     use assertables::{
         assert_err,
         assert_ok,
@@ -172,7 +178,11 @@ mod tests {
 
     use crate::{
         error::Error,
-        event::identifier::Identifier,
+        event::identifier::{
+            Identifier,
+            IdentifierHash,
+            IdentifierHashRef,
+        },
     };
 
     #[test]
@@ -237,6 +247,269 @@ mod tests {
         let id_1 = Identifier::new("id_1")?;
 
         assert_ne!(id_0.hash_val(), id_1.hash_val());
+
+        Ok(())
+    }
+
+    // Eq and PartialEq
+
+    #[test]
+    fn identifier_equality() -> Result<(), Error> {
+        let id1 = Identifier::new("StudentEnrolled")?;
+        let id2 = Identifier::new("StudentEnrolled")?;
+        let id3 = Identifier::new("CourseCreated")?;
+
+        assert_eq!(id1, id2);
+        assert_ne!(id1, id3);
+        assert_ne!(id2, id3);
+
+        Ok(())
+    }
+
+    #[test]
+    fn identifier_equality_case_sensitive() -> Result<(), Error> {
+        let id1 = Identifier::new("Event")?;
+        let id2 = Identifier::new("event")?;
+
+        assert_ne!(id1, id2);
+
+        Ok(())
+    }
+
+    // Ord and PartialOrd
+
+    #[test]
+    fn identifier_ordering() -> Result<(), Error> {
+        let id1 = Identifier::new("AAA")?;
+        let id2 = Identifier::new("BBB")?;
+        let id3 = Identifier::new("CCC")?;
+
+        assert!(id1 < id2);
+        assert!(id2 < id3);
+        assert!(id1 < id3);
+        assert!(id2 > id1);
+        assert!(id3 > id2);
+        assert!(id3 > id1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn identifier_ordering_reflexive() -> Result<(), Error> {
+        let id = Identifier::new("Event")?;
+
+        assert!(id <= id);
+        assert!(id >= id);
+        assert!(!(id < id));
+        assert!(!(id > id));
+
+        Ok(())
+    }
+
+    #[test]
+    fn identifier_ordering_lexicographic() -> Result<(), Error> {
+        let id1 = Identifier::new("Event1")?;
+        let id2 = Identifier::new("Event10")?;
+        let id3 = Identifier::new("Event2")?;
+
+        assert!(id1 < id2);
+        assert!(id1 < id3);
+        assert!(id2 < id3);
+
+        Ok(())
+    }
+
+    // Hash trait
+
+    #[test]
+    fn identifier_hash_trait_consistency() -> Result<(), Error> {
+        let id1 = Identifier::new("Event")?;
+        let id2 = Identifier::new("Event")?;
+
+        let mut hasher1 = DefaultHasher::new();
+        let mut hasher2 = DefaultHasher::new();
+
+        id1.hash(&mut hasher1);
+        id2.hash(&mut hasher2);
+
+        assert_eq!(hasher1.finish(), hasher2.finish());
+
+        Ok(())
+    }
+
+    #[test]
+    fn identifier_hash_trait_uniqueness() -> Result<(), Error> {
+        let id1 = Identifier::new("EventA")?;
+        let id2 = Identifier::new("EventB")?;
+
+        let mut hasher1 = DefaultHasher::new();
+        let mut hasher2 = DefaultHasher::new();
+
+        id1.hash(&mut hasher1);
+        id2.hash(&mut hasher2);
+
+        assert_ne!(hasher1.finish(), hasher2.finish());
+
+        Ok(())
+    }
+
+    // Clone
+
+    #[test]
+    fn identifier_clone() -> Result<(), Error> {
+        let id1 = Identifier::new("Event")?;
+        let id2 = id1.clone();
+
+        assert_eq!(id1, id2);
+
+        Ok(())
+    }
+
+    // AsRef
+
+    #[test]
+    fn identifier_as_ref_str() -> Result<(), Error> {
+        let id = Identifier::new("StudentEnrolled")?;
+        let s: &str = id.as_ref();
+
+        assert_eq!(s, "StudentEnrolled");
+
+        Ok(())
+    }
+
+    #[test]
+    fn identifier_as_ref_bytes() -> Result<(), Error> {
+        let id = Identifier::new("Event")?;
+        let bytes: &[u8] = id.as_ref();
+
+        assert_eq!(bytes, b"Event");
+
+        Ok(())
+    }
+
+    // Debug
+
+    #[test]
+    fn identifier_debug_format() -> Result<(), Error> {
+        let id = Identifier::new("StudentEnrolled")?;
+        let debug_str = format!("{id:?}");
+
+        assert!(debug_str.contains("Identifier"));
+        assert!(debug_str.contains("StudentEnrolled"));
+
+        Ok(())
+    }
+
+    // IdentifierHash tests
+
+    #[test]
+    fn identifier_hash_type_equality() {
+        let hash1 = IdentifierHash::new(12345);
+        let hash2 = IdentifierHash::new(12345);
+        let hash3 = IdentifierHash::new(67890);
+
+        assert_eq!(hash1, hash2);
+        assert_ne!(hash1, hash3);
+    }
+
+    #[test]
+    fn identifier_hash_type_ordering() {
+        let hash1 = IdentifierHash::new(100);
+        let hash2 = IdentifierHash::new(200);
+        let hash3 = IdentifierHash::new(300);
+
+        assert!(hash1 < hash2);
+        assert!(hash2 < hash3);
+        assert!(hash1 < hash3);
+        assert!(hash3 > hash1);
+    }
+
+    #[test]
+    fn identifier_hash_type_clone_and_copy() {
+        let hash1 = IdentifierHash::new(12345);
+        let hash2 = hash1;
+        let hash3 = hash1.clone();
+
+        assert_eq!(hash1, hash2);
+        assert_eq!(hash1, hash3);
+    }
+
+    #[test]
+    fn identifier_hash_type_from_identifier() -> Result<(), Error> {
+        let id = Identifier::new("Event")?;
+        let hash: IdentifierHash = (&id).into();
+
+        assert_eq!(hash.hash_val(), id.hash_val());
+
+        Ok(())
+    }
+
+    #[test]
+    fn identifier_hash_type_hash_trait() {
+        let hash1 = IdentifierHash::new(12345);
+        let hash2 = IdentifierHash::new(12345);
+
+        let mut hasher1 = DefaultHasher::new();
+        let mut hasher2 = DefaultHasher::new();
+
+        hash1.hash(&mut hasher1);
+        hash2.hash(&mut hasher2);
+
+        assert_eq!(hasher1.finish(), hasher2.finish());
+    }
+
+    // IdentifierHashRef tests
+
+    #[test]
+    fn identifier_hash_ref_equality() -> Result<(), Error> {
+        let id1 = Identifier::new("Event")?;
+        let id2 = Identifier::new("Event")?;
+        let id3 = Identifier::new("Other")?;
+
+        let ref1: IdentifierHashRef<'_> = (&id1).into();
+        let ref2: IdentifierHashRef<'_> = (&id2).into();
+        let ref3: IdentifierHashRef<'_> = (&id3).into();
+
+        assert_eq!(ref1, ref2);
+        assert_ne!(ref1, ref3);
+
+        Ok(())
+    }
+
+    #[test]
+    fn identifier_hash_ref_deref() -> Result<(), Error> {
+        let id = Identifier::new("StudentEnrolled")?;
+        let hash_ref: IdentifierHashRef<'_> = (&id).into();
+        let deref_id: &Identifier = &hash_ref;
+
+        assert_eq!(deref_id, &id);
+
+        Ok(())
+    }
+
+    #[test]
+    fn identifier_hash_ref_hash_trait() -> Result<(), Error> {
+        let id = Identifier::new("Event")?;
+        let ref1: IdentifierHashRef<'_> = (&id).into();
+        let ref2: IdentifierHashRef<'_> = (&id).into();
+
+        let mut hasher1 = DefaultHasher::new();
+        let mut hasher2 = DefaultHasher::new();
+
+        ref1.hash(&mut hasher1);
+        ref2.hash(&mut hasher2);
+
+        assert_eq!(hasher1.finish(), hasher2.finish());
+
+        Ok(())
+    }
+
+    #[test]
+    fn identifier_hash_ref_from_identifier() -> Result<(), Error> {
+        let id = Identifier::new("Event")?;
+        let hash_ref: IdentifierHashRef<'_> = (&id).into();
+
+        assert_eq!(hash_ref.hash_val(), id.hash_val());
 
         Ok(())
     }
