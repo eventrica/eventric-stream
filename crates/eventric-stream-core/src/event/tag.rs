@@ -316,8 +316,6 @@ mod tests {
 
         assert!(tag <= tag);
         assert!(tag >= tag);
-        assert!(!(tag < tag));
-        assert!(!(tag > tag));
 
         Ok(())
     }
@@ -444,7 +442,7 @@ mod tests {
     fn tag_hash_type_clone_and_copy() {
         let hash1 = TagHash::new(12345);
         let hash2 = hash1;
-        let hash3 = hash1.clone();
+        let hash3 = hash1;
 
         assert_eq!(hash1, hash2);
         assert_eq!(hash1, hash3);

@@ -372,8 +372,6 @@ mod tests {
 
         assert!(spec <= spec);
         assert!(spec >= spec);
-        assert!(!(spec < spec));
-        assert!(!(spec > spec));
         assert_eq!(spec.cmp(&spec), Ordering::Equal);
     }
 

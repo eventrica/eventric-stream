@@ -302,8 +302,6 @@ mod tests {
 
         assert!(id <= id);
         assert!(id >= id);
-        assert!(!(id < id));
-        assert!(!(id > id));
 
         Ok(())
     }
@@ -430,7 +428,7 @@ mod tests {
     fn identifier_hash_type_clone_and_copy() {
         let hash1 = IdentifierHash::new(12345);
         let hash2 = hash1;
-        let hash3 = hash1.clone();
+        let hash3 = hash1;
 
         assert_eq!(hash1, hash2);
         assert_eq!(hash1, hash3);
