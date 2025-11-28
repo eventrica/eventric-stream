@@ -33,10 +33,7 @@ fn iterate_empty_stream() -> Result<(), Error> {
 fn iterate_single_event() -> Result<(), Error> {
     let mut stream = fixtures::stream()?;
 
-    stream.append(
-        [fixtures::event("data", "TestEvent", &["tag:1"], 0)?],
-        None,
-    )?;
+    stream.append([fixtures::event("data", "TestEvent", &["tag:1"], 0)?], None)?;
 
     let events: Vec<_> = stream.iterate(None).collect::<Result<Vec<_>, _>>()?;
 

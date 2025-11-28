@@ -75,7 +75,7 @@ fn iterate_query_by_identifier_and_tags() -> Result<(), Error> {
 
     let query = Query::new([Selector::specifiers_and_tags(
         vec![Specifier::new(Identifier::new("StudentEnrolled")?)],
-        vec![Tag::new("course:200")?],
+        vec![Tag::new("c:200")?],
     )?])?;
 
     let (events, _query_opt) = stream.iterate_query(query, None);
@@ -84,7 +84,7 @@ fn iterate_query_by_identifier_and_tags() -> Result<(), Error> {
     assert_eq!(
         events.len(),
         2,
-        "Should match StudentEnrolled events with course:200"
+        "Should match StudentEnrolled events with c:200"
     );
     assert_eq!(events[0].position(), &Position::new(0));
     assert_eq!(events[1].position(), &Position::new(2));
@@ -99,7 +99,7 @@ fn iterate_query_with_multiple_tags() -> Result<(), Error> {
 
     let query = Query::new([Selector::specifiers_and_tags(
         vec![Specifier::new(Identifier::new("StudentEnrolled")?)],
-        vec![Tag::new("student:100")?, Tag::new("course:200")?],
+        vec![Tag::new("s:100")?, Tag::new("c:200")?],
     )?])?;
 
     let (events, _query_opt) = stream.iterate_query(query, None);
@@ -108,7 +108,7 @@ fn iterate_query_with_multiple_tags() -> Result<(), Error> {
     assert_eq!(
         events.len(),
         1,
-        "Should match events with both student:100 AND course:200"
+        "Should match events with both s:100 AND c:200"
     );
     assert_eq!(events[0].position(), &Position::new(0));
 
@@ -180,7 +180,7 @@ fn iterate_query_with_multiple_selectors() -> Result<(), Error> {
         Selector::specifiers(vec![Specifier::new(Identifier::new("CourseCreated")?)])?,
         Selector::specifiers_and_tags(
             vec![Specifier::new(Identifier::new("StudentEnrolled")?)],
-            vec![Tag::new("student:100")?],
+            vec![Tag::new("s:100")?],
         )?,
     ])?;
 
@@ -190,7 +190,7 @@ fn iterate_query_with_multiple_selectors() -> Result<(), Error> {
     assert_eq!(
         events.len(),
         3,
-        "Should match CourseCreated OR (StudentEnrolled with student:100)"
+        "Should match CourseCreated OR (StudentEnrolled with s:100)"
     );
     assert_eq!(events[0].position(), &Position::new(0));
     assert_eq!(events[1].position(), &Position::new(1));
@@ -364,17 +364,13 @@ fn iterate_query_with_common_tag() -> Result<(), Error> {
             Specifier::new(Identifier::new("CourseUpdated")?),
             Specifier::new(Identifier::new("StudentDropped")?),
         ],
-        vec![Tag::new("course:200")?],
+        vec![Tag::new("c:200")?],
     )?])?;
 
     let (events, _query_opt) = stream.iterate_query(query, None);
     let events = events.collect::<Result<Vec<_>, _>>()?;
 
-    assert_eq!(
-        events.len(),
-        5,
-        "Should match all events tagged with course:200"
-    );
+    assert_eq!(events.len(), 5, "Should match all events tagged with c:200");
 
     Ok(())
 }
@@ -517,7 +513,7 @@ fn iterate_vec_query_with_overlapping_queries() -> Result<(), Error> {
         )])?])?,
         Query::new([Selector::specifiers_and_tags(
             vec![Specifier::new(Identifier::new("StudentEnrolled")?)],
-            vec![Tag::new("course:200")?],
+            vec![Tag::new("c:200")?],
         )?])?,
     ];
 
@@ -559,7 +555,7 @@ fn iterate_vec_query_with_three_queries() -> Result<(), Error> {
         )])?])?,
         Query::new([Selector::specifiers_and_tags(
             vec![Specifier::new(Identifier::new("CourseUpdated")?)],
-            vec![Tag::new("course:200")?],
+            vec![Tag::new("c:200")?],
         )?])?,
     ];
 
@@ -595,11 +591,11 @@ fn iterate_vec_query_with_tags_filter() -> Result<(), Error> {
     let queries = vec![
         Query::new([Selector::specifiers_and_tags(
             vec![Specifier::new(Identifier::new("StudentEnrolled")?)],
-            vec![Tag::new("student:100")?],
+            vec![Tag::new("s:100")?],
         )?])?,
         Query::new([Selector::specifiers_and_tags(
             vec![Specifier::new(Identifier::new("StudentEnrolled")?)],
-            vec![Tag::new("student:101")?],
+            vec![Tag::new("s:101")?],
         )?])?,
     ];
 
@@ -608,11 +604,11 @@ fn iterate_vec_query_with_tags_filter() -> Result<(), Error> {
 
     assert_eq!(events.len(), 2, "Should match 2 specific students");
 
-    // First event: student:100 at position 0
+    // First event: s:100 at position 0
     assert_eq!(events[0].0.position(), &Position::new(0));
     assert_eq!(events[0].1, vec![true, false]);
 
-    // Second event: student:101 at position 2
+    // Second event: s:101 at position 2
     assert_eq!(events[1].0.position(), &Position::new(2));
     assert_eq!(events[1].1, vec![false, true]);
 
@@ -633,7 +629,7 @@ fn iterate_vec_query_all_queries_match_same_events() -> Result<(), Error> {
                 Specifier::new(Identifier::new("CourseCreated")?),
                 Specifier::new(Identifier::new("CourseUpdated")?),
             ],
-            vec![Tag::new("course:200")?],
+            vec![Tag::new("c:200")?],
         )?])?,
     ];
 
@@ -774,7 +770,7 @@ fn iterate_vec_query_with_complex_selectors() -> Result<(), Error> {
             Selector::specifiers(vec![Specifier::new(Identifier::new("CourseCreated")?)])?,
             Selector::specifiers_and_tags(
                 vec![Specifier::new(Identifier::new("StudentEnrolled")?)],
-                vec![Tag::new("student:100")?],
+                vec![Tag::new("s:100")?],
             )?,
         ])?,
         Query::new([Selector::specifiers_and_tags(
@@ -782,7 +778,7 @@ fn iterate_vec_query_with_complex_selectors() -> Result<(), Error> {
                 Specifier::new(Identifier::new("StudentEnrolled")?),
                 Specifier::new(Identifier::new("StudentDropped")?),
             ],
-            vec![Tag::new("student:100")?],
+            vec![Tag::new("s:100")?],
         )?])?,
     ];
 
