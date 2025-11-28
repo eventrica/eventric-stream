@@ -1,64 +1,26 @@
+mod fixtures;
+
 use eventric_stream::{
     error::Error,
     event::{
-        Data,
-        EphemeralEvent,
         Identifier,
         Position,
-        Tag,
         Timestamp,
         Version,
     },
     stream::{
-        Stream,
         append::Append,
         iterate::Iterate,
     },
-    temp_path,
 };
 
 // =================================================================================================
 // Iterate
 // =================================================================================================
 
-/// Creates a new temporary test stream that will be automatically cleaned up
-fn create_test_stream() -> Result<Stream, Error> {
-    Stream::builder(temp_path()).temporary(true).open()
-}
-
-/// Creates a sample `EphemeralEvent` for testing
-fn create_event(
-    data: &str,
-    identifier: &str,
-    tags: &[&str],
-    version: u8,
-) -> Result<EphemeralEvent, Error> {
-    Ok(EphemeralEvent::new(
-        Data::new(data)?,
-        Identifier::new(identifier)?,
-        tags.iter()
-            .map(|tag| Tag::new(*tag))
-            .collect::<Result<Vec<_>, _>>()?,
-        Version::new(version),
-    ))
-}
-
-/// Creates multiple sample events for testing
-fn create_sample_events() -> Result<[EphemeralEvent; 5], Error> {
-    Ok([
-        create_event("first", "EventA", &["tag:1"], 0)?,
-        create_event("second", "EventB", &["tag:2"], 0)?,
-        create_event("third", "EventC", &["tag:3"], 0)?,
-        create_event("fourth", "EventD", &["tag:4"], 0)?,
-        create_event("fifth", "EventE", &["tag:5"], 0)?,
-    ])
-}
-
-// Iterate Trait
-
 #[test]
 fn iterate_empty_stream() -> Result<(), Error> {
-    let stream = create_test_stream()?;
+    let stream = fixtures::stream()?;
 
     let events: Vec<_> = stream.iterate(None).collect::<Result<Vec<_>, _>>()?;
 
@@ -69,9 +31,12 @@ fn iterate_empty_stream() -> Result<(), Error> {
 
 #[test]
 fn iterate_single_event() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
-    stream.append([create_event("data", "TestEvent", &["tag:1"], 0)?], None)?;
+    stream.append(
+        [fixtures::event("data", "TestEvent", &["tag:1"], 0)?],
+        None,
+    )?;
 
     let events: Vec<_> = stream.iterate(None).collect::<Result<Vec<_>, _>>()?;
 
@@ -87,13 +52,13 @@ fn iterate_single_event() -> Result<(), Error> {
 
 #[test]
 fn iterate_multiple_events() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
-    stream.append(create_sample_events()?, None)?;
+    stream.append(fixtures::events()?, None)?;
 
     let events: Vec<_> = stream.iterate(None).collect::<Result<Vec<_>, _>>()?;
 
-    assert_eq!(events.len(), 5, "Should retrieve 5 events");
+    assert_eq!(events.len(), 7, "Should retrieve 7 events");
 
     for (i, event) in events.iter().enumerate() {
         assert_eq!(
@@ -108,47 +73,48 @@ fn iterate_multiple_events() -> Result<(), Error> {
 
 #[test]
 fn iterate_from_position() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
-    stream.append(create_sample_events()?, None)?;
+    stream.append(fixtures::events()?, None)?;
 
     let events: Vec<_> = stream
-        .iterate(Some(Position::new(2)))
+        .iterate(Some(Position::new(4)))
         .collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(
         events.len(),
         3,
-        "Should retrieve events from position 2 onwards"
+        "Should retrieve events from position 4 onwards"
     );
-    assert_eq!(events[0].position(), &Position::new(2));
-    assert_eq!(events[1].position(), &Position::new(3));
-    assert_eq!(events[2].position(), &Position::new(4));
+
+    assert_eq!(events[0].position(), &Position::new(4));
+    assert_eq!(events[1].position(), &Position::new(5));
+    assert_eq!(events[2].position(), &Position::new(6));
 
     Ok(())
 }
 
 #[test]
 fn iterate_from_last_position() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
-    stream.append(create_sample_events()?, None)?;
+    stream.append(fixtures::events()?, None)?;
 
     let events: Vec<_> = stream
-        .iterate(Some(Position::new(4)))
+        .iterate(Some(Position::new(6)))
         .collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 1, "Should retrieve only the last event");
-    assert_eq!(events[0].position(), &Position::new(4));
+    assert_eq!(events[0].position(), &Position::new(6));
 
     Ok(())
 }
 
 #[test]
 fn iterate_from_beyond_stream() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
-    stream.append(create_sample_events()?, None)?;
+    stream.append(fixtures::events()?, None)?;
 
     let events: Vec<_> = stream
         .iterate(Some(Position::new(100)))
@@ -161,9 +127,9 @@ fn iterate_from_beyond_stream() -> Result<(), Error> {
 
 #[test]
 fn iterate_preserves_event_data() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
-    let original_event = create_event("test data", "TestEvent", &["tag:a", "tag:b"], 3)?;
+    let original_event = fixtures::event("test data", "TestEvent", &["tag:a", "tag:b"], 3)?;
     let expected_data = original_event.data().clone();
     let expected_identifier = original_event.identifier().clone();
     let expected_tags = original_event.tags().clone();
@@ -184,11 +150,11 @@ fn iterate_preserves_event_data() -> Result<(), Error> {
 
 #[test]
 fn iterate_assigns_positions_sequentially() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
-    stream.append([create_event("first", "Event1", &[], 0)?], None)?;
-    stream.append([create_event("second", "Event2", &[], 0)?], None)?;
-    stream.append([create_event("third", "Event3", &[], 0)?], None)?;
+    stream.append([fixtures::event("first", "Event1", &[], 0)?], None)?;
+    stream.append([fixtures::event("second", "Event2", &[], 0)?], None)?;
+    stream.append([fixtures::event("third", "Event3", &[], 0)?], None)?;
 
     let events: Vec<_> = stream.iterate(None).collect::<Result<Vec<_>, _>>()?;
 
@@ -202,9 +168,9 @@ fn iterate_assigns_positions_sequentially() -> Result<(), Error> {
 
 #[test]
 fn iterate_assigns_timestamps() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
-    stream.append([create_event("data", "TestEvent", &[], 0)?], None)?;
+    stream.append([fixtures::event("data", "TestEvent", &[], 0)?], None)?;
 
     let events: Vec<_> = stream.iterate(None).collect::<Result<Vec<_>, _>>()?;
 
@@ -219,12 +185,12 @@ fn iterate_assigns_timestamps() -> Result<(), Error> {
 
 #[test]
 fn iterate_maintains_append_order() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
     let identifiers = ["EventA", "EventB", "EventC", "EventD", "EventE"];
 
     for id in &identifiers {
-        stream.append([create_event("data", id, &[], 0)?], None)?;
+        stream.append([fixtures::event("data", id, &[], 0)?], None)?;
     }
 
     let events: Vec<_> = stream.iterate(None).collect::<Result<Vec<_>, _>>()?;
@@ -244,9 +210,9 @@ fn iterate_maintains_append_order() -> Result<(), Error> {
 
 #[test]
 fn iterate_multiple_times() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
-    stream.append(create_sample_events()?, None)?;
+    stream.append(fixtures::events()?, None)?;
 
     let events1: Vec<_> = stream.iterate(None).collect::<Result<Vec<_>, _>>()?;
     let events2: Vec<_> = stream.iterate(None).collect::<Result<Vec<_>, _>>()?;
@@ -256,7 +222,7 @@ fn iterate_multiple_times() -> Result<(), Error> {
         events2.len(),
         "Both iterations should return same count"
     );
-    assert_eq!(events1.len(), 5);
+    assert_eq!(events1.len(), 7);
 
     for (i, (e1, e2)) in events1.iter().zip(events2.iter()).enumerate() {
         assert_eq!(
@@ -276,26 +242,26 @@ fn iterate_multiple_times() -> Result<(), Error> {
 
 #[test]
 fn iterate_backward() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
-    stream.append(create_sample_events()?, None)?;
+    stream.append(fixtures::events()?, None)?;
 
     let events: Vec<_> = stream.iterate(None).rev().collect::<Result<Vec<_>, _>>()?;
 
-    assert_eq!(events.len(), 5, "Should retrieve 5 events in reverse");
+    assert_eq!(events.len(), 7, "Should retrieve 7 events in reverse");
     assert_eq!(
         events[0].position(),
-        &Position::new(4),
+        &Position::new(6),
         "First should be last"
     );
     assert_eq!(
-        events[4].position(),
+        events[6].position(),
         &Position::new(0),
         "Last should be first"
     );
 
     for (i, event) in events.iter().enumerate() {
-        let expected_position = 4 - i;
+        let expected_position = 6 - i;
         assert_eq!(
             event.position(),
             &Position::new(expected_position as u64),
@@ -308,13 +274,13 @@ fn iterate_backward() -> Result<(), Error> {
 
 #[test]
 fn iterate_with_mixed_tags() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
     stream.append(
         [
-            create_event("event1", "Event1", &[], 0)?,
-            create_event("event2", "Event2", &["tag:a"], 0)?,
-            create_event("event3", "Event3", &["tag:a", "tag:b", "tag:c"], 0)?,
+            fixtures::event("event1", "Event1", &[], 0)?,
+            fixtures::event("event2", "Event2", &["tag:a"], 0)?,
+            fixtures::event("event3", "Event3", &["tag:a", "tag:b", "tag:c"], 0)?,
         ],
         None,
     )?;
@@ -331,13 +297,13 @@ fn iterate_with_mixed_tags() -> Result<(), Error> {
 
 #[test]
 fn iterate_with_different_versions() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
     stream.append(
         [
-            create_event("v0", "Event", &[], 0)?,
-            create_event("v1", "Event", &[], 1)?,
-            create_event("v2", "Event", &[], 2)?,
+            fixtures::event("v0", "Event", &[], 0)?,
+            fixtures::event("v1", "Event", &[], 1)?,
+            fixtures::event("v2", "Event", &[], 2)?,
         ],
         None,
     )?;
@@ -354,16 +320,16 @@ fn iterate_with_different_versions() -> Result<(), Error> {
 
 #[test]
 fn iterate_after_multiple_appends() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
-    stream.append([create_event("first", "Event1", &[], 0)?], None)?;
-    stream.append([create_event("second", "Event2", &[], 0)?], None)?;
+    stream.append([fixtures::event("first", "Event1", &[], 0)?], None)?;
+    stream.append([fixtures::event("second", "Event2", &[], 0)?], None)?;
 
     let events_before: Vec<_> = stream.iterate(None).collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events_before.len(), 2);
 
-    stream.append([create_event("third", "Event3", &[], 0)?], None)?;
+    stream.append([fixtures::event("third", "Event3", &[], 0)?], None)?;
 
     let events_after: Vec<_> = stream.iterate(None).collect::<Result<Vec<_>, _>>()?;
 

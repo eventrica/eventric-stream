@@ -1,8 +1,8 @@
+mod fixtures;
+
 use eventric_stream::{
     error::Error,
     event::{
-        Data,
-        EphemeralEvent,
         Identifier,
         Position,
         Specifier,
@@ -10,7 +10,6 @@ use eventric_stream::{
         Version,
     },
     stream::{
-        Stream,
         append::Append,
         iterate::IterateQuery,
         query::{
@@ -18,74 +17,16 @@ use eventric_stream::{
             Selector,
         },
     },
-    temp_path,
 };
 
 // =================================================================================================
 // Iterate Query
 // =================================================================================================
 
-/// Creates a new temporary test stream that will be automatically cleaned up
-fn create_test_stream() -> Result<Stream, Error> {
-    Stream::builder(temp_path()).temporary(true).open()
-}
-
-/// Creates a sample `EphemeralEvent` for testing
-fn create_event(
-    data: &str,
-    identifier: &str,
-    tags: &[&str],
-    version: u8,
-) -> Result<EphemeralEvent, Error> {
-    Ok(EphemeralEvent::new(
-        Data::new(data)?,
-        Identifier::new(identifier)?,
-        tags.iter()
-            .map(|tag| Tag::new(*tag))
-            .collect::<Result<Vec<_>, _>>()?,
-        Version::new(version),
-    ))
-}
-
-/// Creates a diverse set of events for query testing
-fn create_diverse_events() -> Result<Vec<EphemeralEvent>, Error> {
-    Ok(vec![
-        create_event(
-            "event1",
-            "StudentEnrolled",
-            &["student:100", "course:200"],
-            0,
-        )?,
-        create_event("event2", "CourseCreated", &["course:200"], 0)?,
-        create_event(
-            "event3",
-            "StudentEnrolled",
-            &["student:101", "course:200"],
-            0,
-        )?,
-        create_event("event4", "CourseUpdated", &["course:200"], 0)?,
-        create_event(
-            "event5",
-            "StudentEnrolled",
-            &["student:102", "course:201"],
-            0,
-        )?,
-        create_event("event6", "CourseCreated", &["course:201"], 0)?,
-        create_event(
-            "event7",
-            "StudentDropped",
-            &["student:100", "course:200"],
-            0,
-        )?,
-    ])
-}
-
-// Iterate Query Trait
-
 #[test]
 fn iterate_query_by_single_identifier() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let query = Query::new([Selector::specifiers(vec![Specifier::new(
         Identifier::new("StudentEnrolled")?,
@@ -104,8 +45,8 @@ fn iterate_query_by_single_identifier() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_by_multiple_identifiers() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let query = Query::new([Selector::specifiers(vec![
         Specifier::new(Identifier::new("CourseCreated")?),
@@ -129,8 +70,8 @@ fn iterate_query_by_multiple_identifiers() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_by_identifier_and_tags() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let query = Query::new([Selector::specifiers_and_tags(
         vec![Specifier::new(Identifier::new("StudentEnrolled")?)],
@@ -153,8 +94,8 @@ fn iterate_query_by_identifier_and_tags() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_with_multiple_tags() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let query = Query::new([Selector::specifiers_and_tags(
         vec![Specifier::new(Identifier::new("StudentEnrolled")?)],
@@ -176,8 +117,8 @@ fn iterate_query_with_multiple_tags() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_with_no_matches() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let query = Query::new([Selector::specifiers(vec![Specifier::new(
         Identifier::new("NonExistentEvent")?,
@@ -193,8 +134,8 @@ fn iterate_query_with_no_matches() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_from_position() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let query = Query::new([Selector::specifiers(vec![Specifier::new(
         Identifier::new("StudentEnrolled")?,
@@ -215,8 +156,8 @@ fn iterate_query_from_position() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_from_beyond_matches() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let query = Query::new([Selector::specifiers(vec![Specifier::new(
         Identifier::new("StudentEnrolled")?,
@@ -232,8 +173,8 @@ fn iterate_query_from_beyond_matches() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_with_multiple_selectors() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let query = Query::new([
         Selector::specifiers(vec![Specifier::new(Identifier::new("CourseCreated")?)])?,
@@ -260,8 +201,8 @@ fn iterate_query_with_multiple_selectors() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_returns_optimized_query() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let query = Query::new([Selector::specifiers(vec![Specifier::new(
         Identifier::new("StudentEnrolled")?,
@@ -279,8 +220,8 @@ fn iterate_query_returns_optimized_query() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_preserves_event_data() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    let event = create_event("test data", "TestEvent", &["tag:a", "tag:b"], 3)?;
+    let mut stream = fixtures::stream()?;
+    let event = fixtures::event("test data", "TestEvent", &["tag:a", "tag:b"], 3)?;
     let expected_identifier = event.identifier().clone();
 
     stream.append([event], None)?;
@@ -301,8 +242,8 @@ fn iterate_query_preserves_event_data() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_multiple_times() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let query1 = Query::new([Selector::specifiers(vec![Specifier::new(
         Identifier::new("StudentEnrolled")?,
@@ -329,7 +270,7 @@ fn iterate_query_multiple_times() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_empty_stream() -> Result<(), Error> {
-    let stream = create_test_stream()?;
+    let stream = fixtures::stream()?;
 
     let query = Query::new([Selector::specifiers(vec![Specifier::new(
         Identifier::new("AnyEvent")?,
@@ -345,8 +286,8 @@ fn iterate_query_empty_stream() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_maintains_order() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let query = Query::new([Selector::specifiers(vec![Specifier::new(
         Identifier::new("StudentEnrolled")?,
@@ -367,8 +308,8 @@ fn iterate_query_maintains_order() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_backward() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let query = Query::new([Selector::specifiers(vec![Specifier::new(
         Identifier::new("StudentEnrolled")?,
@@ -387,14 +328,14 @@ fn iterate_query_backward() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_with_version_specifier() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
 
     stream.append(
         vec![
-            create_event("v0", "Event", &["tag:1"], 0)?,
-            create_event("v1", "Event", &["tag:1"], 1)?,
-            create_event("v2", "Event", &["tag:1"], 2)?,
-            create_event("v0_again", "Event", &["tag:1"], 0)?,
+            fixtures::event("v0", "Event", &["tag:1"], 0)?,
+            fixtures::event("v1", "Event", &["tag:1"], 1)?,
+            fixtures::event("v2", "Event", &["tag:1"], 2)?,
+            fixtures::event("v0_again", "Event", &["tag:1"], 0)?,
         ],
         None,
     )?;
@@ -413,8 +354,8 @@ fn iterate_query_with_version_specifier() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_with_common_tag() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let query = Query::new([Selector::specifiers_and_tags(
         vec![
@@ -440,10 +381,10 @@ fn iterate_query_with_common_tag() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_after_additional_appends() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
+    let mut stream = fixtures::stream()?;
     let initial_events = vec![
-        create_event("event1", "EventA", &["tag:1"], 0)?,
-        create_event("event2", "EventB", &["tag:2"], 0)?,
+        fixtures::event("event1", "EventA", &["tag:1"], 0)?,
+        fixtures::event("event2", "EventB", &["tag:2"], 0)?,
     ];
 
     stream.append(initial_events, None)?;
@@ -457,7 +398,7 @@ fn iterate_query_after_additional_appends() -> Result<(), Error> {
 
     assert_eq!(events_before.len(), 1);
 
-    stream.append([create_event("event3", "EventA", &["tag:3"], 0)?], None)?;
+    stream.append([fixtures::event("event3", "EventA", &["tag:3"], 0)?], None)?;
 
     let (events_after, _) = stream.iterate_query(query, None);
     let events_after = events_after.collect::<Result<Vec<_>, _>>()?;
@@ -470,8 +411,8 @@ fn iterate_query_after_additional_appends() -> Result<(), Error> {
 
 #[test]
 fn iterate_query_reuses_optimized_query() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let query = Query::new([Selector::specifiers(vec![Specifier::new(
         Identifier::new("StudentEnrolled")?,
@@ -497,8 +438,8 @@ fn iterate_query_reuses_optimized_query() -> Result<(), Error> {
 
 #[test]
 fn iterate_vec_query_with_single_query() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let queries = vec![Query::new([Selector::specifiers(vec![Specifier::new(
         Identifier::new("StudentEnrolled")?,
@@ -521,8 +462,8 @@ fn iterate_vec_query_with_single_query() -> Result<(), Error> {
 
 #[test]
 fn iterate_vec_query_with_two_non_overlapping_queries() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let queries = vec![
         Query::new([Selector::specifiers(vec![Specifier::new(
@@ -567,8 +508,8 @@ fn iterate_vec_query_with_two_non_overlapping_queries() -> Result<(), Error> {
 
 #[test]
 fn iterate_vec_query_with_overlapping_queries() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let queries = vec![
         Query::new([Selector::specifiers(vec![Specifier::new(
@@ -606,8 +547,8 @@ fn iterate_vec_query_with_overlapping_queries() -> Result<(), Error> {
 
 #[test]
 fn iterate_vec_query_with_three_queries() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let queries = vec![
         Query::new([Selector::specifiers(vec![Specifier::new(
@@ -648,8 +589,8 @@ fn iterate_vec_query_with_three_queries() -> Result<(), Error> {
 
 #[test]
 fn iterate_vec_query_with_tags_filter() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let queries = vec![
         Query::new([Selector::specifiers_and_tags(
@@ -680,8 +621,8 @@ fn iterate_vec_query_with_tags_filter() -> Result<(), Error> {
 
 #[test]
 fn iterate_vec_query_all_queries_match_same_events() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let queries = vec![
         Query::new([Selector::specifiers(vec![Specifier::new(
@@ -719,8 +660,8 @@ fn iterate_vec_query_all_queries_match_same_events() -> Result<(), Error> {
 
 #[test]
 fn iterate_vec_query_from_position() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let queries = vec![
         Query::new([Selector::specifiers(vec![Specifier::new(
@@ -753,8 +694,8 @@ fn iterate_vec_query_from_position() -> Result<(), Error> {
 
 #[test]
 fn iterate_vec_query_empty_queries() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let queries: Vec<Query> = vec![];
 
@@ -768,8 +709,8 @@ fn iterate_vec_query_empty_queries() -> Result<(), Error> {
 
 #[test]
 fn iterate_vec_query_backward() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let queries = vec![
         Query::new([Selector::specifiers(vec![Specifier::new(
@@ -798,8 +739,8 @@ fn iterate_vec_query_backward() -> Result<(), Error> {
 
 #[test]
 fn iterate_vec_query_maintains_order() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let queries = vec![
         Query::new([Selector::specifiers(vec![Specifier::new(
@@ -825,8 +766,8 @@ fn iterate_vec_query_maintains_order() -> Result<(), Error> {
 
 #[test]
 fn iterate_vec_query_with_complex_selectors() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let queries = vec![
         Query::new([
@@ -871,8 +812,8 @@ fn iterate_vec_query_with_complex_selectors() -> Result<(), Error> {
 
 #[test]
 fn iterate_vec_query_reuses_prepared() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let queries = vec![
         Query::new([Selector::specifiers(vec![Specifier::new(
@@ -902,8 +843,8 @@ fn iterate_vec_query_reuses_prepared() -> Result<(), Error> {
 
 #[test]
 fn iterate_vec_query_preserves_mask_order() -> Result<(), Error> {
-    let mut stream = create_test_stream()?;
-    stream.append(create_diverse_events()?, None)?;
+    let mut stream = fixtures::stream()?;
+    stream.append(fixtures::events()?, None)?;
 
     let queries = vec![
         Query::new([Selector::specifiers(vec![Specifier::new(
