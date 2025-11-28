@@ -288,6 +288,7 @@ fn is_empty_persists_across_reopens() -> Result<(), Error> {
 
 // Combined len and is_empty tests
 
+#[allow(clippy::len_zero)]
 #[test]
 fn len_and_is_empty_relationship() -> Result<(), Error> {
     let mut stream = create_test_stream()?;
@@ -308,6 +309,7 @@ fn len_and_is_empty_relationship() -> Result<(), Error> {
     Ok(())
 }
 
+#[allow(clippy::len_zero)]
 #[test]
 fn len_and_is_empty_with_various_batch_sizes() -> Result<(), Error> {
     let batch_sizes = [1, 5, 10, 50, 100];
@@ -406,29 +408,6 @@ fn properties_with_versioned_events() -> Result<(), Error> {
 
     assert_eq!(stream.len(), 4, "All versions should be counted");
     assert!(!stream.is_empty());
-
-    Ok(())
-}
-
-#[test]
-fn len_at_boundaries() -> Result<(), Error> {
-    let stream = create_test_stream()?;
-
-    assert_eq!(stream.len(), 0, "Minimum length is 0");
-
-    // We can't easily test u64::MAX, but we can verify the type is u64
-    let len: u64 = stream.len();
-    assert!(len <= u64::MAX);
-
-    Ok(())
-}
-
-#[test]
-fn is_empty_boolean_type() -> Result<(), Error> {
-    let stream = create_test_stream()?;
-
-    let is_empty: bool = stream.is_empty();
-    assert!(is_empty || !is_empty); // Always true, just verifies type
 
     Ok(())
 }
