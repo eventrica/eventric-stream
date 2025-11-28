@@ -65,7 +65,11 @@ fn len_after_single_append() -> Result<(), Error> {
 
     stream.append([create_event("event1", "Event", &[], 0)?], None)?;
 
-    assert_eq!(stream.len(), 1, "Stream should have length 1 after appending 1 event");
+    assert_eq!(
+        stream.len(),
+        1,
+        "Stream should have length 1 after appending 1 event"
+    );
 
     Ok(())
 }
@@ -78,7 +82,11 @@ fn len_after_multiple_appends() -> Result<(), Error> {
     stream.append([create_event("event2", "Event", &[], 0)?], None)?;
     stream.append([create_event("event3", "Event", &[], 0)?], None)?;
 
-    assert_eq!(stream.len(), 3, "Stream should have length 3 after 3 appends");
+    assert_eq!(
+        stream.len(),
+        3,
+        "Stream should have length 3 after 3 appends"
+    );
 
     Ok(())
 }
@@ -89,7 +97,11 @@ fn len_after_batch_append() -> Result<(), Error> {
 
     stream.append(create_events(10)?, None)?;
 
-    assert_eq!(stream.len(), 10, "Stream should have length 10 after batch append");
+    assert_eq!(
+        stream.len(),
+        10,
+        "Stream should have length 10 after batch append"
+    );
 
     Ok(())
 }
@@ -193,7 +205,10 @@ fn is_empty_after_append() -> Result<(), Error> {
 
     stream.append([create_event("event1", "Event", &[], 0)?], None)?;
 
-    assert!(!stream.is_empty(), "Stream should not be empty after append");
+    assert!(
+        !stream.is_empty(),
+        "Stream should not be empty after append"
+    );
 
     Ok(())
 }
@@ -252,7 +267,10 @@ fn is_empty_persists_across_reopens() -> Result<(), Error> {
         assert!(stream.is_empty(), "New stream should be empty");
 
         stream.append(create_events(3)?, None)?;
-        assert!(!stream.is_empty(), "Stream should not be empty after append");
+        assert!(
+            !stream.is_empty(),
+            "Stream should not be empty after append"
+        );
     }
 
     {
