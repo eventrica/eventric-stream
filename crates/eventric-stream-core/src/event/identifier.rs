@@ -257,9 +257,9 @@ mod tests {
 
     #[test]
     fn identifier_equality() -> Result<(), Error> {
-        let id1 = Identifier::new("StudentEnrolled")?;
-        let id2 = Identifier::new("StudentEnrolled")?;
-        let id3 = Identifier::new("CourseCreated")?;
+        let id1 = Identifier::new("student_enrolled")?;
+        let id2 = Identifier::new("student_enrolled")?;
+        let id3 = Identifier::new("course_created")?;
 
         assert_eq!(id1, id2);
         assert_ne!(id1, id3);
@@ -369,10 +369,10 @@ mod tests {
 
     #[test]
     fn identifier_as_ref_str() -> Result<(), Error> {
-        let id = Identifier::new("StudentEnrolled")?;
+        let id = Identifier::new("student_enrolled")?;
         let s: &str = id.as_ref();
 
-        assert_eq!(s, "StudentEnrolled");
+        assert_eq!(s, "student_enrolled");
 
         Ok(())
     }
@@ -391,11 +391,11 @@ mod tests {
 
     #[test]
     fn identifier_debug_format() -> Result<(), Error> {
-        let id = Identifier::new("StudentEnrolled")?;
+        let id = Identifier::new("student_enrolled")?;
         let debug_str = format!("{id:?}");
 
         assert!(debug_str.contains("Identifier"));
-        assert!(debug_str.contains("StudentEnrolled"));
+        assert!(debug_str.contains("student_enrolled"));
 
         Ok(())
     }
@@ -478,7 +478,7 @@ mod tests {
 
     #[test]
     fn identifier_hash_ref_deref() -> Result<(), Error> {
-        let id = Identifier::new("StudentEnrolled")?;
+        let id = Identifier::new("student_enrolled")?;
         let hash_ref: IdentifierHashRef<'_> = (&id).into();
         let deref_id: &Identifier = &hash_ref;
 

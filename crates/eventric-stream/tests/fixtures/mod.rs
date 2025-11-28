@@ -38,8 +38,8 @@ pub(crate) fn event(data: &str, identifier: &str, tags: &[&str], version: u8) ->
 /// Creates a diverse set of events for comprehensive testing scenarios.
 ///
 /// This set includes:
-/// - Multiple event types (StudentEnrolled, CourseCreated, CourseUpdated,
-///   StudentDropped)
+/// - Multiple event types (student_enrolled, course_created, course_updated,
+///   student_dropped)
 /// - Various tag combinations (students, courses)
 /// - Different versions
 ///
@@ -47,13 +47,13 @@ pub(crate) fn event(data: &str, identifier: &str, tags: &[&str], version: u8) ->
 #[rustfmt::skip]
 pub(crate) fn events() -> Result<Vec<EphemeralEvent>, Error> {
     Ok(Vec::from_iter([
-        event("s:100-enrolled-c:200",   "StudentEnrolled",  &["s:100", "c:200"],    0)?,
-        event("c:200-created",          "CourseCreated",    &["c:200"],             0)?,
-        event("s:101-enrolled-c:200",   "StudentEnrolled",  &["s:101", "c:200"],    0)?,
-        event("c:200-updated",          "CourseUpdated",    &["c:200"],             0)?,
-        event("s:102-enrolled-c:201",   "StudentEnrolled",  &["s:102", "c:201"],    0)?,
-        event("course 201 created",     "CourseCreated",    &["c:201"],             0)?,
-        event("s:100-dropped-c:200",    "StudentDropped",   &["s:100", "c:200"],    0)?,
+        event("student:100-enrolled-course:200",    "student_enrolled",     &["student:100", "course:200"],     0)?,
+        event("course:200-created",                 "course_created",       &["course:200"],                    0)?,
+        event("student:101-enrolled-course:200",    "student_enrolled",     &["student:101", "course:200"],     0)?,
+        event("course:200-updated",                 "course_updated",       &["course:200"],                    0)?,
+        event("student:102-enrolled-course:201",    "student_enrolled",     &["student:102", "course:201"],     0)?,
+        event("course:201-created",                 "course_created",       &["course:201"],                    0)?,
+        event("student:100-dropped-course:200",     "student_dropped",      &["student:100", "course:200"],     0)?,
     ]))
 }
 

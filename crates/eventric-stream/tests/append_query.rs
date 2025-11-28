@@ -89,29 +89,29 @@ fn append_query_with_identifier_check() -> Result<(), Error> {
     stream.append_query(
         [fixtures::event(
             "first",
-            "StudentEnrolled",
+            "student_enrolled",
             &["student:100"],
             0,
         )?],
         Query::new([Selector::specifiers(vec![Specifier::new(
-            Identifier::new("CourseCreated")?,
+            Identifier::new("course_created")?,
         )])?])?,
         None,
     )?;
 
     let query = Query::new([Selector::specifiers(vec![Specifier::new(
-        Identifier::new("StudentEnrolled")?,
+        Identifier::new("student_enrolled")?,
     )])?])?;
 
     let result = stream.append_query(
-        [fixtures::event("second", "CourseCreated", &[], 0)?],
+        [fixtures::event("second", "course_created", &[], 0)?],
         query,
         None,
     );
 
     assert!(
         matches!(result, Err(Error::Concurrency)),
-        "Should detect StudentEnrolled event exists"
+        "Should detect student_enrolled event exists"
     );
 
     Ok(())
@@ -169,7 +169,7 @@ fn append_query_with_multiple_tags() -> Result<(), Error> {
     stream.append_query(
         [fixtures::event(
             "event1",
-            "StudentEnrolled",
+            "student_enrolled",
             &["student:100", "course:200"],
             0,
         )?],
@@ -180,7 +180,7 @@ fn append_query_with_multiple_tags() -> Result<(), Error> {
     )?;
 
     let query = Query::new([Selector::specifiers_and_tags(
-        vec![Specifier::new(Identifier::new("StudentEnrolled")?)],
+        vec![Specifier::new(Identifier::new("student_enrolled")?)],
         vec![Tag::new("student:100")?, Tag::new("course:200")?],
     )?])?;
 
@@ -506,7 +506,7 @@ fn append_query_complex_scenario() -> Result<(), Error> {
     stream.append_query(
         [fixtures::event(
             "enrollment1",
-            "StudentEnrolled",
+            "student_enrolled",
             &["student:100", "course:200"],
             0,
         )?],
@@ -519,7 +519,7 @@ fn append_query_complex_scenario() -> Result<(), Error> {
     stream.append_query(
         [fixtures::event(
             "course_created",
-            "CourseCreated",
+            "course_created",
             &["course:200"],
             0,
         )?],
@@ -530,14 +530,14 @@ fn append_query_complex_scenario() -> Result<(), Error> {
     )?;
 
     let query = Query::new([Selector::specifiers_and_tags(
-        vec![Specifier::new(Identifier::new("StudentEnrolled")?)],
+        vec![Specifier::new(Identifier::new("student_enrolled")?)],
         vec![Tag::new("course:200")?],
     )?])?;
 
     let result = stream.append_query(
         [fixtures::event(
             "enrollment2",
-            "StudentEnrolled",
+            "student_enrolled",
             &["student:101"],
             0,
         )?],
@@ -547,7 +547,7 @@ fn append_query_complex_scenario() -> Result<(), Error> {
 
     assert!(
         matches!(result, Err(Error::Concurrency)),
-        "Should detect existing StudentEnrolled with course:200"
+        "Should detect existing student_enrolled with course:200"
     );
 
     Ok(())
