@@ -143,3 +143,501 @@ impl Matches for Filters {
         false
     }
 }
+
+// -------------------------------------------------------------------------------------------------
+
+// Tests
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        event::{
+            Data,
+            PersistentEventHash,
+            Position,
+            Timestamp,
+            Version,
+            identifier::Identifier,
+            specifier::{
+                Specifier,
+                SpecifierHash,
+            },
+            tag::{
+                Tag,
+                TagHash,
+            },
+        },
+        stream::query::{
+            QueryHash,
+            SelectorHash,
+            filter::{
+                Filter,
+                Matches,
+            },
+        },
+    };
+
+    // Helper functions
+
+    fn make_event(identifier: &str, version: u8, tags: Vec<&str>) -> PersistentEventHash {
+        let identifier = (&Identifier::new_unvalidated(identifier)).into();
+        let tags = tags
+            .into_iter()
+            .map(|tag| (&Tag::new_unvalidated(tag)).into())
+            .collect();
+
+        PersistentEventHash::new(
+            Data::new_unvalidated(vec![0]),
+            identifier,
+            Position::new(0),
+            tags,
+            Timestamp::new(0),
+            Version::new(version),
+        )
+    }
+
+    fn make_specifier_hash(identifier: &str, range: std::ops::Range<Version>) -> SpecifierHash {
+        let id = Identifier::new_unvalidated(identifier);
+        let spec = Specifier::new(id).range(range);
+
+        (&spec).into()
+    }
+
+    fn make_tag_hash(tag: &str) -> TagHash {
+        let tag = Tag::new_unvalidated(tag);
+        (&tag).into()
+    }
+
+    // Filter::new with Specifiers only
+
+    #[test]
+    fn new_with_single_specifier() {
+        let spec = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec].into_iter().collect(),
+        )]);
+
+        let filter = Filter::new(&query);
+
+        assert!(filter.filters.len() == 1);
+    }
+
+    #[test]
+    fn new_with_multiple_specifiers_same_identifier() {
+        let spec1 = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let spec2 = make_specifier_hash("Event", Version::new(10)..Version::new(15));
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec1, spec2].into_iter().collect(),
+        )]);
+
+        let filter = Filter::new(&query);
+
+        assert!(filter.filters.len() == 1);
+    }
+
+    #[test]
+    fn new_with_multiple_specifiers_different_identifiers() {
+        let spec1 = make_specifier_hash("EventA", Version::new(1)..Version::new(5));
+        let spec2 = make_specifier_hash("EventB", Version::new(1)..Version::new(5));
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec1, spec2].into_iter().collect(),
+        )]);
+
+        let filter = Filter::new(&query);
+
+        assert!(filter.filters.len() == 2);
+    }
+
+    // Filter::new with SpecifiersAndTags
+
+    #[test]
+    fn new_with_specifiers_and_tags() {
+        let spec = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let tag = make_tag_hash("user:123");
+        let query = QueryHash::new(vec![SelectorHash::SpecifiersAndTags(
+            vec![spec].into_iter().collect(),
+            vec![tag].into_iter().collect(),
+        )]);
+
+        let filter = Filter::new(&query);
+
+        assert!(filter.filters.len() == 1);
+    }
+
+    #[test]
+    fn new_with_multiple_tags() {
+        let spec = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let tag1 = make_tag_hash("user:123");
+        let tag2 = make_tag_hash("org:456");
+        let query = QueryHash::new(vec![SelectorHash::SpecifiersAndTags(
+            vec![spec].into_iter().collect(),
+            vec![tag1, tag2].into_iter().collect(),
+        )]);
+
+        let filter = Filter::new(&query);
+
+        assert!(filter.filters.len() == 1);
+    }
+
+    // Filter::matches - basic matching
+
+    #[test]
+    fn matches_event_with_matching_identifier_and_version() {
+        let spec = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 3, vec![]);
+
+        assert!(filter.matches(&event));
+    }
+
+    #[test]
+    fn does_not_match_event_with_wrong_identifier() {
+        let spec = make_specifier_hash("EventA", Version::new(1)..Version::new(5));
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("EventB", 3, vec![]);
+
+        assert!(!filter.matches(&event));
+    }
+
+    #[test]
+    fn does_not_match_event_with_version_before_range() {
+        let spec = make_specifier_hash("Event", Version::new(5)..Version::new(10));
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 3, vec![]);
+
+        assert!(!filter.matches(&event));
+    }
+
+    #[test]
+    fn does_not_match_event_with_version_after_range() {
+        let spec = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 10, vec![]);
+
+        assert!(!filter.matches(&event));
+    }
+
+    #[test]
+    fn matches_event_at_range_start() {
+        let spec = make_specifier_hash("Event", Version::new(5)..Version::new(10));
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 5, vec![]);
+
+        assert!(filter.matches(&event));
+    }
+
+    #[test]
+    fn does_not_match_event_at_range_end() {
+        let spec = make_specifier_hash("Event", Version::new(5)..Version::new(10));
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 10, vec![]);
+
+        assert!(!filter.matches(&event));
+    }
+
+    // Filter::matches - tag matching
+
+    #[test]
+    fn matches_event_with_exact_tags() {
+        let spec = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let tag = make_tag_hash("user:123");
+        let query = QueryHash::new(vec![SelectorHash::SpecifiersAndTags(
+            vec![spec].into_iter().collect(),
+            vec![tag].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 3, vec!["user:123"]);
+
+        assert!(filter.matches(&event));
+    }
+
+    #[test]
+    fn matches_event_with_superset_of_tags() {
+        let spec = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let tag = make_tag_hash("user:123");
+        let query = QueryHash::new(vec![SelectorHash::SpecifiersAndTags(
+            vec![spec].into_iter().collect(),
+            vec![tag].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 3, vec!["user:123", "org:456"]);
+
+        assert!(filter.matches(&event));
+    }
+
+    #[test]
+    fn does_not_match_event_missing_required_tag() {
+        let spec = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let tag = make_tag_hash("user:123");
+        let query = QueryHash::new(vec![SelectorHash::SpecifiersAndTags(
+            vec![spec].into_iter().collect(),
+            vec![tag].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 3, vec!["org:456"]);
+
+        assert!(!filter.matches(&event));
+    }
+
+    #[test]
+    fn does_not_match_event_with_no_tags_when_tags_required() {
+        let spec = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let tag = make_tag_hash("user:123");
+        let query = QueryHash::new(vec![SelectorHash::SpecifiersAndTags(
+            vec![spec].into_iter().collect(),
+            vec![tag].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 3, vec![]);
+
+        assert!(!filter.matches(&event));
+    }
+
+    #[test]
+    fn matches_event_with_all_required_tags() {
+        let spec = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let tag1 = make_tag_hash("user:123");
+        let tag2 = make_tag_hash("org:456");
+        let query = QueryHash::new(vec![SelectorHash::SpecifiersAndTags(
+            vec![spec].into_iter().collect(),
+            vec![tag1, tag2].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 3, vec!["user:123", "org:456"]);
+
+        assert!(filter.matches(&event));
+    }
+
+    #[test]
+    fn does_not_match_event_missing_one_required_tag() {
+        let spec = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let tag1 = make_tag_hash("user:123");
+        let tag2 = make_tag_hash("org:456");
+        let query = QueryHash::new(vec![SelectorHash::SpecifiersAndTags(
+            vec![spec].into_iter().collect(),
+            vec![tag1, tag2].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 3, vec!["user:123"]);
+
+        assert!(!filter.matches(&event));
+    }
+
+    // Filter::matches - multiple version ranges
+
+    #[test]
+    fn matches_event_in_first_of_multiple_ranges() {
+        let spec1 = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let spec2 = make_specifier_hash("Event", Version::new(10)..Version::new(15));
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec1, spec2].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 3, vec![]);
+
+        assert!(filter.matches(&event));
+    }
+
+    #[test]
+    fn matches_event_in_merged_overlapping_ranges() {
+        let spec1 = make_specifier_hash("Event", Version::new(1)..Version::new(10));
+        let spec2 = make_specifier_hash("Event", Version::new(5)..Version::new(15));
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec1, spec2].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 12, vec![]);
+
+        assert!(filter.matches(&event));
+    }
+
+    #[test]
+    fn does_not_match_event_between_ranges() {
+        let spec1 = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let spec2 = make_specifier_hash("Event", Version::new(10)..Version::new(15));
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec1, spec2].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 7, vec![]);
+
+        assert!(!filter.matches(&event));
+    }
+
+    // Filter::matches - overlapping ranges (should be normalized)
+
+    #[test]
+    fn matches_event_in_overlapping_ranges() {
+        let spec1 = make_specifier_hash("Event", Version::new(1)..Version::new(10));
+        let spec2 = make_specifier_hash("Event", Version::new(5)..Version::new(15));
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec1, spec2].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 7, vec![]);
+
+        assert!(filter.matches(&event));
+    }
+
+    // Filter::matches - multiple selectors
+
+    #[test]
+    fn matches_event_with_first_selector() {
+        let spec1 = make_specifier_hash("EventA", Version::new(1)..Version::new(5));
+        let spec2 = make_specifier_hash("EventB", Version::new(1)..Version::new(5));
+        let query = QueryHash::new(vec![
+            SelectorHash::Specifiers(vec![spec1].into_iter().collect()),
+            SelectorHash::Specifiers(vec![spec2].into_iter().collect()),
+        ]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("EventA", 3, vec![]);
+
+        assert!(filter.matches(&event));
+    }
+
+    #[test]
+    fn matches_event_with_second_selector() {
+        let spec1 = make_specifier_hash("EventA", Version::new(1)..Version::new(5));
+        let spec2 = make_specifier_hash("EventB", Version::new(1)..Version::new(5));
+        let query = QueryHash::new(vec![
+            SelectorHash::Specifiers(vec![spec1].into_iter().collect()),
+            SelectorHash::Specifiers(vec![spec2].into_iter().collect()),
+        ]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("EventB", 3, vec![]);
+
+        assert!(filter.matches(&event));
+    }
+
+    // Filter::matches - edge cases
+
+    #[test]
+    fn matches_event_with_version_min() {
+        let spec = make_specifier_hash("Event", Version::MIN..Version::new(10));
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 0, vec![]);
+
+        assert!(filter.matches(&event));
+    }
+
+    #[test]
+    fn matches_event_with_version_near_max() {
+        let spec = make_specifier_hash("Event", Version::new(250)..Version::MAX);
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 254, vec![]);
+
+        assert!(filter.matches(&event));
+    }
+
+    #[test]
+    fn matches_event_with_full_version_range() {
+        let spec = make_specifier_hash("Event", Version::MIN..Version::MAX);
+        let query = QueryHash::new(vec![SelectorHash::Specifiers(
+            vec![spec].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 100, vec![]);
+
+        assert!(filter.matches(&event));
+    }
+
+    // Filter::matches - mixed selectors (with and without tags)
+
+    #[test]
+    fn matches_untagged_event_with_specifier_only_selector() {
+        let spec1 = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let spec2 = make_specifier_hash("Event", Version::new(10)..Version::new(15));
+        let tag = make_tag_hash("user:123");
+        let query = QueryHash::new(vec![
+            SelectorHash::Specifiers(vec![spec1].into_iter().collect()),
+            SelectorHash::SpecifiersAndTags(
+                vec![spec2].into_iter().collect(),
+                vec![tag].into_iter().collect(),
+            ),
+        ]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 3, vec![]);
+
+        assert!(filter.matches(&event));
+    }
+
+    #[test]
+    fn does_not_match_untagged_event_with_tag_selector_only() {
+        let spec = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let tag = make_tag_hash("user:123");
+        let query = QueryHash::new(vec![SelectorHash::SpecifiersAndTags(
+            vec![spec].into_iter().collect(),
+            vec![tag].into_iter().collect(),
+        )]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 3, vec![]);
+
+        assert!(!filter.matches(&event));
+    }
+
+    #[test]
+    fn matches_tagged_event_with_tag_selector() {
+        let spec1 = make_specifier_hash("Event", Version::new(1)..Version::new(5));
+        let spec2 = make_specifier_hash("Event", Version::new(3)..Version::new(15));
+        let tag = make_tag_hash("user:123");
+        let query = QueryHash::new(vec![
+            SelectorHash::Specifiers(vec![spec1].into_iter().collect()),
+            SelectorHash::SpecifiersAndTags(
+                vec![spec2].into_iter().collect(),
+                vec![tag].into_iter().collect(),
+            ),
+        ]);
+        let filter = Filter::new(&query);
+
+        let event = make_event("Event", 4, vec!["user:123"]);
+
+        assert!(filter.matches(&event));
+    }
+}
