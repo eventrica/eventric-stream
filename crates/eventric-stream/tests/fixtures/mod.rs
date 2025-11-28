@@ -49,10 +49,10 @@ pub(crate) fn events() -> Result<Vec<EphemeralEvent>, Error> {
     Ok(Vec::from_iter([
         event("student:100-enrolled-course:200",    "student_enrolled",     &["student:100", "course:200"],     0)?,
         event("course:200-created",                 "course_created",       &["course:200"],                    0)?,
-        event("student:101-enrolled-course:200",    "student_enrolled",     &["student:101", "course:200"],     0)?,
+        event("student:101-enrolled-course:200",    "student_enrolled",     &["student:101", "course:200"],     1)?,
         event("course:200-updated",                 "course_updated",       &["course:200"],                    0)?,
-        event("student:102-enrolled-course:201",    "student_enrolled",     &["student:102", "course:201"],     0)?,
-        event("course:201-created",                 "course_created",       &["course:201"],                    0)?,
+        event("student:102-enrolled-course:201",    "student_enrolled",     &["student:102", "course:201"],     1)?,
+        event("course:201-created",                 "course_created",       &["course:201"],                    1)?,
         event("student:100-dropped-course:200",     "student_dropped",      &["student:100", "course:200"],     0)?,
     ]))
 }
