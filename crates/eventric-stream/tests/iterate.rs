@@ -270,13 +270,16 @@ fn iterate_query() -> Result<(), Error> {
 
     // Iterate over a query reversed returns the expected events in reverse order
 
-    let query = Query::new([Selector::specifiers([student_enrolled.clone()])?])?;
+    let query = Query::new([
+        Selector::specifiers(vec![course_created.clone()])?,
+        Selector::specifiers_and_tags(vec![student_enrolled.clone()], vec![student_100.clone()])?,
+    ])?;
 
     let events = stream.iterate_query(query, None).0.rev().collect::<Result<Vec<_>, _>>()?;
 
-    assert_eq!(events.len(), 3);
-    assert_eq!(events[0].position(), &Position::new(4));
-    assert_eq!(events[1].position(), &Position::new(2));
+    assert_eq!(events.len(), 3,);
+    assert_eq!(events[0].position(), &Position::new(5));
+    assert_eq!(events[1].position(), &Position::new(1));
     assert_eq!(events[2].position(), &Position::new(0));
 
     // Iterate over a query using the prepared query returns the same events as the
