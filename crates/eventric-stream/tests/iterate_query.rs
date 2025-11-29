@@ -1,5 +1,6 @@
 mod fixtures;
 
+use assertables::assert_none;
 use eventric_stream::{
     error::Error,
     event::{
@@ -22,77 +23,82 @@ use eventric_stream::{
 // Iterate Query
 // =================================================================================================
 
-// Vec<Query>
-
+#[rustfmt::skip]
 #[test]
-fn iterate_vec_query_with_single_query() -> Result<(), Error> {
+fn iterate_query_vec() -> Result<(), Error> {
     let mut stream = fixtures::stream()?;
+
+    // Iterate with a vector of queries on an empty stream should return no events
+
+    let student_enrolled = Specifier::new(Identifier::new("student_enrolled")?);
+    let queries = vec![Query::new([Selector::specifiers([student_enrolled.clone()])?])?];
+
+    assert_none!(stream.iterate_query(queries, None).0.next());
+
+    // Using the standard set of events
+
     stream.append(fixtures::events()?, None)?;
 
-    let queries = vec![Query::new([Selector::specifiers(vec![Specifier::new(
-        Identifier::new("student_enrolled")?,
-    )])?])?];
+    // A query containing a single query should return the expected events (identical
+    // to the query alone), and with a mask value where all events match the single
+    // query
 
-    let (events, _prepared) = stream.iterate_query(queries, None);
-    let events = events.collect::<Result<Vec<_>, _>>()?;
+    let queries = vec![Query::new([Selector::specifiers([student_enrolled.clone()])?])?];
 
-    assert_eq!(events.len(), 3, "Should match 3 student_enrolled events");
+    let events = stream.iterate_query(queries, None).0.collect::<Result<Vec<_>, _>>()?;
 
-    for (event, mask) in &events {
-        assert_eq!(mask.len(), 1, "Mask should have 1 entry");
-        assert!(mask[0], "First query should match");
-        let identifier: &str = event.identifier().as_ref();
-        assert!(identifier.contains("student_enrolled"));
-    }
+    assert_eq!(events.len(), 3);
+    assert_eq!((events[0].0.position(), &events[0].1), (&Position::new(0), &vec![true]));
+    assert_eq!((events[1].0.position(), &events[1].1), (&Position::new(2), &vec![true]));
+    assert_eq!((events[2].0.position(), &events[2].1), (&Position::new(4), &vec![true]));
 
-    Ok(())
-}
+    // A query containing non-overlapping queries should return events matching any
+    // query with a correct mask value
 
-#[test]
-fn iterate_vec_query_with_two_non_overlapping_queries() -> Result<(), Error> {
-    let mut stream = fixtures::stream()?;
-    stream.append(fixtures::events()?, None)?;
-
+    let course_created = Specifier::new(Identifier::new("course_created")?);
+    let course_200 = Tag::new("course:200")?;
+    let student_100 = Tag::new("student:100")?;
     let queries = vec![
-        Query::new([Selector::specifiers(vec![Specifier::new(
-            Identifier::new("student_enrolled")?,
-        )])?])?,
-        Query::new([Selector::specifiers(vec![Specifier::new(
-            Identifier::new("course_created")?,
-        )])?])?,
+        Query::new([Selector::specifiers_and_tags(
+            vec![student_enrolled.clone()],
+            vec![student_100.clone()]
+        )?])?,
+        Query::new([Selector::specifiers_and_tags(
+            vec![course_created.clone()],
+            vec![course_200.clone()]
+        )?])?
     ];
 
-    let (events, _prepared) = stream.iterate_query(queries, None);
-    let events = events.collect::<Result<Vec<_>, _>>()?;
+    let events = stream.iterate_query(queries, None).0.collect::<Result<Vec<_>, _>>()?;
 
-    assert_eq!(
-        events.len(),
-        5,
-        "Should match 3 student_enrolled + 2 course_created"
-    );
+    assert_eq!(events.len(), 2);
+    assert_eq!((events[0].0.position(), &events[0].1), (&Position::new(0), &vec![true, false]));
+    assert_eq!((events[1].0.position(), &events[1].1), (&Position::new(1), &vec![false, true]));
 
-    // First event: student_enrolled at position 0
-    assert_eq!(events[0].0.position(), &Position::new(0));
-    assert_eq!(events[0].1, vec![true, false]);
+    // A query containing overlapping queries should return events matching any query
+    // with a correct mask value
 
-    // Second event: course_created at position 1
-    assert_eq!(events[1].0.position(), &Position::new(1));
-    assert_eq!(events[1].1, vec![false, true]);
+    let queries = vec![
+        Query::new([Selector::specifiers(
+            vec![student_enrolled.clone()]
+        )?])?,
+        Query::new([Selector::specifiers_and_tags(
+            vec![student_enrolled.clone()],
+            vec![course_200.clone()]
+        )?])?
+    ];
 
-    // Third event: student_enrolled at position 2
-    assert_eq!(events[2].0.position(), &Position::new(2));
-    assert_eq!(events[2].1, vec![true, false]);
+    let events = stream.iterate_query(queries, None).0.collect::<Result<Vec<_>, _>>()?;
 
-    // Fourth event: student_enrolled at position 4
-    assert_eq!(events[3].0.position(), &Position::new(4));
-    assert_eq!(events[3].1, vec![true, false]);
-
-    // Fifth event: course_created at position 5
-    assert_eq!(events[4].0.position(), &Position::new(5));
-    assert_eq!(events[4].1, vec![false, true]);
+    assert_eq!(events.len(), 3);
+    assert_eq!((events[0].0.position(), &events[0].1), (&Position::new(0), &vec![true, true]));
+    assert_eq!((events[1].0.position(), &events[1].1), (&Position::new(2), &vec![true, true]));
+    assert_eq!((events[2].0.position(), &events[2].1), (&Position::new(4), &vec![true, false]));
 
     Ok(())
 }
+
+// Vec<Query>
 
 #[test]
 fn iterate_vec_query_with_overlapping_queries() -> Result<(), Error> {
