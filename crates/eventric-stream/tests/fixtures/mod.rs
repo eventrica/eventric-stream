@@ -17,14 +17,16 @@ use eventric_stream::{
 // Fixtures
 // =================================================================================================
 
-/// Creates a new temporary test stream that will be automatically cleaned up
+/// Creates a new temporary event stream, at a temporary path - the event stream
+/// data will be automatically deleted on drop
 pub(crate) fn stream() -> Result<Stream, Error> {
     Stream::builder(eventric_stream::temp_path())
         .temporary(true)
         .open()
 }
 
-/// Creates a sample `EphemeralEvent` for testing
+/// Creates an [`EphemeralEvent`] given properties which can be converted to
+/// strongly-typed event properties as required
 #[rustfmt::skip]
 pub(crate) fn event(data: &str, identifier: &str, tags: &[&str], version: u8) -> Result<EphemeralEvent, Error> {
     let data = Data::new(data)?;
@@ -35,15 +37,8 @@ pub(crate) fn event(data: &str, identifier: &str, tags: &[&str], version: u8) ->
     Ok(EphemeralEvent::new(data, identifier, tags, version))
 }
 
-/// Creates a diverse set of events for comprehensive testing scenarios.
-///
-/// This set includes:
-/// - Multiple event types (student_enrolled, course_created, course_updated,
-///   student_dropped)
-/// - Various tag combinations (students, courses)
-/// - Different versions
-///
-/// Total: 7 events
+/// Creates a known collection of [`EphemeralEvent`] instances which can be used
+/// to verify the various aspects of append/iterate functions
 #[rustfmt::skip]
 pub(crate) fn events() -> Result<Vec<EphemeralEvent>, Error> {
     Ok(Vec::from_iter([
@@ -55,35 +50,4 @@ pub(crate) fn events() -> Result<Vec<EphemeralEvent>, Error> {
         event("course:201-created",                 "course_created",       &["course:201"],                    1)?,
         event("student:100-dropped-course:200",     "student_dropped",      &["student:100", "course:200"],     0)?,
     ]))
-}
-
-/// Creates a smaller set of domain-specific events for append testing.
-///
-/// This set includes:
-/// - StudentSubscribedToCourse events with different versions
-/// - CourseCapacityChanged event
-/// - Multiple student and course tags
-///
-/// Total: 3 events
-pub(crate) fn create_domain_events() -> Result<[EphemeralEvent; 3], Error> {
-    Ok([
-        event(
-            "student subscribed",
-            "StudentSubscribedToCourse",
-            &["student:100", "course:200"],
-            0,
-        )?,
-        event(
-            "capacity changed",
-            "CourseCapacityChanged",
-            &["course:200"],
-            0,
-        )?,
-        event(
-            "another student subscribed",
-            "StudentSubscribedToCourse",
-            &["student:101", "course:201"],
-            1,
-        )?,
-    ])
 }
