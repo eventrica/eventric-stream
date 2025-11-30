@@ -33,6 +33,7 @@ use crate::{
             cache::Cache,
         },
         query::{
+            Queries,
             Query,
             filter::{
                 Filter,
@@ -61,7 +62,7 @@ impl Data for Query {
     type Data = ();
 }
 
-impl Data for Vec<Query> {
+impl Data for Queries {
     type Data = Arc<Vec<Filter>>;
 }
 
@@ -142,9 +143,9 @@ impl Iterator for Iter<Query> {
     }
 }
 
-// Vec<Query>
+// Queries
 
-impl Iter<Vec<Query>> {
+impl Iter<Queries> {
     fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| {
             let mask = self
@@ -158,11 +159,11 @@ impl Iter<Vec<Query>> {
     }
 }
 
-impl Build<Prepared<Vec<Query>>> for Iter<Vec<Query>> {
+impl Build<Prepared<Queries>> for Iter<Queries> {
     #[allow(private_interfaces)]
     fn build(
         iter: PersistentEventHashIterator,
-        prepared: &Prepared<Vec<Query>>,
+        prepared: &Prepared<Queries>,
         references: References,
     ) -> Self {
         let cache = prepared.cache.clone();
@@ -173,13 +174,13 @@ impl Build<Prepared<Vec<Query>>> for Iter<Vec<Query>> {
     }
 }
 
-impl DoubleEndedIterator for Iter<Vec<Query>> {
+impl DoubleEndedIterator for Iter<Queries> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next_back().map(|event| self.map(event))
     }
 }
 
-impl Iterator for Iter<Vec<Query>> {
+impl Iterator for Iter<Queries> {
     type Item = Result<(PersistentEvent, Vec<bool>), Error>;
 
     fn next(&mut self) -> Option<Self::Item> {

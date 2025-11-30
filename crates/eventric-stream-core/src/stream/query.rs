@@ -91,15 +91,6 @@ impl Source for Query {
     }
 }
 
-impl Source for Vec<Query> {
-    type Iterator = Iter<Vec<Query>>;
-    type Prepared = Prepared<Vec<Query>>;
-
-    fn prepare(self) -> Self::Prepared {
-        self.into()
-    }
-}
-
 impl Validate for Query {
     type Err = Error;
 
@@ -157,6 +148,58 @@ pub(crate) struct QueryHashRef<'a>(pub(crate) Vec<SelectorHashRef<'a>>);
 impl<'a> From<&'a Query> for QueryHashRef<'a> {
     fn from(query: &'a Query) -> Self {
         Self::new(query.as_ref().iter().map(Into::into).collect())
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Queries
+
+/// The [`Queries`] type is a validating collection of [`Query`]
+/// instances, used to ensure that invariants are met when constructing queries.
+#[derive(new, Clone, Debug)]
+#[new(const_fn, name(new_inner), vis())]
+pub struct Queries(pub(crate) Vec<Query>);
+
+impl Queries {
+    /// Constructs a new [`Queries`] instance given any value which can be
+    /// converted into a valid [`Vec`] of [`Query`] instances.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error on validation failure. Queries must conform to the
+    /// following constraints:
+    /// - Min 1 Query (Non-Zero Length/Non-Empty)
+    pub fn new<Q>(queries: Q) -> Result<Self, Error>
+    where
+        Q: IntoIterator<Item = Query>,
+    {
+        Self::new_unvalidated(queries.into_iter().collect()).validate()
+    }
+
+    #[doc(hidden)]
+    #[must_use]
+    pub fn new_unvalidated(queries: Vec<Query>) -> Self {
+        Self::new_inner(queries)
+    }
+}
+
+impl Source for Queries {
+    type Iterator = Iter<Queries>;
+    type Prepared = Prepared<Queries>;
+
+    fn prepare(self) -> Self::Prepared {
+        self.into()
+    }
+}
+
+impl Validate for Queries {
+    type Err = Error;
+
+    fn validate(self) -> Result<Self, Self::Err> {
+        validate(&self.0, "queries", &[&vec::IsEmpty])?;
+
+        Ok(self)
     }
 }
 

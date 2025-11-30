@@ -8,6 +8,7 @@ use crate::stream::{
         iter::Iter,
     },
     query::{
+        Queries,
         Query,
         QueryHash,
         QueryHashRef,
@@ -30,7 +31,7 @@ impl Data for Query {
     type Data = ();
 }
 
-impl Data for Vec<Query> {
+impl Data for Queries {
     type Data = Arc<Vec<Filter>>;
 }
 
@@ -83,12 +84,13 @@ impl Source for Prepared<Query> {
     }
 }
 
-// Vec<Query>
+// Queries
 
-impl From<Vec<Query>> for Prepared<Vec<Query>> {
-    fn from(queries: Vec<Query>) -> Self {
+impl From<Queries> for Prepared<Queries> {
+    fn from(queries: Queries) -> Self {
         let cache = Arc::new(Cache::default());
         let query_hashes = queries
+            .0
             .iter()
             .map(Into::into)
             .inspect(|query_hash_ref| cache.populate(query_hash_ref))
@@ -113,8 +115,8 @@ impl From<Vec<Query>> for Prepared<Vec<Query>> {
     }
 }
 
-impl Source for Prepared<Vec<Query>> {
-    type Iterator = Iter<Vec<Query>>;
+impl Source for Prepared<Queries> {
+    type Iterator = Iter<Queries>;
     type Prepared = Self;
 
     fn prepare(self) -> Self::Prepared {

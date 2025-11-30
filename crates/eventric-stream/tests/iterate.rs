@@ -30,6 +30,7 @@ use eventric_stream::{
         },
     },
 };
+use eventric_stream_core::stream::query::Queries;
 
 // =================================================================================================
 // Iterate
@@ -303,13 +304,13 @@ fn iterate_query() -> Result<(), Error> {
 
 #[rustfmt::skip]
 #[test]
-fn iterate_query_vec() -> Result<(), Error> {
+fn iterate_queries() -> Result<(), Error> {
     let mut stream = fixtures::stream()?;
 
     // Iterate with a vector of queries on an empty stream should return no events
 
     let student_enrolled = Specifier::new(Identifier::new("student_enrolled")?);
-    let queries = vec![Query::new([Selector::specifiers([student_enrolled.clone()])?])?];
+    let queries = Queries::new([Query::new([Selector::specifiers([student_enrolled.clone()])?])?])?;
 
     assert_none!(stream.iterate_query(queries, None).0.next());
 
@@ -317,17 +318,11 @@ fn iterate_query_vec() -> Result<(), Error> {
 
     stream.append(fixtures::events()?, None)?;
 
-    // An empty vector of queries should return no results - note, this will likely
-    // become unrepresentable at some point in the future if an ergonomic
-    // representation can be found
-
-    assert_none!(stream.iterate_query(vec![], None).0.next());
-
     // A query containing a single query should return the expected events (identical
     // to the query alone), and with a mask value where all events match the single
     // query
 
-    let queries = vec![Query::new([Selector::specifiers([student_enrolled.clone()])?])?];
+    let queries = Queries::new([Query::new([Selector::specifiers([student_enrolled.clone()])?])?])?;
 
     let events = stream.iterate_query(queries, None).0.collect::<Result<Vec<_>, _>>()?;
 
@@ -342,7 +337,7 @@ fn iterate_query_vec() -> Result<(), Error> {
     let course_created = Specifier::new(Identifier::new("course_created")?);
     let course_200 = Tag::new("course:200")?;
     let student_100 = Tag::new("student:100")?;
-    let queries = vec![
+    let queries = Queries::new([
         Query::new([Selector::specifiers_and_tags(
             vec![student_enrolled.clone()],
             vec![student_100.clone()]
@@ -351,7 +346,7 @@ fn iterate_query_vec() -> Result<(), Error> {
             vec![course_created.clone()],
             vec![course_200.clone()]
         )?])?
-    ];
+    ])?;
 
     let events = stream.iterate_query(queries, None).0.collect::<Result<Vec<_>, _>>()?;
 
@@ -362,7 +357,7 @@ fn iterate_query_vec() -> Result<(), Error> {
     // A query containing overlapping queries should return events matching any query
     // with a correct mask value
 
-    let queries = vec![
+    let queries = Queries::new([
         Query::new([Selector::specifiers(
             vec![student_enrolled.clone()]
         )?])?,
@@ -370,7 +365,7 @@ fn iterate_query_vec() -> Result<(), Error> {
             vec![student_enrolled.clone()],
             vec![course_200.clone()]
         )?])?
-    ];
+    ])?;
 
     let events = stream.iterate_query(queries, None).0.collect::<Result<Vec<_>, _>>()?;
 
@@ -382,7 +377,7 @@ fn iterate_query_vec() -> Result<(), Error> {
     // A query with a from position should only return events greater than or equal
     // to the from position
 
-    let queries = vec![
+    let queries = Queries::new([
         Query::new([Selector::specifiers(
             vec![student_enrolled.clone()]
         )?])?,
@@ -390,7 +385,7 @@ fn iterate_query_vec() -> Result<(), Error> {
             vec![student_enrolled.clone()],
             vec![course_200.clone()]
         )?])?
-    ];
+    ])?;
 
     let events = stream.iterate_query(queries, Some(Position::new(2))).0.collect::<Result<Vec<_>, _>>()?;
 
@@ -401,7 +396,7 @@ fn iterate_query_vec() -> Result<(), Error> {
     // A query which is iterated and reversed should return the same events as the
     // query but in reverse order
 
-    let queries = vec![
+    let queries = Queries::new([
         Query::new([Selector::specifiers(
             vec![student_enrolled.clone()]
         )?])?,
@@ -409,7 +404,7 @@ fn iterate_query_vec() -> Result<(), Error> {
             vec![student_enrolled.clone()],
             vec![course_200.clone()]
         )?])?
-    ];
+    ])?;
 
     let events = stream.iterate_query(queries, Some(Position::new(2))).0.rev().collect::<Result<Vec<_>, _>>()?;
 
@@ -420,7 +415,7 @@ fn iterate_query_vec() -> Result<(), Error> {
     // Iterate over a query using the prepared query returns the same events as the
     // original query
 
-    let queries = vec![
+    let queries = Queries::new([
         Query::new([Selector::specifiers(
             vec![student_enrolled.clone()]
         )?])?,
@@ -428,7 +423,7 @@ fn iterate_query_vec() -> Result<(), Error> {
             vec![student_enrolled.clone()],
             vec![course_200.clone()]
         )?])?
-    ];
+    ])?;
 
     let (events_a, prepared_a) = stream.iterate_query(queries, None);
     let (events_b, _) = stream.iterate_query(prepared_a, None);
