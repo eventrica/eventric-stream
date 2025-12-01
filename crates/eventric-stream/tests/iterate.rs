@@ -335,9 +335,9 @@ fn iterate_selection_selections() -> Result<(), Error> {
     let events = stream.iter_select(selections, None).0.collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 3);
-    assert_eq!((events[0].position(), events[0].mask()), (&Position::new(0), &Mask::new([true])));
-    assert_eq!((events[1].position(), events[1].mask()), (&Position::new(2), &Mask::new([true])));
-    assert_eq!((events[2].position(), events[2].mask()), (&Position::new(4), &Mask::new([true])));
+    assert_eq!((events[0].position(), events[0].mask()), (&Position::new(0), &Mask::new(vec![true].into())));
+    assert_eq!((events[1].position(), events[1].mask()), (&Position::new(2), &Mask::new(vec![true].into())));
+    assert_eq!((events[2].position(), events[2].mask()), (&Position::new(4), &Mask::new(vec![true].into())));
 
     // A selections containing non-overlapping selections should return events
     // matching any selection with a correct mask value
@@ -359,8 +359,8 @@ fn iterate_selection_selections() -> Result<(), Error> {
     let events = stream.iter_select(selections, None).0.collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 2);
-    assert_eq!((events[0].position(), events[0].mask()), (&Position::new(0), &Mask::new([true, false])));
-    assert_eq!((events[1].position(), events[1].mask()), (&Position::new(1), &Mask::new([false, true])));
+    assert_eq!((events[0].position(), events[0].mask()), (&Position::new(0), &Mask::new(vec![true, false].into())));
+    assert_eq!((events[1].position(), events[1].mask()), (&Position::new(1), &Mask::new(vec![false, true].into())));
 
     // A selection containing overlapping selections should return events matching
     // any selection with a correct mask value
@@ -378,9 +378,9 @@ fn iterate_selection_selections() -> Result<(), Error> {
     let events = stream.iter_select(selections, None).0.collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 3);
-    assert_eq!((events[0].position(), events[0].mask()), (&Position::new(0), &Mask::new([true, true])));
-    assert_eq!((events[1].position(), events[1].mask()), (&Position::new(2), &Mask::new([true, true])));
-    assert_eq!((events[2].position(), events[2].mask()), (&Position::new(4), &Mask::new([true, false])));
+    assert_eq!((events[0].position(), events[0].mask()), (&Position::new(0), &Mask::new(vec![true, true].into())));
+    assert_eq!((events[1].position(), events[1].mask()), (&Position::new(2), &Mask::new(vec![true, true].into())));
+    assert_eq!((events[2].position(), events[2].mask()), (&Position::new(4), &Mask::new(vec![true, false].into())));
 
     // A selection with a from position should only return events greater than or
     // equal to the from position
@@ -398,8 +398,8 @@ fn iterate_selection_selections() -> Result<(), Error> {
     let events = stream.iter_select(selections, Some(Position::new(2))).0.collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 2);
-    assert_eq!((events[0].position(), events[0].mask()), (&Position::new(2), &Mask::new([true, true])));
-    assert_eq!((events[1].position(), events[1].mask()), (&Position::new(4), &Mask::new([true, false])));
+    assert_eq!((events[0].position(), events[0].mask()), (&Position::new(2), &Mask::new(vec![true, true].into())));
+    assert_eq!((events[1].position(), events[1].mask()), (&Position::new(4), &Mask::new(vec![true, false].into())));
 
     // A selection which is iterated and reversed should return the same events
     // as the selection but in reverse order
@@ -417,8 +417,8 @@ fn iterate_selection_selections() -> Result<(), Error> {
     let events = stream.iter_select(selections, Some(Position::new(2))).0.rev().collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 2);
-    assert_eq!((events[0].position(), events[0].mask()), (&Position::new(4), &Mask::new([true, false])));
-    assert_eq!((events[1].position(), events[1].mask()), (&Position::new(2), &Mask::new([true, true])));
+    assert_eq!((events[0].position(), events[0].mask()), (&Position::new(4), &Mask::new(vec![true, false].into())));
+    assert_eq!((events[1].position(), events[1].mask()), (&Position::new(2), &Mask::new(vec![true, true].into())));
 
     // Iterate over a selection using the prepared selection returns the same events
     // as the original selection

@@ -5,6 +5,7 @@ use derive_more::{
     Deref,
 };
 use fancy_constructor::new;
+use smallvec::SmallVec;
 
 // =================================================================================================
 // Mask
@@ -18,9 +19,9 @@ use fancy_constructor::new;
 #[derive(new, AsRef, Clone, Deref, Debug, Eq, PartialEq)]
 #[as_ref([bool])]
 #[new(const_fn)]
-pub struct Mask<const N: usize>(#[new(name(mask))] pub(crate) [bool; N]);
+pub struct Mask(#[new(name(mask))] pub(crate) SmallVec<[bool; 8]>);
 
-impl<const N: usize> Index<usize> for Mask<N> {
+impl Index<usize> for Mask {
     type Output = bool;
 
     fn index(&self, index: usize) -> &Self::Output {

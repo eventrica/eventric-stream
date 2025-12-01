@@ -13,16 +13,16 @@ use crate::{
 /// .
 #[derive(new, Debug, Deref, Eq, PartialEq)]
 #[new(const_fn, vis(pub(crate)))]
-pub struct EventMasked<const N: usize> {
+pub struct EventMasked {
     #[deref]
     event: Event,
-    mask: Mask<N>,
+    mask: Mask,
 }
 
-impl<const N: usize> EventMasked<N> {
+impl EventMasked {
     /// .
     #[must_use]
-    pub fn mask(&self) -> &Mask<N> {
+    pub fn mask(&self) -> &Mask {
         &self.mask
     }
 }

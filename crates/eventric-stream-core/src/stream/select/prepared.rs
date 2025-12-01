@@ -1,9 +1,7 @@
-use std::{
-    mem::MaybeUninit,
-    sync::Arc,
-};
+use std::sync::Arc;
 
 use fancy_constructor::new;
+use smallvec::SmallVec;
 
 use crate::stream::{
     iterate::{
@@ -34,8 +32,8 @@ impl Data for Selection {
     type Data = ();
 }
 
-impl<const N: usize> Data for Selections<N> {
-    type Data = Arc<[Filter; N]>;
+impl Data for Selections {
+    type Data = Arc<SmallVec<[Filter; 8]>>;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -89,28 +87,20 @@ impl Source for Prepared<Selection> {
 
 // Selections
 
-#[allow(unsafe_code)]
-#[rustfmt::skip]
-impl<const N: usize> From<Selections<N>> for Prepared<Selections<N>> {
-    fn from(selections: Selections<N>) -> Self {
+impl From<Selections> for Prepared<Selections> {
+    fn from(selections: Selections) -> Self {
         let cache = Arc::new(Cache::default());
 
-        let mut filters: [MaybeUninit<Filter>; N] = [const { MaybeUninit::uninit() }; N];
-        let mut selection_hashes: [MaybeUninit<SelectionHash>; N] = [const { MaybeUninit::uninit() }; N];
+        let selection_hashes = selections
+            .0
+            .iter()
+            .map(Into::into)
+            .inspect(|query_hash_ref| cache.populate(query_hash_ref))
+            .map(Into::into)
+            .collect::<Vec<_>>();
 
-        for (i, selection) in selections.0.iter().enumerate() {
-            let selection_hash_ref: SelectionHashRef<'_> = selection.into();
-            let selection_hash: SelectionHash = (&selection_hash_ref).into();
-            let filter = Filter::new(&selection_hash);
-
-            cache.populate(&selection_hash_ref);
-
-            filters[i].write(filter);
-            selection_hashes[i].write(selection_hash);
-        }
-
-        let filters = Arc::new(filters.map(|filter| unsafe { filter.assume_init() }));
-        let selection_hashes = selection_hashes.map(|selection_hash| unsafe { selection_hash.assume_init() });
+        let filters = selection_hashes.iter().map(Filter::new).collect();
+        let filters = Arc::new(filters);
 
         // TODO: Need to do some kind of merge/optimisation pass here, not simply bodge
         // all the selector hashess together, even though that will technically work,
@@ -127,8 +117,8 @@ impl<const N: usize> From<Selections<N>> for Prepared<Selections<N>> {
     }
 }
 
-impl<const N: usize> Source for Prepared<Selections<N>> {
-    type Iterator = Iter<Selections<N>>;
+impl Source for Prepared<Selections> {
+    type Iterator = Iter<Selections>;
     type Prepared = Self;
 
     fn prepare(self) -> Self::Prepared {

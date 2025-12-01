@@ -16,7 +16,6 @@ use derive_more::{
 };
 use eventric_core::validation::{
     Validate,
-    array,
     validate,
     vec,
 };
@@ -163,9 +162,9 @@ impl<'a> From<&'a Selection> for SelectionHashRef<'a> {
 /// instances, used to ensure that invariants are met when constructing queries.
 #[derive(new, Clone, Debug)]
 #[new(const_fn, name(new_inner), vis())]
-pub struct Selections<const N: usize>(pub(crate) [Selection; N]);
+pub struct Selections(pub(crate) Vec<Selection>);
 
-impl<const N: usize> Selections<N> {
+impl Selections {
     /// Constructs a new [`Selections`] instance given an array of [`Selection`]
     /// instances.
     ///
@@ -174,31 +173,34 @@ impl<const N: usize> Selections<N> {
     /// Returns an error on validation failure. Selections must conform to the
     /// following constraints:
     /// - Min 1 Selection (Non-Zero Length/Non-Empty)
-    pub fn new(queries: [Selection; N]) -> Result<Self, Error> {
-        Self::new_unvalidated(queries).validate()
+    pub fn new<S>(selections: S) -> Result<Self, Error>
+    where
+        S: IntoIterator<Item = Selection>,
+    {
+        Self::new_unvalidated(selections.into_iter().collect()).validate()
     }
 
     #[doc(hidden)]
     #[must_use]
-    pub fn new_unvalidated(queries: [Selection; N]) -> Self {
-        Self::new_inner(queries)
+    pub fn new_unvalidated(selections: Vec<Selection>) -> Self {
+        Self::new_inner(selections)
     }
 }
 
-impl<const N: usize> Source for Selections<N> {
-    type Iterator = Iter<Selections<N>>;
-    type Prepared = Prepared<Selections<N>>;
+impl Source for Selections {
+    type Iterator = Iter<Selections>;
+    type Prepared = Prepared<Selections>;
 
     fn prepare(self) -> Self::Prepared {
         self.into()
     }
 }
 
-impl<const N: usize> Validate for Selections<N> {
+impl Validate for Selections {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.0, "queries", &[&array::IsEmpty])?;
+        validate(&self.0, "queries", &[&vec::IsEmpty])?;
 
         Ok(self)
     }

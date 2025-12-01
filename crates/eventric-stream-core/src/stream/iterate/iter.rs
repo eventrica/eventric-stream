@@ -8,6 +8,7 @@ use std::{
 
 use derive_more::Debug;
 use fancy_constructor::new;
+use smallvec::SmallVec;
 
 use crate::{
     error::Error,
@@ -64,8 +65,8 @@ impl Data for Selection {
     type Data = ();
 }
 
-impl<const N: usize> Data for Selections<N> {
-    type Data = Arc<[Filter; N]>;
+impl Data for Selections {
+    type Data = Arc<SmallVec<[Filter; 8]>>;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -143,16 +144,15 @@ impl Iterator for Iter<Selection> {
 
 // Queries
 
-impl<const N: usize> Iter<Selections<N>> {
+impl Iter<Selections> {
     fn map(&mut self, event: Result<EventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| {
-            let mut mask = [false; N];
-
-            for (i, mask) in mask.iter_mut().enumerate().take(N) {
-                *mask = self.data[i].matches(&event);
-            }
-
-            let mask = Mask::new(mask);
+            let mask = Mask::new(
+                self.data
+                    .iter()
+                    .map(|filter| filter.matches(&event))
+                    .collect(),
+            );
 
             self.retrieve
                 .get(event)
@@ -161,13 +161,9 @@ impl<const N: usize> Iter<Selections<N>> {
     }
 }
 
-impl<const N: usize> Build<Prepared<Selections<N>>> for Iter<Selections<N>> {
+impl Build<Prepared<Selections>> for Iter<Selections> {
     #[allow(private_interfaces)]
-    fn build(
-        iter: EventHashIter,
-        prepared: &Prepared<Selections<N>>,
-        references: References,
-    ) -> Self {
+    fn build(iter: EventHashIter, prepared: &Prepared<Selections>, references: References) -> Self {
         let cache = prepared.cache.clone();
         let data = prepared.data.clone();
         let iter = Exclusive::new(iter);
@@ -176,14 +172,14 @@ impl<const N: usize> Build<Prepared<Selections<N>>> for Iter<Selections<N>> {
     }
 }
 
-impl<const N: usize> DoubleEndedIterator for Iter<Selections<N>> {
+impl DoubleEndedIterator for Iter<Selections> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next_back().map(|event| self.map(event))
     }
 }
 
-impl<const N: usize> Iterator for Iter<Selections<N>> {
-    type Item = Result<EventMasked<N>, Error>;
+impl Iterator for Iter<Selections> {
+    type Item = Result<EventMasked, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next().map(|event| self.map(event))
