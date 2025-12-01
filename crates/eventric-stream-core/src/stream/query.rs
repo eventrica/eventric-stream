@@ -16,6 +16,7 @@ use derive_more::{
 };
 use eventric_core::validation::{
     Validate,
+    array,
     validate,
     vec,
 };
@@ -161,9 +162,9 @@ impl<'a> From<&'a Query> for QueryHashRef<'a> {
 /// instances, used to ensure that invariants are met when constructing queries.
 #[derive(new, Clone, Debug)]
 #[new(const_fn, name(new_inner), vis())]
-pub struct Queries(pub(crate) Vec<Query>);
+pub struct Queries<const N: usize>(pub(crate) [Query; N]);
 
-impl Queries {
+impl<const N: usize> Queries<N> {
     /// Constructs a new [`Queries`] instance given any value which can be
     /// converted into a valid [`Vec`] of [`Query`] instances.
     ///
@@ -172,34 +173,31 @@ impl Queries {
     /// Returns an error on validation failure. Queries must conform to the
     /// following constraints:
     /// - Min 1 Query (Non-Zero Length/Non-Empty)
-    pub fn new<Q>(queries: Q) -> Result<Self, Error>
-    where
-        Q: IntoIterator<Item = Query>,
-    {
-        Self::new_unvalidated(queries.into_iter().collect()).validate()
+    pub fn new(queries: [Query; N]) -> Result<Self, Error> {
+        Self::new_unvalidated(queries).validate()
     }
 
     #[doc(hidden)]
     #[must_use]
-    pub fn new_unvalidated(queries: Vec<Query>) -> Self {
+    pub fn new_unvalidated(queries: [Query; N]) -> Self {
         Self::new_inner(queries)
     }
 }
 
-impl Source for Queries {
-    type Iterator = Iter<Queries>;
-    type Prepared = Prepared<Queries>;
+impl<const N: usize> Source for Queries<N> {
+    type Iterator = Iter<Queries<N>>;
+    type Prepared = Prepared<Queries<N>>;
 
     fn prepare(self) -> Self::Prepared {
         self.into()
     }
 }
 
-impl Validate for Queries {
+impl<const N: usize> Validate for Queries<N> {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.0, "queries", &[&vec::IsEmpty])?;
+        validate(&self.0, "queries", &[&array::IsEmpty])?;
 
         Ok(self)
     }

@@ -64,8 +64,8 @@ impl Data for Query {
     type Data = ();
 }
 
-impl Data for Queries {
-    type Data = Arc<Vec<Filter>>;
+impl<const N: usize> Data for Queries<N> {
+    type Data = Arc<[Filter; N]>;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -147,15 +147,16 @@ impl Iterator for Iter<Query> {
 
 // Queries
 
-impl Iter<Queries> {
+impl<const N: usize> Iter<Queries<N>> {
     fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| {
-            let mask = Mask::new(
-                self.data
-                    .iter()
-                    .map(|filter| filter.matches(&event))
-                    .collect(),
-            );
+            let mut mask = [false; N];
+
+            for (i, mask) in mask.iter_mut().enumerate().take(N) {
+                *mask = self.data[i].matches(&event);
+            }
+
+            let mask = Mask::new(mask);
 
             self.retrieve
                 .get(event)
@@ -164,11 +165,11 @@ impl Iter<Queries> {
     }
 }
 
-impl Build<Prepared<Queries>> for Iter<Queries> {
+impl<const N: usize> Build<Prepared<Queries<N>>> for Iter<Queries<N>> {
     #[allow(private_interfaces)]
     fn build(
         iter: PersistentEventHashIterator,
-        prepared: &Prepared<Queries>,
+        prepared: &Prepared<Queries<N>>,
         references: References,
     ) -> Self {
         let cache = prepared.cache.clone();
@@ -179,14 +180,14 @@ impl Build<Prepared<Queries>> for Iter<Queries> {
     }
 }
 
-impl DoubleEndedIterator for Iter<Queries> {
+impl<const N: usize> DoubleEndedIterator for Iter<Queries<N>> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next_back().map(|event| self.map(event))
     }
 }
 
-impl Iterator for Iter<Queries> {
-    type Item = Result<PersistentEventMasked, Error>;
+impl<const N: usize> Iterator for Iter<Queries<N>> {
+    type Item = Result<PersistentEventMasked<N>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next().map(|event| self.map(event))

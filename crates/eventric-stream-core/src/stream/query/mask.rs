@@ -18,9 +18,9 @@ use fancy_constructor::new;
 #[derive(new, AsRef, Clone, Deref, Debug, Eq, PartialEq)]
 #[as_ref([bool])]
 #[new(const_fn)]
-pub struct Mask(#[new(name(mask))] pub(crate) Vec<bool>);
+pub struct Mask<const N: usize>(#[new(name(mask))] pub(crate) [bool; N]);
 
-impl Index<usize> for Mask {
+impl<const N: usize> Index<usize> for Mask<N> {
     type Output = bool;
 
     fn index(&self, index: usize) -> &Self::Output {

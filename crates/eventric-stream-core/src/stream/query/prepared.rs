@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    mem::MaybeUninit,
+    sync::Arc,
+};
 
 use fancy_constructor::new;
 
@@ -31,8 +34,8 @@ impl Data for Query {
     type Data = ();
 }
 
-impl Data for Queries {
-    type Data = Arc<Vec<Filter>>;
+impl<const N: usize> Data for Queries<N> {
+    type Data = Arc<[Filter; N]>;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -86,19 +89,27 @@ impl Source for Prepared<Query> {
 
 // Queries
 
-impl From<Queries> for Prepared<Queries> {
-    fn from(queries: Queries) -> Self {
+#[allow(unsafe_code)]
+impl<const N: usize> From<Queries<N>> for Prepared<Queries<N>> {
+    fn from(queries: Queries<N>) -> Self {
         let cache = Arc::new(Cache::default());
-        let query_hashes = queries
-            .0
-            .iter()
-            .map(Into::into)
-            .inspect(|query_hash_ref| cache.populate(query_hash_ref))
-            .map(Into::into)
-            .collect::<Vec<_>>();
 
-        let filters = query_hashes.iter().map(Filter::new).collect();
-        let filters = Arc::new(filters);
+        let mut filters: [MaybeUninit<Filter>; N] = [const { MaybeUninit::uninit() }; N];
+        let mut query_hashes: [MaybeUninit<QueryHash>; N] = [const { MaybeUninit::uninit() }; N];
+
+        for (i, query) in queries.0.iter().enumerate() {
+            let query_hash_ref: QueryHashRef<'_> = query.into();
+            let query_hash: QueryHash = (&query_hash_ref).into();
+            let filter = Filter::new(&query_hash);
+
+            cache.populate(&query_hash_ref);
+
+            filters[i].write(filter);
+            query_hashes[i].write(query_hash);
+        }
+
+        let filters = Arc::new(filters.map(|filter| unsafe { filter.assume_init() }));
+        let query_hashes = query_hashes.map(|query_hash| unsafe { query_hash.assume_init() });
 
         // TODO: Need to do some kind of merge/optimisation pass here, not simply bodge
         // all the selector hashess together, even though that will technically work,
@@ -115,8 +126,8 @@ impl From<Queries> for Prepared<Queries> {
     }
 }
 
-impl Source for Prepared<Queries> {
-    type Iterator = Iter<Queries>;
+impl<const N: usize> Source for Prepared<Queries<N>> {
+    type Iterator = Iter<Queries<N>>;
     type Prepared = Self;
 
     fn prepare(self) -> Self::Prepared {
