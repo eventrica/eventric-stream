@@ -4,7 +4,7 @@
 use crate::{
     error::Error,
     event::{
-        EphemeralEvent,
+        CandidateEvent,
         position::Position,
         timestamp::Timestamp,
     },
@@ -23,11 +23,11 @@ use crate::{
 
 // Append
 
-/// The [`Append`] trait defines the logical operation of appending (ephemeral)
+/// The [`Append`] trait defines the logical operation of appending (candidate)
 /// events to a stream or stream-like type, with an optional condition to
 /// determine behaviour related to concurrency, etc.
 pub trait Append {
-    /// Appends new [`EphemeralEvent`]s to the relevant stream or stream-like
+    /// Appends new [`CandidateEvent`]s to the relevant stream or stream-like
     /// instance, optionally performing a concurrency check based on a supplied
     /// [`Condition`].
     ///
@@ -46,13 +46,13 @@ pub trait Append {
     //#[rustfmt::skip]
     fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
     where
-        E: IntoIterator<Item = EphemeralEvent>;
+        E: IntoIterator<Item = CandidateEvent>;
 }
 
 impl Append for Stream {
     fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
     where
-        E: IntoIterator<Item = EphemeralEvent>,
+        E: IntoIterator<Item = CandidateEvent>,
     {
         self.check(None, after).and_then(|()| self.put(events))
     }
@@ -76,7 +76,7 @@ pub trait AppendQuery {
         after: Option<Position>,
     ) -> Result<(Position, S::Prepared), Error>
     where
-        E: IntoIterator<Item = EphemeralEvent>,
+        E: IntoIterator<Item = CandidateEvent>,
         S: Source;
 }
 
@@ -88,7 +88,7 @@ impl AppendQuery for Stream {
         after: Option<Position>,
     ) -> Result<(Position, S::Prepared), Error>
     where
-        E: IntoIterator<Item = EphemeralEvent>,
+        E: IntoIterator<Item = CandidateEvent>,
         S: Source,
     {
         let prepared = fail_if_matches.prepare();
@@ -144,7 +144,7 @@ impl Stream {
 
     fn put<E>(&mut self, events: E) -> Result<Position, Error>
     where
-        E: IntoIterator<Item = EphemeralEvent>,
+        E: IntoIterator<Item = CandidateEvent>,
     {
         // Create a local copy of the "next" position here, so that it can be
         // incremented independently of the stream instance. As we only set the stream

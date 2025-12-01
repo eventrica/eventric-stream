@@ -19,26 +19,26 @@ mod tests {
     use crate::{
         error::Error,
         utils::iteration::{
-            and::SequentialAndIterator,
-            or::SequentialOrIterator,
+            and::AndIter,
+            or::OrIter,
         },
     };
 
     #[derive(Debug)]
     pub enum TestIterator {
-        And(SequentialAndIterator<TestIterator, u64>),
-        Or(SequentialOrIterator<TestIterator, u64>),
+        And(AndIter<TestIterator, u64>),
+        Or(OrIter<TestIterator, u64>),
         Boxed(#[debug("Boxed")] Box<dyn DoubleEndedIterator<Item = Result<u64, Error>>>),
     }
 
-    impl From<SequentialAndIterator<TestIterator, u64>> for TestIterator {
-        fn from(iter: SequentialAndIterator<TestIterator, u64>) -> Self {
+    impl From<AndIter<TestIterator, u64>> for TestIterator {
+        fn from(iter: AndIter<TestIterator, u64>) -> Self {
             Self::And(iter)
         }
     }
 
-    impl From<SequentialOrIterator<TestIterator, u64>> for TestIterator {
-        fn from(iter: SequentialOrIterator<TestIterator, u64>) -> Self {
+    impl From<OrIter<TestIterator, u64>> for TestIterator {
+        fn from(iter: OrIter<TestIterator, u64>) -> Self {
             Self::Or(iter)
         }
     }

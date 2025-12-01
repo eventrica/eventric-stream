@@ -2,7 +2,7 @@ use derive_more::Deref;
 use fancy_constructor::new;
 
 use crate::{
-    event::PersistentEvent,
+    event::Event,
     stream::query::Mask,
 };
 
@@ -13,13 +13,13 @@ use crate::{
 /// .
 #[derive(new, Debug, Deref, Eq, PartialEq)]
 #[new(const_fn, vis(pub(crate)))]
-pub struct PersistentEventMasked<const N: usize> {
+pub struct EventMasked<const N: usize> {
     #[deref]
-    event: PersistentEvent,
+    event: Event,
     mask: Mask<N>,
 }
 
-impl<const N: usize> PersistentEventMasked<N> {
+impl<const N: usize> EventMasked<N> {
     /// .
     #[must_use]
     pub fn mask(&self) -> &Mask<N> {

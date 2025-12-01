@@ -25,10 +25,10 @@ pub mod event {
     //! to specifying events within queries.
 
     pub use eventric_stream_core::event::{
+        CandidateEvent,
         Data,
-        EphemeralEvent,
+        Event,
         Identifier,
-        PersistentEvent,
         Position,
         Range,
         Specifier,
@@ -80,8 +80,8 @@ pub mod stream {
         //! condition models.
 
         pub use eventric_stream_core::stream::query::{
+            EventMasked,
             Mask,
-            PersistentEventMasked,
             Prepared,
             Queries,
             Query,

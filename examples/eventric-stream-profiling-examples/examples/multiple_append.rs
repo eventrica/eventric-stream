@@ -4,7 +4,7 @@ use eventric_stream::{
     error::Error,
     event::{
         Data,
-        EphemeralEvent,
+        CandidateEvent,
         Identifier,
         Tag,
         Version,
@@ -28,7 +28,7 @@ pub fn main() -> Result<(), Error> {
     let count = 10f64;
     let events = (0..count as u64)
         .map(|_| {
-            EphemeralEvent::new(
+            CandidateEvent::new(
                 Data::new("Hello World").unwrap(),
                 Identifier::new("test_identifier").unwrap(),
                 Vec::from_iter([

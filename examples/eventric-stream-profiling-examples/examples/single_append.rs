@@ -4,7 +4,7 @@ use eventric_stream::{
     error::Error,
     event::{
         Data,
-        EphemeralEvent,
+        CandidateEvent,
         Identifier,
         Tag,
         Version,
@@ -25,7 +25,7 @@ pub fn main() -> Result<(), Error> {
         .temporary(true)
         .open()?;
 
-    let events = [EphemeralEvent::new(
+    let events = [CandidateEvent::new(
         Data::new("Hello World").unwrap(),
         Identifier::new("test_identifier").unwrap(),
         Vec::from_iter([

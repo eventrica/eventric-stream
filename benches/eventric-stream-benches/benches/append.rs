@@ -8,7 +8,7 @@ use criterion::{
 use eventric_stream::{
     event::{
         Data,
-        EphemeralEvent,
+        CandidateEvent,
         Identifier,
         Tag,
         Version,
@@ -34,7 +34,7 @@ pub fn single_append(c: &mut Criterion) {
             .open()
             .unwrap();
 
-        let events = [EphemeralEvent::new(
+        let events = [CandidateEvent::new(
             Data::new("Hello World").unwrap(),
             Identifier::new("test_identifier").unwrap(),
             Vec::from_iter([
@@ -71,7 +71,7 @@ pub fn multiple_append(c: &mut Criterion) {
 
             let events = (0..10)
                 .map(|_| {
-                    EphemeralEvent::new(
+                    CandidateEvent::new(
                         Data::new("Hello World").unwrap(),
                         Identifier::new("test_identifier").unwrap(),
                         Vec::from_iter([

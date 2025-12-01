@@ -28,9 +28,9 @@ use crate::{
         HASH_LEN,
         ID_LEN,
         POSITION_LEN,
-        indices::PositionIterator,
+        indices::PositionIter,
     },
-    utils::iteration::or::SequentialOrIterator,
+    utils::iteration::or::OrIter,
 };
 
 // =================================================================================================
@@ -59,11 +59,11 @@ pub(crate) struct Identifiers {
 
 impl Identifiers {
     #[rustfmt::skip]
-    pub fn iterate<'a, S>(&self, specifiers: S, from: Option<Position>) -> PositionIterator
+    pub fn iterate<'a, S>(&self, specifiers: S, from: Option<Position>) -> PositionIter
     where
         S: Iterator<Item = &'a SpecifierHash>,
     {
-        SequentialOrIterator::combine(specifiers.map(|specifier| {
+        OrIter::combine(specifiers.map(|specifier| {
             let hash = specifier.0.hash_val();
             let range = specifier.1.clone();
 
@@ -77,7 +77,7 @@ impl Identifiers {
                     .prefix(Into::<PrefixBytes>::into(IntoPrefixBytes(hash)))
             };
 
-            PositionIterator::Identifiers(Iter::new(iter, range))
+            PositionIter::Identifiers(Iter::new(iter, range))
         }))
     }
 }

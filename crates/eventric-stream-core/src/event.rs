@@ -28,25 +28,25 @@ use crate::event::{
 // Event
 // =================================================================================================
 
-// Ephemeral
+// Candidate
 
-/// The [`EphemeralEvent`] type represents an event which has not yet been
+/// The [`CandidateEvent`] type represents an event which has not yet been
 /// persisted (by appending it to an event stream). It is effectively a pending
 /// event from the perspective of an event stream system, and as such doesn't
 /// yet have some of the properties of an event which has been persisted (in
-/// this case a [`PersistentEvent`]) such as a [`Position`] within the stream or
+/// this case an [`Event`]) such as a [`Position`] within the stream or
 /// a [`Timestamp`].
 #[derive(new, Clone, Debug, Eq, PartialEq)]
 #[new(const_fn, name(new_inner), vis())]
-pub struct EphemeralEvent {
+pub struct CandidateEvent {
     data: Data,
     identifier: Identifier,
     tags: BTreeSet<Tag>,
     version: Version,
 }
 
-impl EphemeralEvent {
-    /// Constructs a new [`EphemeralEvent`] instance, given appropriate event
+impl CandidateEvent {
+    /// Constructs a new [`CandidateEvent`] instance, given appropriate event
     /// components. Each of the event components is validated (where relevant)
     /// on construction, so the constructor function is guaranteed to succeed.
     ///
@@ -63,7 +63,7 @@ impl EphemeralEvent {
     }
 }
 
-impl EphemeralEvent {
+impl CandidateEvent {
     /// Returns a reference to the [`Data`] value of the event.
     #[must_use]
     pub fn data(&self) -> &Data {
@@ -94,15 +94,15 @@ impl EphemeralEvent {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub(crate) struct EphemeralEventHashRef<'a> {
+pub(crate) struct CandidateEventHashRef<'a> {
     pub data: &'a Data,
     pub identifier: IdentifierHashRef<'a>,
     pub tags: BTreeSet<TagHashRef<'a>>,
     pub version: Version,
 }
 
-impl<'a> From<&'a EphemeralEvent> for EphemeralEventHashRef<'a> {
-    fn from(event: &'a EphemeralEvent) -> Self {
+impl<'a> From<&'a CandidateEvent> for CandidateEventHashRef<'a> {
+    fn from(event: &'a CandidateEvent) -> Self {
         Self::new(
             event.data(),
             event.identifier().into(),
@@ -114,13 +114,13 @@ impl<'a> From<&'a EphemeralEvent> for EphemeralEventHashRef<'a> {
 
 // -------------------------------------------------------------------------------------------------
 
-// Persistent
+// Event
 
-/// The [`PersistentEvent`] type represents an event which has been appended to
-/// a [`Stream`][stream], and has now been returned by a query or similar
-/// operation. A [`PersistentEvent`] is immutable from the perspective of a
-/// logical stream of events - the stream is an append-only data structure, and
-/// once an event is part of a stream, it will always exist in that form and at
+/// The [`Event`] type represents an event which has been appended to a
+/// [`Stream`][stream], and has now been returned by a query or similar
+/// operation. An [`Event`] is immutable from the perspective of a logical
+/// stream of events - the stream is an append-only data structure, and once an
+/// event is part of a stream, it will always exist in that form and at
 /// that [`Position`];
 ///
 /// Note that the [`Timestamp`] is added during the append operation, and the
@@ -130,7 +130,7 @@ impl<'a> From<&'a EphemeralEvent> for EphemeralEventHashRef<'a> {
 /// [stream]: crate::stream::Stream
 #[derive(new, Debug, Eq, PartialEq)]
 #[new(const_fn, vis(pub(crate)))]
-pub struct PersistentEvent {
+pub struct Event {
     data: Data,
     identifier: Identifier,
     position: Position,
@@ -139,7 +139,7 @@ pub struct PersistentEvent {
     version: Version,
 }
 
-impl PersistentEvent {
+impl Event {
     /// Returns a reference to the [`Data`] value of the event.
     #[must_use]
     pub fn data(&self) -> &Data {
@@ -199,7 +199,7 @@ impl PersistentEvent {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub(crate) struct PersistentEventHash {
+pub(crate) struct EventHash {
     pub data: Data,
     pub identifier: IdentifierHash,
     pub position: Position,
@@ -208,7 +208,7 @@ pub(crate) struct PersistentEventHash {
     pub version: Version,
 }
 
-impl PersistentEventHash {
+impl EventHash {
     #[must_use]
     #[rustfmt::skip]
     pub fn take(self) -> (Data, IdentifierHash, Position, BTreeSet<TagHash>, Timestamp, Version) {

@@ -4,8 +4,8 @@
 use eventric_stream::{
     error::Error,
     event::{
+        CandidateEvent,
         Data,
-        EphemeralEvent,
         Identifier,
         Tag,
         Version,
@@ -25,22 +25,22 @@ pub(crate) fn stream() -> Result<Stream, Error> {
         .open()
 }
 
-/// Creates an [`EphemeralEvent`] given properties which can be converted to
+/// Creates a [`CandidateEvent`] given properties which can be converted to
 /// strongly-typed event properties as required
 #[rustfmt::skip]
-pub(crate) fn event(data: &str, identifier: &str, tags: &[&str], version: u8) -> Result<EphemeralEvent, Error> {
+pub(crate) fn event(data: &str, identifier: &str, tags: &[&str], version: u8) -> Result<CandidateEvent, Error> {
     let data = Data::new(data)?;
     let identifier = Identifier::new(identifier)?;
     let tags = tags.iter().map(|tag| Tag::new(*tag)).collect::<Result<Vec<_>, _>>()?;
     let version = Version::new(version);
     
-    Ok(EphemeralEvent::new(data, identifier, tags, version))
+    Ok(CandidateEvent::new(data, identifier, tags, version))
 }
 
-/// Creates a known collection of [`EphemeralEvent`] instances which can be used
+/// Creates a known collection of [`CandidateEvent`] instances which can be used
 /// to verify the various aspects of append/iterate functions
 #[rustfmt::skip]
-pub(crate) fn events() -> Result<Vec<EphemeralEvent>, Error> {
+pub(crate) fn events() -> Result<Vec<CandidateEvent>, Error> {
     Ok(Vec::from_iter([
         event("student:100-enrolled-course:200",    "student_enrolled",     &["student:100", "course:200"],     0)?,
         event("course:200-created",                 "course_created",       &["course:200"],                    0)?,

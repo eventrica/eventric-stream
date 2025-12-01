@@ -8,6 +8,7 @@ use crate::stream::{
 // =================================================================================================
 
 /// .
+#[allow(private_bounds)]
 pub trait Source
 where
     Self::Iterator: Build<Self::Prepared> + DoubleEndedIterator + Iterator,

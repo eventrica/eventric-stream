@@ -15,13 +15,16 @@ use crate::{
     stream::{
         Stream,
         data::events::{
-            MappedPersistentEventHashIterator,
-            PersistentEventHashIterator,
+            EventHashIter,
+            MappedEventHashIter,
         },
-        iterate::cache::Cache,
+        iterate::{
+            build::Build,
+            cache::Cache,
+        },
         query::{
             QueryHash,
-            Source,
+            source::Source,
         },
     },
 };
@@ -58,6 +61,7 @@ impl Iterate for Stream {
 /// stream or stream-like type, using a supplied [`Query`]) to determine
 /// which matching events should be returned, and an optional [`Position`] at
 /// which iteration should begin.
+#[allow(private_bounds)]
 pub trait IterateQuery {
     /// Iterates over the stream or stream-like instance using the given
     /// [`Query`] to determine which matching events should be returned. Will
@@ -78,6 +82,7 @@ pub trait IterateQuery {
         S::Iterator: Build<S::Prepared>;
 }
 
+#[allow(private_bounds)]
 impl IterateQuery for Stream {
     fn iterate_query<S>(&self, query: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
     where
@@ -99,23 +104,19 @@ impl IterateQuery for Stream {
 // Stream
 
 impl Stream {
-    fn iterate_events(&self, from: Option<Position>) -> PersistentEventHashIterator {
+    fn iterate_events(&self, from: Option<Position>) -> EventHashIter {
         let iter = self.data.events.iterate(from);
 
-        PersistentEventHashIterator::Direct(iter)
+        EventHashIter::Direct(iter)
     }
 
-    fn iterate_indices(
-        &self,
-        query: &QueryHash,
-        from: Option<Position>,
-    ) -> PersistentEventHashIterator {
+    fn iterate_indices(&self, query: &QueryHash, from: Option<Position>) -> EventHashIter {
         let events = self.data.events.clone();
 
         let iter = self.data.indices.iterate(query, from);
-        let iter = MappedPersistentEventHashIterator::new(events, iter);
+        let iter = MappedEventHashIter::new(events, iter);
 
-        PersistentEventHashIterator::Mapped(iter)
+        EventHashIter::Mapped(iter)
     }
 }
 
@@ -123,7 +124,4 @@ impl Stream {
 
 // Re-Export
 
-pub use self::{
-    build::Build,
-    iter::Iter,
-};
+pub use self::iter::Iter;

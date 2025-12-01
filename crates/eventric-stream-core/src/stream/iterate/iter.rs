@@ -12,8 +12,8 @@ use fancy_constructor::new;
 use crate::{
     error::Error,
     event::{
-        PersistentEvent,
-        PersistentEventHash,
+        Event,
+        EventHash,
         identifier::{
             Identifier,
             IdentifierHash,
@@ -25,7 +25,7 @@ use crate::{
     },
     stream::{
         data::{
-            events::PersistentEventHashIterator,
+            events::EventHashIter,
             references::References,
         },
         iterate::{
@@ -33,7 +33,7 @@ use crate::{
             cache::Cache,
         },
         query::{
-            PersistentEventMasked,
+            EventMasked,
             Queries,
             Query,
             filter::{
@@ -82,7 +82,7 @@ where
 {
     data: T::Data,
     #[allow(clippy::struct_field_names)]
-    iter: Exclusive<PersistentEventHashIterator>,
+    iter: Exclusive<EventHashIter>,
     #[new(val(Retrieve::new(cache, fetch_tags, references)))]
     retrieve: Retrieve,
 }
@@ -90,7 +90,7 @@ where
 // ()
 
 impl Iter<()> {
-    fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
+    fn map(&mut self, event: Result<EventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| self.retrieve.get(event))
     }
 }
@@ -102,7 +102,7 @@ impl DoubleEndedIterator for Iter<()> {
 }
 
 impl Iterator for Iter<()> {
-    type Item = Result<PersistentEvent, Error>;
+    type Item = Result<Event, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next().map(|event| self.map(event))
@@ -112,7 +112,7 @@ impl Iterator for Iter<()> {
 // Query
 
 impl Iter<Query> {
-    fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
+    fn map(&mut self, event: Result<EventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| self.retrieve.get(event))
     }
 }
@@ -120,7 +120,7 @@ impl Iter<Query> {
 impl Build<Prepared<Query>> for Iter<Query> {
     #[allow(private_interfaces)]
     fn build(
-        iter: PersistentEventHashIterator,
+        iter: EventHashIter,
         prepared: &Prepared<Query>,
         references: References,
     ) -> Self {
@@ -138,7 +138,7 @@ impl DoubleEndedIterator for Iter<Query> {
 }
 
 impl Iterator for Iter<Query> {
-    type Item = Result<PersistentEvent, Error>;
+    type Item = Result<Event, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next().map(|event| self.map(event))
@@ -148,7 +148,7 @@ impl Iterator for Iter<Query> {
 // Queries
 
 impl<const N: usize> Iter<Queries<N>> {
-    fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
+    fn map(&mut self, event: Result<EventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| {
             let mut mask = [false; N];
 
@@ -160,7 +160,7 @@ impl<const N: usize> Iter<Queries<N>> {
 
             self.retrieve
                 .get(event)
-                .map(|event| PersistentEventMasked::new(event, mask))
+                .map(|event| EventMasked::new(event, mask))
         })
     }
 }
@@ -168,7 +168,7 @@ impl<const N: usize> Iter<Queries<N>> {
 impl<const N: usize> Build<Prepared<Queries<N>>> for Iter<Queries<N>> {
     #[allow(private_interfaces)]
     fn build(
-        iter: PersistentEventHashIterator,
+        iter: EventHashIter,
         prepared: &Prepared<Queries<N>>,
         references: References,
     ) -> Self {
@@ -187,7 +187,7 @@ impl<const N: usize> DoubleEndedIterator for Iter<Queries<N>> {
 }
 
 impl<const N: usize> Iterator for Iter<Queries<N>> {
-    type Item = Result<PersistentEventMasked<N>, Error>;
+    type Item = Result<EventMasked<N>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next().map(|event| self.map(event))
@@ -208,12 +208,12 @@ struct Retrieve {
 
 impl Retrieve {
     #[rustfmt::skip]
-    fn get(&self, event: PersistentEventHash) -> Result<PersistentEvent, Error> {
+    fn get(&self, event: EventHash) -> Result<Event, Error> {
         let (data, identifier, position, tags, timestamp, version) = event.take();
 
         self.get_identifier(identifier)
             .and_then(|identifier| self.get_tags(&tags).map(|tags| (identifier, tags)))
-            .map(|(identifier, tags)| PersistentEvent::new(data, identifier, position, tags, timestamp, version))
+            .map(|(identifier, tags)| Event::new(data, identifier, position, tags, timestamp, version))
     }
 }
 

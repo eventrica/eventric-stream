@@ -16,8 +16,8 @@ use fjall::{
 use crate::{
     error::Error,
     event::{
-        EphemeralEventHashRef,
-        PersistentEventHash,
+        CandidateEventHashRef,
+        EventHash,
         data::Data,
         identifier::IdentifierHash,
         position::Position,
@@ -25,7 +25,7 @@ use crate::{
         timestamp::Timestamp,
         version::Version,
     },
-    stream::data::indices::PositionIterator,
+    stream::data::indices::PositionIter,
 };
 
 // =================================================================================================
@@ -58,18 +58,18 @@ impl Events {
 // Get/Put
 
 impl Events {
-    pub fn get(&self, at: Position) -> Result<Option<PersistentEventHash>, Error> {
+    pub fn get(&self, at: Position) -> Result<Option<EventHash>, Error> {
         let key = at.to_be_bytes();
         let value = self.keyspace.get(key)?;
 
-        Ok(value.map(|value| IntoPersistentEventHash(at, value).into()))
+        Ok(value.map(|value| IntoEventHash(at, value).into()))
     }
 
     pub fn put(
         &self,
         batch: &mut WriteBatch,
         at: Position,
-        event: &EphemeralEventHashRef<'_>,
+        event: &CandidateEventHashRef<'_>,
         timestamp: Timestamp,
     ) {
         let key = at.to_be_bytes();
@@ -84,14 +84,14 @@ impl Events {
 impl Events {
     #[must_use]
     #[rustfmt::skip]
-    pub fn iterate(&self, from: Option<Position>) -> Iter {
+    pub fn iterate(&self, from: Option<Position>) -> DirectEventHashIter {
         let iter = if let Some(from) = from {
             self.keyspace.range(from.to_be_bytes()..)
         } else {
             self.keyspace.iter()
         };
 
-        Iter::new(iter)
+        DirectEventHashIter::new(iter)
     }
 }
 
@@ -111,12 +111,12 @@ impl Events {
 // Iterators
 
 #[derive(Debug)]
-pub(crate) enum PersistentEventHashIterator {
-    Direct(Iter),
-    Mapped(MappedPersistentEventHashIterator),
+pub(crate) enum EventHashIter {
+    Direct(DirectEventHashIter),
+    Mapped(MappedEventHashIter),
 }
 
-impl DoubleEndedIterator for PersistentEventHashIterator {
+impl DoubleEndedIterator for EventHashIter {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
             Self::Direct(iter) => iter.next_back(),
@@ -125,8 +125,8 @@ impl DoubleEndedIterator for PersistentEventHashIterator {
     }
 }
 
-impl Iterator for PersistentEventHashIterator {
-    type Item = Result<PersistentEventHash, Error>;
+impl Iterator for EventHashIter {
+    type Item = Result<EventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -140,28 +140,28 @@ impl Iterator for PersistentEventHashIterator {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub(crate) struct Iter {
+pub(crate) struct DirectEventHashIter {
     #[debug("Iter")]
     iter: fjall::Iter,
 }
 
-impl Iter {
+impl DirectEventHashIter {
     fn next_map(guard: Guard) -> <Self as Iterator>::Item {
         match guard.into_inner() {
-            Ok((key, value)) => Ok(IntoPersistentEventHash(IntoPosition(key).into(), value).into()),
+            Ok((key, value)) => Ok(IntoEventHash(IntoPosition(key).into(), value).into()),
             Err(err) => Err(Error::from(err)),
         }
     }
 }
 
-impl DoubleEndedIterator for Iter {
+impl DoubleEndedIterator for DirectEventHashIter {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.next_back().map(Self::next_map)
     }
 }
 
-impl Iterator for Iter {
-    type Item = Result<PersistentEventHash, Error>;
+impl Iterator for DirectEventHashIter {
+    type Item = Result<EventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(Self::next_map)
@@ -172,12 +172,12 @@ impl Iterator for Iter {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub(crate) struct MappedPersistentEventHashIterator {
+pub(crate) struct MappedEventHashIter {
     events: Events,
-    iter: PositionIterator,
+    iter: PositionIter,
 }
 
-impl MappedPersistentEventHashIterator {
+impl MappedEventHashIter {
     fn map(&mut self, position: Result<Position, Error>) -> Option<<Self as Iterator>::Item> {
         match position {
             Ok(position) => match self.events.get(position) {
@@ -190,7 +190,7 @@ impl MappedPersistentEventHashIterator {
     }
 }
 
-impl DoubleEndedIterator for MappedPersistentEventHashIterator {
+impl DoubleEndedIterator for MappedEventHashIter {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter
             .next_back()
@@ -198,8 +198,8 @@ impl DoubleEndedIterator for MappedPersistentEventHashIterator {
     }
 }
 
-impl Iterator for MappedPersistentEventHashIterator {
-    type Item = Result<PersistentEventHash, Error>;
+impl Iterator for MappedEventHashIter {
+    type Item = Result<EventHash, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().and_then(|position| self.map(position))
@@ -220,12 +220,12 @@ impl From<IntoPosition> for Position {
     }
 }
 
-// Slice & Position -> PersistentEventHash
+// Slice & Position -> EventHash
 
-struct IntoPersistentEventHash(Position, Slice);
+struct IntoEventHash(Position, Slice);
 
-impl From<IntoPersistentEventHash> for PersistentEventHash {
-    fn from(IntoPersistentEventHash(position, value): IntoPersistentEventHash) -> Self {
+impl From<IntoEventHash> for EventHash {
+    fn from(IntoEventHash(position, value): IntoEventHash) -> Self {
         let mut value = &value[..];
 
         let identifier = IdentifierHash::new(value.get_u64());
@@ -243,7 +243,7 @@ impl From<IntoPersistentEventHash> for PersistentEventHash {
 
 // Event & Timestamp -> Value Byte Vector
 
-struct IntoValueBytes<'a>(&'a EphemeralEventHashRef<'a>, Timestamp);
+struct IntoValueBytes<'a>(&'a CandidateEventHashRef<'a>, Timestamp);
 
 impl From<IntoValueBytes<'_>> for Vec<u8> {
     fn from(IntoValueBytes(event, timestamp): IntoValueBytes<'_>) -> Self {

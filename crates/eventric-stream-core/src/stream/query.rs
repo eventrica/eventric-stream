@@ -208,7 +208,7 @@ impl<const N: usize> Validate for Queries<N> {
 // Re-Exports
 
 pub use self::{
-    event::PersistentEventMasked,
+    event::EventMasked,
     mask::Mask,
     prepared::Prepared,
     selector::{

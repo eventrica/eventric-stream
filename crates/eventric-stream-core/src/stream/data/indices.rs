@@ -13,7 +13,7 @@ use fjall::{
 use crate::{
     error::Error,
     event::{
-        EphemeralEventHashRef,
+        CandidateEventHashRef,
         position::Position,
         timestamp::Timestamp,
     },
@@ -29,8 +29,8 @@ use crate::{
         },
     },
     utils::iteration::{
-        and::SequentialAndIterator,
-        or::SequentialOrIterator,
+        and::AndIter,
+        or::OrIter,
     },
 };
 
@@ -79,12 +79,12 @@ impl Indices {
 
 impl Indices {
     #[must_use]
-    pub fn iterate(&self, query: &QueryHash, from: Option<Position>) -> PositionIterator {
-        SequentialOrIterator::combine(query.as_ref().iter().map(|selector| match selector {
+    pub fn iterate(&self, query: &QueryHash, from: Option<Position>) -> PositionIter {
+        OrIter::combine(query.as_ref().iter().map(|selector| match selector {
             SelectorHash::Specifiers(specifiers) => {
                 self.identifiers.iterate(specifiers.iter(), from)
             }
-            SelectorHash::SpecifiersAndTags(specifiers, tags) => SequentialAndIterator::combine([
+            SelectorHash::SpecifiersAndTags(specifiers, tags) => AndIter::combine([
                 self.identifiers.iterate(specifiers.iter(), from),
                 self.tags.iterate(tags.iter(), from),
             ]),
@@ -100,7 +100,7 @@ impl Indices {
         &self,
         batch: &mut WriteBatch,
         at: Position,
-        event: &EphemeralEventHashRef<'_>,
+        event: &CandidateEventHashRef<'_>,
         timestamp: Timestamp,
     ) {
         self.identifiers.put(batch, at, &event.identifier, event.version);
@@ -114,14 +114,14 @@ impl Indices {
 // Iterators
 
 #[derive(Debug)]
-pub enum PositionIterator {
-    And(SequentialAndIterator<PositionIterator, Position>),
-    Or(SequentialOrIterator<PositionIterator, Position>),
+pub enum PositionIter {
+    And(AndIter<PositionIter, Position>),
+    Or(OrIter<PositionIter, Position>),
     Identifiers(identifiers::Iter),
     Tags(tags::Iter),
 }
 
-impl DoubleEndedIterator for PositionIterator {
+impl DoubleEndedIterator for PositionIter {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
             Self::And(iter) => iter.next_back(),
@@ -132,7 +132,7 @@ impl DoubleEndedIterator for PositionIterator {
     }
 }
 
-impl Iterator for PositionIterator {
+impl Iterator for PositionIter {
     type Item = Result<Position, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -145,14 +145,14 @@ impl Iterator for PositionIterator {
     }
 }
 
-impl From<SequentialAndIterator<PositionIterator, Position>> for PositionIterator {
-    fn from(iter: SequentialAndIterator<PositionIterator, Position>) -> Self {
+impl From<AndIter<PositionIter, Position>> for PositionIter {
+    fn from(iter: AndIter<PositionIter, Position>) -> Self {
         Self::And(iter)
     }
 }
 
-impl From<SequentialOrIterator<PositionIterator, Position>> for PositionIterator {
-    fn from(iter: SequentialOrIterator<PositionIterator, Position>) -> Self {
+impl From<OrIter<PositionIter, Position>> for PositionIter {
+    fn from(iter: OrIter<PositionIter, Position>) -> Self {
         Self::Or(iter)
     }
 }

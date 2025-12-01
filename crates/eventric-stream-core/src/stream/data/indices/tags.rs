@@ -26,9 +26,9 @@ use crate::{
         HASH_LEN,
         ID_LEN,
         POSITION_LEN,
-        indices::PositionIterator,
+        indices::PositionIter,
     },
-    utils::iteration::and::SequentialAndIterator,
+    utils::iteration::and::AndIter,
 };
 
 // =================================================================================================
@@ -56,11 +56,11 @@ pub(crate) struct Tags {
 // Iterate
 
 impl Tags {
-    pub fn iterate<'a, T>(&self, tags: T, from: Option<Position>) -> PositionIterator
+    pub fn iterate<'a, T>(&self, tags: T, from: Option<Position>) -> PositionIter
     where
         T: Iterator<Item = &'a TagHash>,
     {
-        SequentialAndIterator::combine(tags.map(|tag| {
+        AndIter::combine(tags.map(|tag| {
             let hash = tag.hash_val();
 
             let iter = if let Some(from) = from {
@@ -73,7 +73,7 @@ impl Tags {
                     .prefix(Into::<PrefixBytes>::into(IntoPrefixBytes(hash)))
             };
 
-            PositionIterator::Tags(Iter::new(iter))
+            PositionIter::Tags(Iter::new(iter))
         }))
     }
 }

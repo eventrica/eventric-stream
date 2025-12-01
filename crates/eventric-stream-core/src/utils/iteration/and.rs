@@ -118,14 +118,14 @@ macro_rules! impl_and_next {
 /// ```
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
-pub struct SequentialAndIterator<I, T>(Vec<DoubleEndedPeekable<I>>)
+pub struct AndIter<I, T>(Vec<DoubleEndedPeekable<I>>)
 where
     I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd;
 
-impl<I, T> SequentialAndIterator<I, T>
+impl<I, T> AndIter<I, T>
 where
-    I: DoubleEndedIterator<Item = Result<T, Error>> + From<SequentialAndIterator<I, T>>,
+    I: DoubleEndedIterator<Item = Result<T, Error>> + From<AndIter<I, T>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     /// Take a an iterable value of iterators, and return an iterator of the
@@ -140,11 +140,11 @@ where
             .map(DoubleEndedPeekableExt::double_ended_peekable)
             .collect();
 
-        I::from(SequentialAndIterator::new(iters))
+        I::from(AndIter::new(iters))
     }
 }
 
-impl<I, T> DoubleEndedIterator for SequentialAndIterator<I, T>
+impl<I, T> DoubleEndedIterator for AndIter<I, T>
 where
     I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
@@ -153,7 +153,7 @@ where
     impl_and_next!(peek_back, next_back, next_back_if_eq, Ordering::Less, Ordering::Greater);
 }
 
-impl<I, T> Iterator for SequentialAndIterator<I, T>
+impl<I, T> Iterator for AndIter<I, T>
 where
     I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
@@ -176,7 +176,7 @@ where
     }
 }
 
-impl<I, T> FusedIterator for SequentialAndIterator<I, T>
+impl<I, T> FusedIterator for AndIter<I, T>
 where
     I: DoubleEndedIterator<Item = Result<T, Error>> + FusedIterator,
     T: Copy + Debug + Ord + PartialOrd,
@@ -192,7 +192,7 @@ mod tests {
     use crate::{
         error::Error,
         utils::iteration::{
-            and::SequentialAndIterator,
+            and::AndIter,
             tests::TestIterator,
         },
     };
@@ -203,7 +203,7 @@ mod tests {
         let a = TestIterator::from([]);
         let b = TestIterator::from([]);
 
-        let mut iter = SequentialAndIterator::combine([a, b]);
+        let mut iter = AndIter::combine([a, b]);
 
         assert_eq!(None, iter.next());
 
@@ -212,7 +212,7 @@ mod tests {
         let b = TestIterator::from([Ok(3), Ok(4), Ok(5)]);
         let c = TestIterator::from([Ok(6), Ok(7), Ok(8)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(None, iter.next());
 
@@ -221,7 +221,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5)]);
         let c = TestIterator::from([Ok(1), Ok(2), Ok(4), Ok(7)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(2)), iter.next());
         assert_eq!(Some(Ok(4)), iter.next());
@@ -232,7 +232,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let c = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert_eq!(Some(Ok(2)), iter.next());
@@ -244,7 +244,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4)]);
         let c = TestIterator::from([Ok(0), Ok(3), Ok(4), Ok(5), Ok(6)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(3)), iter.next());
         assert_eq!(Some(Ok(4)), iter.next());
@@ -253,7 +253,7 @@ mod tests {
         // Single iterator
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let mut iter = SequentialAndIterator::combine([a]);
+        let mut iter = AndIter::combine([a]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert_eq!(Some(Ok(2)), iter.next());
@@ -264,7 +264,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let b = TestIterator::from([]);
 
-        let mut iter = SequentialAndIterator::combine([a, b]);
+        let mut iter = AndIter::combine([a, b]);
 
         assert_eq!(None, iter.next());
 
@@ -273,7 +273,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5), Ok(6), Ok(7)]);
         let c = TestIterator::from([Ok(3), Ok(5), Ok(7), Ok(8)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(3)), iter.next());
         assert_eq!(Some(Ok(5)), iter.next());
@@ -287,7 +287,7 @@ mod tests {
         let a = TestIterator::from([]);
         let b = TestIterator::from([]);
 
-        let mut iter = SequentialAndIterator::combine([a, b]);
+        let mut iter = AndIter::combine([a, b]);
 
         assert_eq!(None, iter.next_back());
 
@@ -296,7 +296,7 @@ mod tests {
         let b = TestIterator::from([Ok(3), Ok(4), Ok(5)]);
         let c = TestIterator::from([Ok(6), Ok(7), Ok(8)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(None, iter.next_back());
 
@@ -305,7 +305,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5)]);
         let c = TestIterator::from([Ok(1), Ok(2), Ok(4), Ok(7)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(4)), iter.next_back());
         assert_eq!(Some(Ok(2)), iter.next_back());
@@ -316,7 +316,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let c = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(3)), iter.next_back());
         assert_eq!(Some(Ok(2)), iter.next_back());
@@ -328,7 +328,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4)]);
         let c = TestIterator::from([Ok(0), Ok(3), Ok(4), Ok(5), Ok(6)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(4)), iter.next_back());
         assert_eq!(Some(Ok(3)), iter.next_back());
@@ -337,7 +337,7 @@ mod tests {
         // Single iterator
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let mut iter = SequentialAndIterator::combine([a]);
+        let mut iter = AndIter::combine([a]);
 
         assert_eq!(Some(Ok(3)), iter.next_back());
         assert_eq!(Some(Ok(2)), iter.next_back());
@@ -348,7 +348,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let b = TestIterator::from([]);
 
-        let mut iter = SequentialAndIterator::combine([a, b]);
+        let mut iter = AndIter::combine([a, b]);
 
         assert_eq!(None, iter.next_back());
 
@@ -357,7 +357,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5), Ok(6), Ok(7)]);
         let c = TestIterator::from([Ok(3), Ok(5), Ok(7), Ok(8)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(7)), iter.next_back());
         assert_eq!(Some(Ok(5)), iter.next_back());
@@ -372,7 +372,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5), Ok(6)]);
         let c = TestIterator::from([Ok(1), Ok(2), Ok(4), Ok(6), Ok(7)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(2)), iter.next());
         assert_eq!(Some(Ok(6)), iter.next_back());
@@ -384,7 +384,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4), Ok(5)]);
         let c = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4), Ok(5)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert_eq!(Some(Ok(5)), iter.next_back());
@@ -398,7 +398,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4), Ok(5)]);
         let c = TestIterator::from([Ok(0), Ok(3), Ok(4), Ok(5), Ok(6)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(5)), iter.next_back());
         assert_eq!(Some(Ok(3)), iter.next());
@@ -410,7 +410,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5), Ok(6), Ok(7), Ok(10)]);
         let c = TestIterator::from([Ok(3), Ok(5), Ok(7), Ok(8), Ok(9)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(3)), iter.next());
         assert_eq!(Some(Ok(7)), iter.next_back());
@@ -424,7 +424,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Err(Error::Concurrency), Ok(3)]);
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b]);
+        let mut iter = AndIter::combine([a, b]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
@@ -433,7 +433,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let b = TestIterator::from([Ok(1), Err(Error::Concurrency), Ok(3)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b]);
+        let mut iter = AndIter::combine([a, b]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
@@ -443,7 +443,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let c = TestIterator::from([Ok(1), Err(Error::Concurrency), Ok(3)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b, c]);
+        let mut iter = AndIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
@@ -452,7 +452,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Err(Error::Concurrency)]);
         let b = TestIterator::from([Ok(1), Err(Error::Concurrency)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b]);
+        let mut iter = AndIter::combine([a, b]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
@@ -464,7 +464,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(2), Err(Error::Concurrency)]);
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b]);
+        let mut iter = AndIter::combine([a, b]);
 
         assert!(matches!(iter.next_back(), Some(Err(Error::Concurrency))));
 
@@ -472,7 +472,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let b = TestIterator::from([Ok(1), Ok(2), Err(Error::Concurrency)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b]);
+        let mut iter = AndIter::combine([a, b]);
 
         assert!(matches!(iter.next_back(), Some(Err(Error::Concurrency))));
 
@@ -480,7 +480,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4)]);
         let b = TestIterator::from([Ok(1), Err(Error::Concurrency), Ok(3), Ok(4)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b]);
+        let mut iter = AndIter::combine([a, b]);
 
         assert_eq!(Some(Ok(4)), iter.next_back());
         assert_eq!(Some(Ok(3)), iter.next_back());
@@ -491,7 +491,7 @@ mod tests {
     #[test]
     fn size_hint_empty_iterators() {
         // Empty iterator collection
-        let iter = SequentialAndIterator::<TestIterator, u64>::new(vec![]);
+        let iter = AndIter::<TestIterator, u64>::new(vec![]);
 
         assert_eq!((0, Some(0)), iter.size_hint());
     }
@@ -501,7 +501,7 @@ mod tests {
         // Single iterator with known size
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let iter = SequentialAndIterator::combine([a]);
+        let iter = AndIter::combine([a]);
 
         assert_eq!((0, Some(3)), iter.size_hint());
     }
@@ -513,7 +513,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3), Ok(6)]);
         let c = TestIterator::from([Ok(3), Ok(4), Ok(5)]);
 
-        let iter = SequentialAndIterator::combine([a, b, c]);
+        let iter = AndIter::combine([a, b, c]);
 
         // Upper bound is minimum of all (all are 3, so min is 3)
         assert_eq!((0, Some(3)), iter.size_hint());
@@ -526,7 +526,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2)]);
         let c = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let iter = SequentialAndIterator::combine([a, b, c]);
+        let iter = AndIter::combine([a, b, c]);
 
         // Upper bound is minimum of all (2 is the smallest)
         assert_eq!((0, Some(2)), iter.size_hint());
@@ -539,7 +539,7 @@ mod tests {
         let b = TestIterator::from([]);
         let c = TestIterator::from([Ok(1), Ok(2)]);
 
-        let iter = SequentialAndIterator::combine([a, b, c]);
+        let iter = AndIter::combine([a, b, c]);
 
         // Upper bound is minimum, which is 0
         assert_eq!((0, Some(0)), iter.size_hint());
@@ -551,7 +551,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4)]);
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b]);
+        let mut iter = AndIter::combine([a, b]);
 
         // Initially: upper bound is 4
         assert_eq!((0, Some(4)), iter.size_hint());
@@ -575,7 +575,7 @@ mod tests {
         let a = TestIterator::from([Ok(1)]);
         let b = TestIterator::from([Ok(2)]);
 
-        let mut iter = SequentialAndIterator::combine([a, b]);
+        let mut iter = AndIter::combine([a, b]);
 
         // Initially
         assert_eq!((0, Some(1)), iter.size_hint());
@@ -593,7 +593,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(3), Ok(5)]);
         let b = TestIterator::from([Ok(2), Ok(4), Ok(6)]);
 
-        let iter = SequentialAndIterator::combine([a, b]);
+        let iter = AndIter::combine([a, b]);
 
         // Lower bound is 0 because there might be no intersection
         assert_eq!((0, Some(3)), iter.size_hint());

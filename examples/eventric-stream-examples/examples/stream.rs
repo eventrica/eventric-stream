@@ -3,7 +3,7 @@ use std::error::Error;
 use eventric_stream::{
     event::{
         Data,
-        EphemeralEvent,
+        CandidateEvent,
         Identifier,
         Specifier,
         Tag,
@@ -29,19 +29,19 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
     stream.append(
         [
-            EphemeralEvent::new(
+            CandidateEvent::new(
                 Data::new("hello world!")?,
                 Identifier::new("StudentSubscribedToCourse")?,
                 [Tag::new("student:3242")?, Tag::new("course:523")?],
                 Version::new(0),
             ),
-            EphemeralEvent::new(
+            CandidateEvent::new(
                 Data::new("oh, no!")?,
                 Identifier::new("CourseCapacityChanged")?,
                 [Tag::new("course:523")?],
                 Version::new(0),
             ),
-            EphemeralEvent::new(
+            CandidateEvent::new(
                 Data::new("goodbye world...")?,
                 Identifier::new("StudentSubscribedToCourse")?,
                 [Tag::new("student:7642")?, Tag::new("course:63")?],

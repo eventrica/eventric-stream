@@ -1,5 +1,5 @@
 use crate::stream::data::{
-    events::PersistentEventHashIterator,
+    events::EventHashIter,
     references::References,
 };
 
@@ -8,11 +8,11 @@ use crate::stream::data::{
 // =================================================================================================
 
 /// .
-pub trait Build<T>
+pub(crate) trait Build<T>
 where
     Self: DoubleEndedIterator + Iterator,
 {
     /// .
     #[allow(private_interfaces)]
-    fn build(iter: PersistentEventHashIterator, prepared: &T, references: References) -> Self;
+    fn build(iter: EventHashIter, prepared: &T, references: References) -> Self;
 }

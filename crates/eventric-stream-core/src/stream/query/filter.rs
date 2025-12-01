@@ -12,7 +12,7 @@ use std::{
 
 use crate::{
     event::{
-        PersistentEventHash,
+        EventHash,
         Version,
         identifier::IdentifierHash,
         tag::TagHash,
@@ -31,7 +31,7 @@ use crate::{
 
 #[allow(dead_code)]
 pub trait Matches {
-    fn matches(&self, event: &PersistentEventHash) -> bool;
+    fn matches(&self, event: &EventHash) -> bool;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -119,7 +119,7 @@ impl Filter {
 }
 
 impl Matches for Filter {
-    fn matches(&self, event: &PersistentEventHash) -> bool {
+    fn matches(&self, event: &EventHash) -> bool {
         match self.filters.get(&event.identifier) {
             Some(ranges) => ranges.matches(event),
             None => false,
@@ -129,7 +129,7 @@ impl Matches for Filter {
 
 impl Matches for Filters {
     #[rustfmt::skip]
-    fn matches(&self, event: &PersistentEventHash) -> bool {
+    fn matches(&self, event: &EventHash) -> bool {
         for (range, tags) in self {
             match event.version.partial_cmp(range).unwrap() {
                 Ordering::Equal => if tags.as_ref().is_none_or(|tags| tags.is_subset(&event.tags)) {
@@ -153,7 +153,7 @@ mod tests {
     use crate::{
         event::{
             Data,
-            PersistentEventHash,
+            EventHash,
             Position,
             Timestamp,
             Version,
@@ -179,14 +179,14 @@ mod tests {
 
     // Helper functions
 
-    fn make_event(identifier: &str, version: u8, tags: Vec<&str>) -> PersistentEventHash {
+    fn make_event(identifier: &str, version: u8, tags: Vec<&str>) -> EventHash {
         let identifier = (&Identifier::new_unvalidated(identifier)).into();
         let tags = tags
             .into_iter()
             .map(|tag| (&Tag::new_unvalidated(tag)).into())
             .collect();
 
-        PersistentEventHash::new(
+        EventHash::new(
             Data::new_unvalidated(vec![0]),
             identifier,
             Position::new(0),

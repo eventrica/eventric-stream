@@ -12,7 +12,7 @@ use fjall::{
 use crate::{
     error::Error,
     event::{
-        EphemeralEventHashRef,
+        CandidateEventHashRef,
         identifier::Identifier,
         tag::Tag,
     },
@@ -63,7 +63,7 @@ impl References {
         self.tags.get(hash)
     }
 
-    pub fn put(&self, batch: &mut WriteBatch, event: &EphemeralEventHashRef<'_>) {
+    pub fn put(&self, batch: &mut WriteBatch, event: &CandidateEventHashRef<'_>) {
         self.identifiers.put(batch, &event.identifier);
         self.tags.put(batch, &event.tags);
     }

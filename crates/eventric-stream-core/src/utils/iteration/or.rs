@@ -116,14 +116,14 @@ macro_rules! impl_or_next {
 /// ```
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
-pub struct SequentialOrIterator<I, T>(Vec<DoubleEndedPeekable<I>>)
+pub struct OrIter<I, T>(Vec<DoubleEndedPeekable<I>>)
 where
     I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd;
 
-impl<I, T> SequentialOrIterator<I, T>
+impl<I, T> OrIter<I, T>
 where
-    I: DoubleEndedIterator<Item = Result<T, Error>> + From<SequentialOrIterator<I, T>>,
+    I: DoubleEndedIterator<Item = Result<T, Error>> + From<OrIter<I, T>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     /// Take a an iterable value of iterators, and return an iterator of the
@@ -138,11 +138,11 @@ where
             .map(DoubleEndedPeekableExt::double_ended_peekable)
             .collect();
 
-        I::from(SequentialOrIterator::new(iters))
+        I::from(OrIter::new(iters))
     }
 }
 
-impl<I, T> DoubleEndedIterator for SequentialOrIterator<I, T>
+impl<I, T> DoubleEndedIterator for OrIter<I, T>
 where
     I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
@@ -150,7 +150,7 @@ where
     impl_or_next!(peek_back, next_back, next_back_if_eq, Ordering::Greater);
 }
 
-impl<I, T> Iterator for SequentialOrIterator<I, T>
+impl<I, T> Iterator for OrIter<I, T>
 where
     I: DoubleEndedIterator<Item = Result<T, Error>>,
     T: Copy + Debug + Ord + PartialOrd,
@@ -181,7 +181,7 @@ where
     }
 }
 
-impl<I, T> FusedIterator for SequentialOrIterator<I, T>
+impl<I, T> FusedIterator for OrIter<I, T>
 where
     I: DoubleEndedIterator<Item = Result<T, Error>> + FusedIterator,
     T: Copy + Debug + Ord + PartialOrd,
@@ -197,7 +197,7 @@ mod tests {
     use crate::{
         error::Error,
         utils::iteration::{
-            or::SequentialOrIterator,
+            or::OrIter,
             tests::TestIterator,
         },
     };
@@ -208,7 +208,7 @@ mod tests {
         let a = TestIterator::from([]);
         let b = TestIterator::from([]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         assert_eq!(None, iter.next());
 
@@ -217,7 +217,7 @@ mod tests {
         let b = TestIterator::from([Ok(3), Ok(4), Ok(5)]);
         let c = TestIterator::from([Ok(6), Ok(7), Ok(8)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(0)), iter.next());
         assert_eq!(Some(Ok(1)), iter.next());
@@ -235,7 +235,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5)]);
         let c = TestIterator::from([Ok(1), Ok(2), Ok(4), Ok(7)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(0)), iter.next());
         assert_eq!(Some(Ok(1)), iter.next());
@@ -252,7 +252,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let c = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert_eq!(Some(Ok(2)), iter.next());
@@ -264,7 +264,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let c = TestIterator::from([Ok(0), Ok(1), Ok(4), Ok(5)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(0)), iter.next());
         assert_eq!(Some(Ok(1)), iter.next());
@@ -277,7 +277,7 @@ mod tests {
         // Single iterator
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let mut iter = SequentialOrIterator::combine([a]);
+        let mut iter = OrIter::combine([a]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert_eq!(Some(Ok(2)), iter.next());
@@ -288,7 +288,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let b = TestIterator::from([]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert_eq!(Some(Ok(2)), iter.next());
@@ -300,7 +300,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5), Ok(6), Ok(7)]);
         let c = TestIterator::from([Ok(3), Ok(5), Ok(7), Ok(8)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert_eq!(Some(Ok(2)), iter.next());
@@ -317,7 +317,7 @@ mod tests {
         let a = TestIterator::from([Ok(0), Ok(2), Ok(4), Ok(6), Ok(8)]);
         let b = TestIterator::from([Ok(1), Ok(3), Ok(5), Ok(7), Ok(9)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         assert_eq!(Some(Ok(0)), iter.next());
         assert_eq!(Some(Ok(1)), iter.next());
@@ -338,7 +338,7 @@ mod tests {
         let a = TestIterator::from([]);
         let b = TestIterator::from([]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         assert_eq!(None, iter.next_back());
 
@@ -347,7 +347,7 @@ mod tests {
         let b = TestIterator::from([Ok(3), Ok(4), Ok(5)]);
         let c = TestIterator::from([Ok(6), Ok(7), Ok(8)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(8)), iter.next_back());
         assert_eq!(Some(Ok(7)), iter.next_back());
@@ -365,7 +365,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5)]);
         let c = TestIterator::from([Ok(1), Ok(2), Ok(4), Ok(7)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(7)), iter.next_back());
         assert_eq!(Some(Ok(6)), iter.next_back());
@@ -382,7 +382,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let c = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(3)), iter.next_back());
         assert_eq!(Some(Ok(2)), iter.next_back());
@@ -394,7 +394,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let c = TestIterator::from([Ok(0), Ok(1), Ok(4), Ok(5)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(5)), iter.next_back());
         assert_eq!(Some(Ok(4)), iter.next_back());
@@ -407,7 +407,7 @@ mod tests {
         // Single iterator
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let mut iter = SequentialOrIterator::combine([a]);
+        let mut iter = OrIter::combine([a]);
 
         assert_eq!(Some(Ok(3)), iter.next_back());
         assert_eq!(Some(Ok(2)), iter.next_back());
@@ -418,7 +418,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let b = TestIterator::from([]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         assert_eq!(Some(Ok(3)), iter.next_back());
         assert_eq!(Some(Ok(2)), iter.next_back());
@@ -430,7 +430,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5), Ok(6), Ok(7)]);
         let c = TestIterator::from([Ok(3), Ok(5), Ok(7), Ok(8)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(9)), iter.next_back());
         assert_eq!(Some(Ok(8)), iter.next_back());
@@ -447,7 +447,7 @@ mod tests {
         let a = TestIterator::from([Ok(0), Ok(2), Ok(4), Ok(6), Ok(8)]);
         let b = TestIterator::from([Ok(1), Ok(3), Ok(5), Ok(7), Ok(9)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         assert_eq!(Some(Ok(9)), iter.next_back());
         assert_eq!(Some(Ok(8)), iter.next_back());
@@ -469,7 +469,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5), Ok(6)]);
         let c = TestIterator::from([Ok(1), Ok(2), Ok(4), Ok(6), Ok(7)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(0)), iter.next());
         assert_eq!(Some(Ok(8)), iter.next_back());
@@ -487,7 +487,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4), Ok(5)]);
         let c = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4), Ok(5)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert_eq!(Some(Ok(5)), iter.next_back());
@@ -501,7 +501,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3), Ok(4), Ok(5)]);
         let c = TestIterator::from([Ok(0), Ok(3), Ok(4), Ok(5), Ok(6)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(0)), iter.next());
         assert_eq!(Some(Ok(8)), iter.next_back());
@@ -518,7 +518,7 @@ mod tests {
         let b = TestIterator::from([Ok(3), Ok(4), Ok(5)]);
         let c = TestIterator::from([Ok(6), Ok(7), Ok(8)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(0)), iter.next());
         assert_eq!(Some(Ok(8)), iter.next_back());
@@ -535,7 +535,7 @@ mod tests {
         let a = TestIterator::from([Ok(0), Ok(2), Ok(4), Ok(6), Ok(8)]);
         let b = TestIterator::from([Ok(1), Ok(3), Ok(5), Ok(7), Ok(9)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         assert_eq!(Some(Ok(0)), iter.next());
         assert_eq!(Some(Ok(9)), iter.next_back());
@@ -554,7 +554,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3), Ok(4), Ok(5), Ok(6), Ok(7), Ok(10)]);
         let c = TestIterator::from([Ok(3), Ok(5), Ok(7), Ok(8), Ok(9)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert_eq!(Some(Ok(11)), iter.next_back());
@@ -576,7 +576,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Err(Error::Concurrency), Ok(3)]);
         let b = TestIterator::from([Ok(2), Ok(3), Ok(4)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
@@ -585,7 +585,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let b = TestIterator::from([Err(Error::Concurrency), Ok(2), Ok(3)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
 
@@ -594,7 +594,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(4), Ok(6)]);
         let c = TestIterator::from([Err(Error::Concurrency)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b, c]);
+        let mut iter = OrIter::combine([a, b, c]);
 
         assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
 
@@ -602,7 +602,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(2), Err(Error::Concurrency)]);
         let b = TestIterator::from([Ok(1), Ok(3), Ok(4)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         assert_eq!(Some(Ok(1)), iter.next());
         assert_eq!(Some(Ok(2)), iter.next());
@@ -615,7 +615,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(2), Err(Error::Concurrency)]);
         let b = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         assert!(matches!(iter.next_back(), Some(Err(Error::Concurrency))));
 
@@ -623,7 +623,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
         let b = TestIterator::from([Ok(4), Ok(5), Err(Error::Concurrency)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         assert!(matches!(iter.next_back(), Some(Err(Error::Concurrency))));
 
@@ -631,7 +631,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(2), Ok(5), Ok(6)]);
         let b = TestIterator::from([Ok(3), Err(Error::Concurrency), Ok(7), Ok(8)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         assert_eq!(Some(Ok(8)), iter.next_back());
         assert_eq!(Some(Ok(7)), iter.next_back());
@@ -641,7 +641,7 @@ mod tests {
     #[test]
     fn size_hint_empty_iterators() {
         // Empty iterator collection
-        let iter = SequentialOrIterator::<TestIterator, u64>::new(vec![]);
+        let iter = OrIter::<TestIterator, u64>::new(vec![]);
 
         assert_eq!((0, Some(0)), iter.size_hint());
     }
@@ -651,7 +651,7 @@ mod tests {
         // Single iterator with known size
         let a = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let iter = SequentialOrIterator::combine([a]);
+        let iter = OrIter::combine([a]);
 
         assert_eq!((3, Some(3)), iter.size_hint());
     }
@@ -663,7 +663,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3), Ok(6)]);
         let c = TestIterator::from([Ok(3), Ok(4), Ok(5)]);
 
-        let iter = SequentialOrIterator::combine([a, b, c]);
+        let iter = OrIter::combine([a, b, c]);
 
         // Lower bound is maximum of all (all are 3, so max is 3)
         // Upper bound is sum of all (3 + 3 + 3 = 9)
@@ -677,7 +677,7 @@ mod tests {
         let b = TestIterator::from([Ok(1), Ok(2)]);
         let c = TestIterator::from([Ok(1), Ok(2), Ok(3)]);
 
-        let iter = SequentialOrIterator::combine([a, b, c]);
+        let iter = OrIter::combine([a, b, c]);
 
         // Lower bound is maximum of all (5 is the largest)
         // Upper bound is sum of all (5 + 2 + 3 = 10)
@@ -691,7 +691,7 @@ mod tests {
         let b = TestIterator::from([]);
         let c = TestIterator::from([Ok(1), Ok(2)]);
 
-        let iter = SequentialOrIterator::combine([a, b, c]);
+        let iter = OrIter::combine([a, b, c]);
 
         // Lower bound is maximum (3 is the largest)
         // Upper bound is sum (3 + 0 + 2 = 5)
@@ -705,7 +705,7 @@ mod tests {
         let b = TestIterator::from([]);
         let c = TestIterator::from([]);
 
-        let iter = SequentialOrIterator::combine([a, b, c]);
+        let iter = OrIter::combine([a, b, c]);
 
         // Lower bound is 0, upper bound is 0
         assert_eq!((0, Some(0)), iter.size_hint());
@@ -717,7 +717,7 @@ mod tests {
         let a = TestIterator::from([Ok(1), Ok(3), Ok(5)]);
         let b = TestIterator::from([Ok(2), Ok(4), Ok(6)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         // Initially: lower bound is 3, upper bound is 6
         assert_eq!((3, Some(6)), iter.size_hint());
@@ -743,7 +743,7 @@ mod tests {
         let a = TestIterator::from([Ok(1)]);
         let b = TestIterator::from([Ok(1)]);
 
-        let mut iter = SequentialOrIterator::combine([a, b]);
+        let mut iter = OrIter::combine([a, b]);
 
         // Initially: lower bound is 1, upper bound is 2
         assert_eq!((1, Some(2)), iter.size_hint());
@@ -762,7 +762,7 @@ mod tests {
         let b = TestIterator::from([Ok(3), Ok(4), Ok(5), Ok(6)]);
         let c = TestIterator::from([Ok(7)]);
 
-        let iter = SequentialOrIterator::combine([a, b, c]);
+        let iter = OrIter::combine([a, b, c]);
 
         // Lower bound is max(2, 4, 1) = 4
         // Upper bound is 2 + 4 + 1 = 7
@@ -776,7 +776,7 @@ mod tests {
         let b = TestIterator::from([Ok(2), Ok(3)]);
         let c = TestIterator::from([Ok(4), Ok(5), Ok(6)]);
 
-        let iter = SequentialOrIterator::combine([a, b, c]);
+        let iter = OrIter::combine([a, b, c]);
 
         // Lower bound is max(1, 2, 3) = 3
         // Upper bound is 1 + 2 + 3 = 6
