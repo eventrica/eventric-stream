@@ -3,7 +3,7 @@
 
 pub mod append;
 pub mod iterate;
-pub mod query;
+pub mod select;
 
 pub(crate) mod data;
 

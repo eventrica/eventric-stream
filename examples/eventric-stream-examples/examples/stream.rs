@@ -2,8 +2,8 @@ use std::error::Error;
 
 use eventric_stream::{
     event::{
-        Data,
         CandidateEvent,
+        Data,
         Identifier,
         Specifier,
         Tag,
@@ -12,9 +12,9 @@ use eventric_stream::{
     stream::{
         Stream,
         append::Append as _,
-        iterate::IterateQuery as _,
-        query::{
-            Query,
+        iterate::IterateSelect as _,
+        select::{
+            Selection,
             Selector,
             Specifiers,
             Tags,
@@ -51,7 +51,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         None,
     )?;
 
-    let query = Query::new([Selector::SpecifiersAndTags(
+    let selection = Selection::new([Selector::SpecifiersAndTags(
         Specifiers::new([
             Specifier::new(Identifier::new("StudentSubscribedToCourse")?),
             Specifier::new(Identifier::new("CourseCapacityChanged")?),
@@ -59,7 +59,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         Tags::new([Tag::new("course:523")?])?,
     )])?;
 
-    let (events, prepared) = stream.iterate_query(query, None);
+    let (events, prepared) = stream.iter_select(selection, None);
 
     for event in events {
         println!("event: {event:#?}");

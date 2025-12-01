@@ -51,7 +51,7 @@ mod tests {
 
     use crate::{
         event::version::Version,
-        stream::query::filter::point::Point,
+        stream::select::filter::point::Point,
     };
 
     // pair_from_range

@@ -57,7 +57,7 @@ pub mod stream {
 
         pub use eventric_stream_core::stream::append::{
             Append,
-            AppendQuery,
+            AppendSelect,
         };
     }
 
@@ -69,22 +69,22 @@ pub mod stream {
         pub use eventric_stream_core::stream::iterate::{
             Iter,
             Iterate,
-            IterateQuery,
+            IterateSelect,
         };
     }
 
-    pub mod query {
-        //! The [`query`][self] module contains types and functionality related
+    pub mod select {
+        //! The [`select`][self] module contains types and functionality related
         //! to the construction and use instances of [`Stream::query`], used as
         //! part of iteration and append operations via the respective
         //! condition models.
 
-        pub use eventric_stream_core::stream::query::{
+        pub use eventric_stream_core::stream::select::{
             EventMasked,
             Mask,
             Prepared,
-            Queries,
-            Query,
+            Selection,
+            Selections,
             Selector,
             Source,
             Specifiers,

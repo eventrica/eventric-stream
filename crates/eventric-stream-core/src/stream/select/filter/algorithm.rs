@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use crate::{
     event::version::Version,
-    stream::query::filter::point::Point,
+    stream::select::filter::point::Point,
 };
 
 // =================================================================================================
@@ -61,7 +61,7 @@ pub fn normalize_version_ranges(ranges: &[Range<Version>]) -> Vec<Range<Version>
 mod tests {
     use crate::{
         event::version::Version,
-        stream::query::filter::algorithm::normalize_version_ranges,
+        stream::select::filter::algorithm::normalize_version_ranges,
     };
 
     // Empty and single ranges

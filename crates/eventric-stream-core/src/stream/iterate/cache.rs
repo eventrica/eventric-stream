@@ -12,8 +12,8 @@ use crate::{
             TagHashRef,
         },
     },
-    stream::query::{
-        QueryHashRef,
+    stream::select::{
+        SelectionHashRef,
         selector::SelectorHashRef,
     },
 };
@@ -42,8 +42,8 @@ pub struct Cache {
 }
 
 impl Cache {
-    pub(crate) fn populate(&self, query: &QueryHashRef<'_>) {
-        for selector in query.as_ref() {
+    pub(crate) fn populate(&self, selection: &SelectionHashRef<'_>) {
+        for selector in selection.as_ref() {
             match selector {
                 SelectorHashRef::Specifiers(specifiers) => self.populate_identifiers(specifiers),
                 SelectorHashRef::SpecifiersAndTags(specifiers, tags) => {
@@ -85,9 +85,9 @@ mod tests {
         },
         stream::{
             iterate::cache::Cache,
-            query::{
-                Query,
-                QueryHashRef,
+            select::{
+                Selection,
+                SelectionHashRef,
                 Selector,
             },
         },
@@ -110,10 +110,10 @@ mod tests {
         let id = Identifier::new("TestEvent").unwrap();
         let spec = Specifier::new(id.clone());
         let selector = Selector::specifiers(vec![spec]).unwrap();
-        let query = Query::new(vec![selector]).unwrap();
+        let query = Selection::new(vec![selector]).unwrap();
 
         let cache = Cache::default();
-        let query_hash_ref: QueryHashRef<'_> = (&query).into();
+        let query_hash_ref: SelectionHashRef<'_> = (&query).into();
 
         cache.populate(&query_hash_ref);
 
@@ -137,10 +137,10 @@ mod tests {
         let spec3 = Specifier::new(id3);
 
         let selector = Selector::specifiers(vec![spec1, spec2, spec3]).unwrap();
-        let query = Query::new(vec![selector]).unwrap();
+        let query = Selection::new(vec![selector]).unwrap();
 
         let cache = Cache::default();
-        let query_hash_ref: QueryHashRef<'_> = (&query).into();
+        let query_hash_ref: SelectionHashRef<'_> = (&query).into();
 
         cache.populate(&query_hash_ref);
 
@@ -157,10 +157,10 @@ mod tests {
         let tag = Tag::new("user:123").unwrap();
 
         let selector = Selector::specifiers_and_tags(vec![spec], vec![tag.clone()]).unwrap();
-        let query = Query::new(vec![selector]).unwrap();
+        let query = Selection::new(vec![selector]).unwrap();
 
         let cache = Cache::default();
-        let query_hash_ref: QueryHashRef<'_> = (&query).into();
+        let query_hash_ref: SelectionHashRef<'_> = (&query).into();
 
         cache.populate(&query_hash_ref);
 
@@ -187,10 +187,10 @@ mod tests {
         let tag3 = Tag::new("tenant:789").unwrap();
 
         let selector = Selector::specifiers_and_tags(vec![spec], vec![tag1, tag2, tag3]).unwrap();
-        let query = Query::new(vec![selector]).unwrap();
+        let query = Selection::new(vec![selector]).unwrap();
 
         let cache = Cache::default();
-        let query_hash_ref: QueryHashRef<'_> = (&query).into();
+        let query_hash_ref: SelectionHashRef<'_> = (&query).into();
 
         cache.populate(&query_hash_ref);
 
@@ -211,10 +211,10 @@ mod tests {
         let tag = Tag::new("user:123").unwrap();
         let selector2 = Selector::specifiers_and_tags(vec![spec2], vec![tag]).unwrap();
 
-        let query = Query::new(vec![selector1, selector2]).unwrap();
+        let query = Selection::new(vec![selector1, selector2]).unwrap();
 
         let cache = Cache::default();
-        let query_hash_ref: QueryHashRef<'_> = (&query).into();
+        let query_hash_ref: SelectionHashRef<'_> = (&query).into();
 
         cache.populate(&query_hash_ref);
 
@@ -232,10 +232,10 @@ mod tests {
         let spec2 = Specifier::new(id.clone());
 
         let selector = Selector::specifiers(vec![spec1, spec2]).unwrap();
-        let query = Query::new(vec![selector]).unwrap();
+        let query = Selection::new(vec![selector]).unwrap();
 
         let cache = Cache::default();
-        let query_hash_ref: QueryHashRef<'_> = (&query).into();
+        let query_hash_ref: SelectionHashRef<'_> = (&query).into();
 
         cache.populate(&query_hash_ref);
 
@@ -252,10 +252,10 @@ mod tests {
 
         let selector =
             Selector::specifiers_and_tags(vec![spec], vec![tag.clone(), tag.clone()]).unwrap();
-        let query = Query::new(vec![selector]).unwrap();
+        let query = Selection::new(vec![selector]).unwrap();
 
         let cache = Cache::default();
-        let query_hash_ref: QueryHashRef<'_> = (&query).into();
+        let query_hash_ref: SelectionHashRef<'_> = (&query).into();
 
         cache.populate(&query_hash_ref);
 
@@ -270,21 +270,21 @@ mod tests {
         let id1 = Identifier::new("EventA").unwrap();
         let spec1 = Specifier::new(id1);
         let selector1 = Selector::specifiers(vec![spec1]).unwrap();
-        let query1 = Query::new(vec![selector1]).unwrap();
+        let query1 = Selection::new(vec![selector1]).unwrap();
 
         let id2 = Identifier::new("EventB").unwrap();
         let spec2 = Specifier::new(id2);
         let selector2 = Selector::specifiers(vec![spec2]).unwrap();
-        let query2 = Query::new(vec![selector2]).unwrap();
+        let query2 = Selection::new(vec![selector2]).unwrap();
 
         let cache = Cache::default();
 
-        let query_hash_ref1: QueryHashRef<'_> = (&query1).into();
+        let query_hash_ref1: SelectionHashRef<'_> = (&query1).into();
         cache.populate(&query_hash_ref1);
 
         assert_eq!(1, cache.identifiers.len());
 
-        let query_hash_ref2: QueryHashRef<'_> = (&query2).into();
+        let query_hash_ref2: SelectionHashRef<'_> = (&query2).into();
         cache.populate(&query_hash_ref2);
 
         // Should accumulate
@@ -297,20 +297,20 @@ mod tests {
 
         let spec1 = Specifier::new(id.clone());
         let selector1 = Selector::specifiers(vec![spec1]).unwrap();
-        let query1 = Query::new(vec![selector1]).unwrap();
+        let query1 = Selection::new(vec![selector1]).unwrap();
 
         let spec2 = Specifier::new(id.clone());
         let selector2 = Selector::specifiers(vec![spec2]).unwrap();
-        let query2 = Query::new(vec![selector2]).unwrap();
+        let query2 = Selection::new(vec![selector2]).unwrap();
 
         let cache = Cache::default();
 
-        let query_hash_ref1: QueryHashRef<'_> = (&query1).into();
+        let query_hash_ref1: SelectionHashRef<'_> = (&query1).into();
         cache.populate(&query_hash_ref1);
 
         assert_eq!(1, cache.identifiers.len());
 
-        let query_hash_ref2: QueryHashRef<'_> = (&query2).into();
+        let query_hash_ref2: SelectionHashRef<'_> = (&query2).into();
         cache.populate(&query_hash_ref2);
 
         // Should still be 1 (reused)
@@ -322,10 +322,10 @@ mod tests {
     #[test]
     fn populate_with_empty_query() {
         // This test uses new_unvalidated to create an empty query
-        let query = Query::new_unvalidated(vec![]);
+        let query = Selection::new_unvalidated(vec![]);
 
         let cache = Cache::default();
-        let query_hash_ref: QueryHashRef<'_> = (&query).into();
+        let query_hash_ref: SelectionHashRef<'_> = (&query).into();
 
         cache.populate(&query_hash_ref);
 

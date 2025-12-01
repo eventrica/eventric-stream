@@ -26,7 +26,7 @@ use crate::{
     error::Error,
     stream::{
         iterate::iter::Iter,
-        query::selector::{
+        select::selector::{
             SelectorHash,
             SelectorHashRef,
         },
@@ -34,10 +34,10 @@ use crate::{
 };
 
 // =================================================================================================
-// Query
+// Select
 // =================================================================================================
 
-/// The [`Query`] type is the primary type when interacting with a [`Stream`],
+/// The [`Selection`] type a key type when interacting with a [`Stream`],
 /// being used both directly in query [`Condition`] to determine the events to
 /// return, but also as part of an [`append::Condition`][append] (where one is
 /// supplied) to ensure appropriate concurrency control during a conditional
@@ -52,13 +52,13 @@ use crate::{
 #[derive(new, AsRef, Clone, Debug)]
 #[as_ref([Selector])]
 #[new(const_fn, name(new_inner), vis())]
-pub struct Query {
+pub struct Selection {
     pub(crate) selectors: Vec<Selector>,
 }
 
-impl Query {
-    /// Constructs a new [`Query`] given a value which can be converted into an
-    /// iterator of [`Selector`] instances.
+impl Selection {
+    /// Constructs a new [`Selection`] given a value which can be converted into
+    /// an iterator of [`Selector`] instances.
     ///
     /// # Errors
     ///
@@ -79,22 +79,22 @@ impl Query {
     }
 }
 
-impl From<Query> for Vec<Selector> {
-    fn from(query: Query) -> Self {
-        query.selectors
+impl From<Selection> for Vec<Selector> {
+    fn from(selection: Selection) -> Self {
+        selection.selectors
     }
 }
 
-impl Source for Query {
-    type Iterator = Iter<Query>;
-    type Prepared = Prepared<Query>;
+impl Source for Selection {
+    type Iterator = Iter<Selection>;
+    type Prepared = Prepared<Selection>;
 
     fn prepare(self) -> Self::Prepared {
         self.into()
     }
 }
 
-impl Validate for Query {
+impl Validate for Selection {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
@@ -106,39 +106,40 @@ impl Validate for Query {
 
 // Hash
 
-/// The [`QueryHash`] type is the optimized form of a [`Query`] which has been
-/// used as part of an [`Iterate`][iterate] or [`IterateMulti`][iterate_multi]
-/// operation. This can be used as part of a conditional [`Append`][append]
-/// operation, and is more efficient than supplying a complete [`Query`].
+/// The [`SelectionHash`] type is the optimized form of a [`Query`] which has
+/// been used as part of an [`Iterate`][iterate] or
+/// [`IterateMulti`][iterate_multi] operation. This can be used as part of a
+/// conditional [`Append`][append] operation, and is more efficient than
+/// supplying a complete [`Selection`].
 ///
 /// [append]: crate::stream::append::Append
 /// [iterate]: crate::stream::iterate::Iterate
 /// [iterate_multi]: crate::stream::iterate::IterateMulti
 #[derive(new, AsRef, Clone, Debug)]
 #[as_ref([SelectorHash])]
-pub struct QueryHash(pub(crate) Vec<SelectorHash>);
+pub struct SelectionHash(pub(crate) Vec<SelectorHash>);
 
-impl From<Query> for QueryHash {
-    fn from(query: Query) -> Self {
-        (&query).into()
+impl From<Selection> for SelectionHash {
+    fn from(selection: Selection) -> Self {
+        (&selection).into()
     }
 }
 
-impl From<&Query> for QueryHash {
-    fn from(query: &Query) -> Self {
-        Self::new(query.as_ref().iter().map(Into::into).collect())
+impl From<&Selection> for SelectionHash {
+    fn from(selection: &Selection) -> Self {
+        Self::new(selection.as_ref().iter().map(Into::into).collect())
     }
 }
 
-impl From<QueryHashRef<'_>> for QueryHash {
-    fn from(query: QueryHashRef<'_>) -> Self {
-        (&query).into()
+impl From<SelectionHashRef<'_>> for SelectionHash {
+    fn from(selection: SelectionHashRef<'_>) -> Self {
+        (&selection).into()
     }
 }
 
-impl From<&QueryHashRef<'_>> for QueryHash {
-    fn from(query: &QueryHashRef<'_>) -> Self {
-        Self::new(query.as_ref().iter().map(Into::into).collect())
+impl From<&SelectionHashRef<'_>> for SelectionHash {
+    fn from(selection: &SelectionHashRef<'_>) -> Self {
+        Self::new(selection.as_ref().iter().map(Into::into).collect())
     }
 }
 
@@ -146,54 +147,54 @@ impl From<&QueryHashRef<'_>> for QueryHash {
 
 #[derive(new, AsRef, Debug)]
 #[as_ref([SelectorHashRef<'a>])]
-pub(crate) struct QueryHashRef<'a>(pub(crate) Vec<SelectorHashRef<'a>>);
+pub(crate) struct SelectionHashRef<'a>(pub(crate) Vec<SelectorHashRef<'a>>);
 
-impl<'a> From<&'a Query> for QueryHashRef<'a> {
-    fn from(query: &'a Query) -> Self {
-        Self::new(query.as_ref().iter().map(Into::into).collect())
+impl<'a> From<&'a Selection> for SelectionHashRef<'a> {
+    fn from(selection: &'a Selection) -> Self {
+        Self::new(selection.as_ref().iter().map(Into::into).collect())
     }
 }
 
 // -------------------------------------------------------------------------------------------------
 
-// Queries
+// Selections
 
-/// The [`Queries`] type is a validating collection of [`Query`]
+/// The [`Selections`] type is a validating collection of [`Query`]
 /// instances, used to ensure that invariants are met when constructing queries.
 #[derive(new, Clone, Debug)]
 #[new(const_fn, name(new_inner), vis())]
-pub struct Queries<const N: usize>(pub(crate) [Query; N]);
+pub struct Selections<const N: usize>(pub(crate) [Selection; N]);
 
-impl<const N: usize> Queries<N> {
-    /// Constructs a new [`Queries`] instance given any value which can be
-    /// converted into a valid [`Vec`] of [`Query`] instances.
+impl<const N: usize> Selections<N> {
+    /// Constructs a new [`Selections`] instance given an array of [`Selection`]
+    /// instances.
     ///
     /// # Errors
     ///
-    /// Returns an error on validation failure. Queries must conform to the
+    /// Returns an error on validation failure. Selections must conform to the
     /// following constraints:
-    /// - Min 1 Query (Non-Zero Length/Non-Empty)
-    pub fn new(queries: [Query; N]) -> Result<Self, Error> {
+    /// - Min 1 Selection (Non-Zero Length/Non-Empty)
+    pub fn new(queries: [Selection; N]) -> Result<Self, Error> {
         Self::new_unvalidated(queries).validate()
     }
 
     #[doc(hidden)]
     #[must_use]
-    pub fn new_unvalidated(queries: [Query; N]) -> Self {
+    pub fn new_unvalidated(queries: [Selection; N]) -> Self {
         Self::new_inner(queries)
     }
 }
 
-impl<const N: usize> Source for Queries<N> {
-    type Iterator = Iter<Queries<N>>;
-    type Prepared = Prepared<Queries<N>>;
+impl<const N: usize> Source for Selections<N> {
+    type Iterator = Iter<Selections<N>>;
+    type Prepared = Prepared<Selections<N>>;
 
     fn prepare(self) -> Self::Prepared {
         self.into()
     }
 }
 
-impl<const N: usize> Validate for Queries<N> {
+impl<const N: usize> Validate for Selections<N> {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
@@ -234,10 +235,10 @@ mod tests {
             specifier::Specifier,
             tag::Tag,
         },
-        stream::query::{
-            Query,
-            QueryHash,
-            QueryHashRef,
+        stream::select::{
+            Selection,
+            SelectionHash,
+            SelectionHashRef,
             Selector,
         },
     };
@@ -250,7 +251,7 @@ mod tests {
         let spec = Specifier::new(id);
         let selector = Selector::specifiers(vec![spec]).unwrap();
 
-        let result = Query::new(vec![selector]);
+        let result = Selection::new(vec![selector]);
 
         assert!(result.is_ok());
         let query = result.unwrap();
@@ -271,7 +272,7 @@ mod tests {
         let selector2 = Selector::specifiers(vec![spec2]).unwrap();
         let selector3 = Selector::specifiers(vec![spec3]).unwrap();
 
-        let result = Query::new(vec![selector1, selector2, selector3]);
+        let result = Selection::new(vec![selector1, selector2, selector3]);
 
         assert!(result.is_ok());
         let query = result.unwrap();
@@ -289,7 +290,7 @@ mod tests {
         let tag = Tag::new("user:123").unwrap();
         let selector2 = Selector::specifiers_and_tags(vec![spec2], vec![tag]).unwrap();
 
-        let result = Query::new(vec![selector1, selector2]);
+        let result = Selection::new(vec![selector1, selector2]);
 
         assert!(result.is_ok());
 
@@ -300,7 +301,7 @@ mod tests {
 
     #[test]
     fn new_with_empty_vec_returns_error() {
-        let result = Query::new(Vec::<Selector>::new());
+        let result = Selection::new(Vec::<Selector>::new());
 
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), Error::Validation(_)));
@@ -310,7 +311,7 @@ mod tests {
 
     #[test]
     fn new_unvalidated_allows_empty_vec() {
-        let query = Query::new_unvalidated(vec![]);
+        let query = Selection::new_unvalidated(vec![]);
 
         assert_eq!(0, query.selectors.len());
     }
@@ -321,7 +322,7 @@ mod tests {
         let spec = Specifier::new(id);
         let selector = Selector::specifiers(vec![spec]).unwrap();
 
-        let query = Query::new_unvalidated(vec![selector]);
+        let query = Selection::new_unvalidated(vec![selector]);
 
         assert_eq!(1, query.selectors.len());
     }
@@ -333,7 +334,7 @@ mod tests {
         let id = Identifier::new("TestEvent").unwrap();
         let spec = Specifier::new(id);
         let selector = Selector::specifiers(vec![spec]).unwrap();
-        let query = Query::new(vec![selector]).unwrap();
+        let query = Selection::new(vec![selector]).unwrap();
 
         let slice: &[Selector] = query.as_ref();
 
@@ -347,7 +348,7 @@ mod tests {
         let id = Identifier::new("TestEvent").unwrap();
         let spec = Specifier::new(id);
         let selector = Selector::specifiers(vec![spec]).unwrap();
-        let query = Query::new(vec![selector]).unwrap();
+        let query = Selection::new(vec![selector]).unwrap();
 
         let cloned = query.clone();
 
@@ -368,7 +369,7 @@ mod tests {
         let selector1 = Selector::specifiers(vec![spec1]).unwrap();
         let selector2 = Selector::specifiers(vec![spec2]).unwrap();
 
-        let query = Query::new(vec![selector1, selector2]).unwrap();
+        let query = Selection::new(vec![selector1, selector2]).unwrap();
 
         let selectors: Vec<Selector> = query.into();
 
@@ -382,7 +383,7 @@ mod tests {
         let id = Identifier::new("TestEvent").unwrap();
         let spec = Specifier::new(id);
         let selector = Selector::specifiers(vec![spec]).unwrap();
-        let query = Query::new_unvalidated(vec![selector]);
+        let query = Selection::new_unvalidated(vec![selector]);
 
         let result = query.validate();
 
@@ -391,7 +392,7 @@ mod tests {
 
     #[test]
     fn validate_fails_for_empty() {
-        let query = Query::new_unvalidated(vec![]);
+        let query = Selection::new_unvalidated(vec![]);
 
         let result = query.validate();
 
@@ -406,9 +407,9 @@ mod tests {
         let id = Identifier::new("TestEvent").unwrap();
         let spec = Specifier::new(id);
         let selector = Selector::specifiers(vec![spec]).unwrap();
-        let query = Query::new(vec![selector]).unwrap();
+        let query = Selection::new(vec![selector]).unwrap();
 
-        let _hash: QueryHash = query.into();
+        let _hash: SelectionHash = query.into();
     }
 
     #[test]
@@ -416,9 +417,9 @@ mod tests {
         let id = Identifier::new("TestEvent").unwrap();
         let spec = Specifier::new(id);
         let selector = Selector::specifiers(vec![spec]).unwrap();
-        let query = Query::new(vec![selector]).unwrap();
+        let query = Selection::new(vec![selector]).unwrap();
 
-        let _hash: QueryHash = (&query).into();
+        let _hash: SelectionHash = (&query).into();
     }
 
     // From<&Query> for QueryHashRef
@@ -428,9 +429,9 @@ mod tests {
         let id = Identifier::new("TestEvent").unwrap();
         let spec = Specifier::new(id);
         let selector = Selector::specifiers(vec![spec]).unwrap();
-        let query = Query::new(vec![selector]).unwrap();
+        let query = Selection::new(vec![selector]).unwrap();
 
-        let _hash_ref: QueryHashRef<'_> = (&query).into();
+        let _hash_ref: SelectionHashRef<'_> = (&query).into();
     }
 
     // From<QueryHashRef> for QueryHash
@@ -440,10 +441,10 @@ mod tests {
         let id = Identifier::new("TestEvent").unwrap();
         let spec = Specifier::new(id);
         let selector = Selector::specifiers(vec![spec]).unwrap();
-        let query = Query::new(vec![selector]).unwrap();
+        let query = Selection::new(vec![selector]).unwrap();
 
-        let hash_ref: QueryHashRef<'_> = (&query).into();
-        let _hash: QueryHash = hash_ref.into();
+        let hash_ref: SelectionHashRef<'_> = (&query).into();
+        let _hash: SelectionHash = hash_ref.into();
     }
 
     #[test]
@@ -451,9 +452,9 @@ mod tests {
         let id = Identifier::new("TestEvent").unwrap();
         let spec = Specifier::new(id);
         let selector = Selector::specifiers(vec![spec]).unwrap();
-        let query = Query::new(vec![selector]).unwrap();
+        let query = Selection::new(vec![selector]).unwrap();
 
-        let hash_ref: QueryHashRef<'_> = (&query).into();
-        let _hash: QueryHash = (&hash_ref).into();
+        let hash_ref: SelectionHashRef<'_> = (&query).into();
+        let _hash: SelectionHash = (&hash_ref).into();
     }
 }

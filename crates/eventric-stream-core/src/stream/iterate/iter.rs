@@ -32,10 +32,10 @@ use crate::{
             Build,
             cache::Cache,
         },
-        query::{
+        select::{
             EventMasked,
-            Queries,
-            Query,
+            Selection,
+            Selections,
             filter::{
                 Filter,
                 Matches as _,
@@ -60,11 +60,11 @@ impl Data for () {
     type Data = ();
 }
 
-impl Data for Query {
+impl Data for Selection {
     type Data = ();
 }
 
-impl<const N: usize> Data for Queries<N> {
+impl<const N: usize> Data for Selections<N> {
     type Data = Arc<[Filter; N]>;
 }
 
@@ -111,19 +111,15 @@ impl Iterator for Iter<()> {
 
 // Query
 
-impl Iter<Query> {
+impl Iter<Selection> {
     fn map(&mut self, event: Result<EventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| self.retrieve.get(event))
     }
 }
 
-impl Build<Prepared<Query>> for Iter<Query> {
+impl Build<Prepared<Selection>> for Iter<Selection> {
     #[allow(private_interfaces)]
-    fn build(
-        iter: EventHashIter,
-        prepared: &Prepared<Query>,
-        references: References,
-    ) -> Self {
+    fn build(iter: EventHashIter, prepared: &Prepared<Selection>, references: References) -> Self {
         let cache = prepared.cache.clone();
         let iter = Exclusive::new(iter);
 
@@ -131,13 +127,13 @@ impl Build<Prepared<Query>> for Iter<Query> {
     }
 }
 
-impl DoubleEndedIterator for Iter<Query> {
+impl DoubleEndedIterator for Iter<Selection> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next_back().map(|event| self.map(event))
     }
 }
 
-impl Iterator for Iter<Query> {
+impl Iterator for Iter<Selection> {
     type Item = Result<Event, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -147,7 +143,7 @@ impl Iterator for Iter<Query> {
 
 // Queries
 
-impl<const N: usize> Iter<Queries<N>> {
+impl<const N: usize> Iter<Selections<N>> {
     fn map(&mut self, event: Result<EventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| {
             let mut mask = [false; N];
@@ -165,11 +161,11 @@ impl<const N: usize> Iter<Queries<N>> {
     }
 }
 
-impl<const N: usize> Build<Prepared<Queries<N>>> for Iter<Queries<N>> {
+impl<const N: usize> Build<Prepared<Selections<N>>> for Iter<Selections<N>> {
     #[allow(private_interfaces)]
     fn build(
         iter: EventHashIter,
-        prepared: &Prepared<Queries<N>>,
+        prepared: &Prepared<Selections<N>>,
         references: References,
     ) -> Self {
         let cache = prepared.cache.clone();
@@ -180,13 +176,13 @@ impl<const N: usize> Build<Prepared<Queries<N>>> for Iter<Queries<N>> {
     }
 }
 
-impl<const N: usize> DoubleEndedIterator for Iter<Queries<N>> {
+impl<const N: usize> DoubleEndedIterator for Iter<Selections<N>> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next_back().map(|event| self.map(event))
     }
 }
 
-impl<const N: usize> Iterator for Iter<Queries<N>> {
+impl<const N: usize> Iterator for Iter<Selections<N>> {
     type Item = Result<EventMasked<N>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {

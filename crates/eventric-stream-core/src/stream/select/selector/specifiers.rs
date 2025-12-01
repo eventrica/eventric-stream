@@ -92,7 +92,7 @@ mod tests {
             identifier::Identifier,
             specifier::Specifier,
         },
-        stream::query::selector::specifiers::Specifiers,
+        stream::select::selector::specifiers::Specifiers,
     };
 
     // Specifiers::new

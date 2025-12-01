@@ -22,8 +22,8 @@ use crate::{
             build::Build,
             cache::Cache,
         },
-        query::{
-            QueryHash,
+        select::{
+            SelectionHash,
             source::Source,
         },
     },
@@ -38,11 +38,11 @@ use crate::{
 /// .
 pub trait Iterate {
     /// .
-    fn iterate(&self, from: Option<Position>) -> Iter<()>;
+    fn iter(&self, from: Option<Position>) -> Iter<()>;
 }
 
 impl Iterate for Stream {
-    fn iterate(&self, from: Option<Position>) -> Iter<()> {
+    fn iter(&self, from: Option<Position>) -> Iter<()> {
         let cache = Arc::new(Cache::default());
         let references = self.data.references.clone();
 
@@ -55,14 +55,14 @@ impl Iterate for Stream {
 
 // -------------------------------------------------------------------------------------------------
 
-// Iterate Query
+// Iterate Select
 
-/// The [`IterateQuery`] trait defines the logical operation of iterating over a
-/// stream or stream-like type, using a supplied [`Query`]) to determine
+/// The [`IterateSelect`] trait defines the logical operation of iterating over
+/// a stream or stream-like type, using a supplied [`Selection`]) to determine
 /// which matching events should be returned, and an optional [`Position`] at
 /// which iteration should begin.
 #[allow(private_bounds)]
-pub trait IterateQuery {
+pub trait IterateSelect {
     /// Iterates over the stream or stream-like instance using the given
     /// [`Query`] to determine which matching events should be returned. Will
     /// begin iteration at given `from` [`Position`] if one is supplied.
@@ -76,21 +76,21 @@ pub trait IterateQuery {
     /// [identifier]: crate::event::identifier::Identifier
     /// [tag]: crate::event::tag::Tag
     /// [issue]: https://github.com/eventrica/eventric-stream/issues/21
-    fn iterate_query<S>(&self, query: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
+    fn iter_select<S>(&self, source: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
     where
         S: Source,
         S::Iterator: Build<S::Prepared>;
 }
 
 #[allow(private_bounds)]
-impl IterateQuery for Stream {
-    fn iterate_query<S>(&self, query: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
+impl IterateSelect for Stream {
+    fn iter_select<S>(&self, source: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
     where
         S: Source,
         S::Iterator: Build<S::Prepared>,
     {
         let references = self.data.references.clone();
-        let prepared = query.prepare();
+        let prepared = source.prepare();
 
         let iter = self.iterate_indices(prepared.as_ref(), from);
         let iter = S::Iterator::build(iter, &prepared, references);
@@ -110,10 +110,10 @@ impl Stream {
         EventHashIter::Direct(iter)
     }
 
-    fn iterate_indices(&self, query: &QueryHash, from: Option<Position>) -> EventHashIter {
+    fn iterate_indices(&self, selection: &SelectionHash, from: Option<Position>) -> EventHashIter {
         let events = self.data.events.clone();
 
-        let iter = self.data.indices.iterate(query, from);
+        let iter = self.data.indices.iterate(selection, from);
         let iter = MappedEventHashIter::new(events, iter);
 
         EventHashIter::Mapped(iter)

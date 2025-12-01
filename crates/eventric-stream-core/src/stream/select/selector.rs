@@ -14,7 +14,7 @@ use crate::{
             TagHashRef,
         },
     },
-    stream::query::selector::{
+    stream::select::selector::{
         specifiers::Specifiers,
         tags::Tags,
     },
@@ -27,12 +27,14 @@ pub(crate) mod tags;
 // Selector
 // =================================================================================================
 
-/// The [`Selector`] type is the functional core of a [`Query`], which contains
-/// one or more [`Selector`] instances. A query will return all events matched
-/// by *any* of the [`Selector`] instances (they are effectively combined as a
-/// logical OR operation).
+/// The [`Selector`] type is the functional core of a [`Selection`][selection],
+/// which contains one or more [`Selector`] instances. A query will return all
+/// events matched by *any* of the [`Selector`] instances (they are effectively
+/// combined as a logical OR operation).
 ///
 /// Each variant of the [`Selector`] has a different meaning.
+///
+/// [selection]: crate::stream::select::Selection
 #[derive(Clone, Debug)]
 pub enum Selector {
     /// A [`Selector`] based only on [`Specifier`]s, which will return all
@@ -139,7 +141,7 @@ mod tests {
             specifier::Specifier,
             tag::Tag,
         },
-        stream::query::Selector,
+        stream::select::Selector,
     };
 
     // Selector::specifiers
@@ -286,7 +288,7 @@ mod tests {
 
         assert!(matches!(
             hash,
-            crate::stream::query::selector::SelectorHash::Specifiers(_)
+            crate::stream::select::selector::SelectorHash::Specifiers(_)
         ));
     }
 
@@ -301,7 +303,7 @@ mod tests {
 
         assert!(matches!(
             hash,
-            crate::stream::query::selector::SelectorHash::SpecifiersAndTags(_, _)
+            crate::stream::select::selector::SelectorHash::SpecifiersAndTags(_, _)
         ));
     }
 
@@ -317,7 +319,7 @@ mod tests {
 
         assert!(matches!(
             hash_ref,
-            crate::stream::query::selector::SelectorHashRef::Specifiers(_)
+            crate::stream::select::selector::SelectorHashRef::Specifiers(_)
         ));
     }
 
@@ -332,7 +334,7 @@ mod tests {
 
         assert!(matches!(
             hash_ref,
-            crate::stream::query::selector::SelectorHashRef::SpecifiersAndTags(_, _)
+            crate::stream::select::selector::SelectorHashRef::SpecifiersAndTags(_, _)
         ));
     }
 }

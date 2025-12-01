@@ -7,8 +7,8 @@ use criterion::{
 };
 use eventric_stream::{
     event::{
-        Data,
         CandidateEvent,
+        Data,
         Identifier,
         Tag,
         Version,

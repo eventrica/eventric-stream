@@ -89,7 +89,7 @@ mod tests {
     use crate::{
         error::Error,
         event::tag::Tag,
-        stream::query::selector::tags::Tags,
+        stream::select::selector::tags::Tags,
     };
 
     // Tags::new

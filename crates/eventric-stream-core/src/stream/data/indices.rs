@@ -23,8 +23,8 @@ use crate::{
             tags::Tags,
             timestamps::Timestamps,
         },
-        query::{
-            QueryHash,
+        select::{
+            SelectionHash,
             selector::SelectorHash,
         },
     },
@@ -70,8 +70,8 @@ impl Indices {
 
 impl Indices {
     #[must_use]
-    pub fn contains(&self, query: &QueryHash, from: Option<Position>) -> bool {
-        self.iterate(query, from).any(|_| true)
+    pub fn contains(&self, selection: &SelectionHash, from: Option<Position>) -> bool {
+        self.iterate(selection, from).any(|_| true)
     }
 }
 
@@ -79,8 +79,8 @@ impl Indices {
 
 impl Indices {
     #[must_use]
-    pub fn iterate(&self, query: &QueryHash, from: Option<Position>) -> PositionIter {
-        OrIter::combine(query.as_ref().iter().map(|selector| match selector {
+    pub fn iterate(&self, selection: &SelectionHash, from: Option<Position>) -> PositionIter {
+        OrIter::combine(selection.as_ref().iter().map(|selector| match selector {
             SelectorHash::Specifiers(specifiers) => {
                 self.identifiers.iterate(specifiers.iter(), from)
             }

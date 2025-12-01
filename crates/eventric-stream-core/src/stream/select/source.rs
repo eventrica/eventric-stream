@@ -1,6 +1,6 @@
 use crate::stream::{
     iterate::build::Build,
-    query::QueryHash,
+    select::SelectionHash,
 };
 
 // =================================================================================================
@@ -12,7 +12,7 @@ use crate::stream::{
 pub trait Source
 where
     Self::Iterator: Build<Self::Prepared> + DoubleEndedIterator + Iterator,
-    Self::Prepared: AsRef<QueryHash>,
+    Self::Prepared: AsRef<SelectionHash>,
 {
     /// .
     type Iterator;

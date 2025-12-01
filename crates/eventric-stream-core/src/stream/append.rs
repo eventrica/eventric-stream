@@ -10,8 +10,8 @@ use crate::{
     },
     stream::{
         Stream,
-        query::{
-            QueryHash,
+        select::{
+            SelectionHash,
             source::Source,
         },
     },
@@ -60,19 +60,19 @@ impl Append for Stream {
 
 // -------------------------------------------------------------------------------------------------
 
-// Append Query
+// Append Select
 
 /// .
-pub trait AppendQuery {
+pub trait AppendSelect {
     /// .
     ///
     /// # Errors
     ///
     /// This function will return an error if .
-    fn append_query<E, S>(
+    fn append_select<E, S>(
         &mut self,
         events: E,
-        fail_if_matches: S,
+        source: S,
         after: Option<Position>,
     ) -> Result<(Position, S::Prepared), Error>
     where
@@ -80,18 +80,18 @@ pub trait AppendQuery {
         S: Source;
 }
 
-impl AppendQuery for Stream {
-    fn append_query<E, S>(
+impl AppendSelect for Stream {
+    fn append_select<E, S>(
         &mut self,
         events: E,
-        fail_if_matches: S,
+        failsourceif_matches: S,
         after: Option<Position>,
     ) -> Result<(Position, S::Prepared), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
         S: Source,
     {
-        let prepared = fail_if_matches.prepare();
+        let prepared = failsourceif_matches.prepare();
 
         self.check(Some(prepared.as_ref()), after)
             .and_then(|()| self.put(events))
@@ -106,7 +106,7 @@ impl AppendQuery for Stream {
 impl Stream {
     fn check(
         &self,
-        fail_if_matches: Option<&QueryHash>,
+        selection: Option<&SelectionHash>,
         after: Option<Position>,
     ) -> Result<(), Error> {
         // Shortcut the append concurrency check if the "after" position is at least the
@@ -125,12 +125,12 @@ impl Stream {
         // always from, rather than after, a particular position, so we increment the
         // position here (if it exists) to ensure a correct from position.
 
-        if let Some(query) = fail_if_matches {
+        if let Some(selection) = selection {
             // We don't need to actually examine the events at all, the underlying
             // implementation only needs to check if there is any matching event in the
             // resultant query stream - contains avoids mapping positions to events, etc.
 
-            if self.data.indices.contains(query, from) {
+            if self.data.indices.contains(selection, from) {
                 return Err(Error::Concurrency);
             }
         } else if let Some(from) = from

@@ -10,11 +10,11 @@ use fancy_constructor::new;
 // Mask
 // =================================================================================================
 
-/// The [`Mask`] type represents a [`Query`][query] matching mask when iterating
-/// over a [`Queries`][queries] collection.
+/// The [`Mask`] type represents a [`Selection`][selection] matching mask when
+/// iterating over a [`Selections`][selections] collection.
 ///
-/// [query]: crate::stream::query::Query
-/// [queries]: crate::stream::query::Queries
+/// [selection]: crate::stream::select::Selection
+/// [selections]: crate::stream::select::Selections
 #[derive(new, AsRef, Clone, Deref, Debug, Eq, PartialEq)]
 #[as_ref([bool])]
 #[new(const_fn)]

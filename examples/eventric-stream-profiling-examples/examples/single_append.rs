@@ -3,8 +3,8 @@ use std::time::Instant;
 use eventric_stream::{
     error::Error,
     event::{
-        Data,
         CandidateEvent,
+        Data,
         Identifier,
         Tag,
         Version,
