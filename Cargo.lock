@@ -351,14 +351,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eventric-core"
-version = "0.1.0"
-source = "git+https://github.com/eventrica/eventric-core.git#c76a28710ecfa415672842a5fbe15a7079b5543d"
-dependencies = [
- "thiserror",
-]
-
-[[package]]
 name = "eventric-stream"
 version = "0.1.0"
 dependencies = [
@@ -385,7 +377,7 @@ dependencies = [
  "dashmap",
  "derive_more",
  "double-ended-peekable",
- "eventric-core",
+ "eventric-utils",
  "fancy_constructor",
  "fjall",
  "rand",
@@ -416,6 +408,14 @@ name = "eventric-stream-profiling-examples"
 version = "0.1.0"
 dependencies = [
  "eventric-stream",
+]
+
+[[package]]
+name = "eventric-utils"
+version = "0.1.0"
+source = "git+https://github.com/eventrica/eventric-utils.git#6aad1d7795920a758e8966d6958069f08399907e"
+dependencies = [
+ "thiserror",
 ]
 
 [[package]]

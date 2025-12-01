@@ -2,7 +2,7 @@ use derive_more::{
     AsRef,
     Deref,
 };
-use eventric_core::validation::{
+use eventric_utils::validation::{
     Validate,
     validate,
     vec,

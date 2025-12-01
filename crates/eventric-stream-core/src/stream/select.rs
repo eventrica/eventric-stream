@@ -14,7 +14,7 @@ use derive_more::{
     AsRef,
     Debug,
 };
-use eventric_core::validation::{
+use eventric_utils::validation::{
     Validate,
     validate,
     vec,
@@ -228,7 +228,7 @@ pub use self::{
 
 #[cfg(test)]
 mod tests {
-    use eventric_core::validation::Validate;
+    use eventric_utils::validation::Validate;
 
     use crate::{
         error::Error,

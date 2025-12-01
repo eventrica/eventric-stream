@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use eventric_core::validation::{
+use eventric_utils::validation::{
     Validate,
     b_tree_set,
     validate,
@@ -84,7 +84,7 @@ impl Validate for Tags {
 mod tests {
     use std::collections::BTreeSet;
 
-    use eventric_core::validation::Validate;
+    use eventric_utils::validation::Validate;
 
     use crate::{
         error::Error,

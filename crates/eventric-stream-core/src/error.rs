@@ -1,7 +1,7 @@
 //! See the `eventric-stream` crate for full documentation, including
 //! module-level documentation.
 
-use eventric_core::validation;
+use eventric_utils::validation;
 use thiserror::Error;
 
 // =================================================================================================
@@ -61,7 +61,7 @@ impl PartialEq for Error {
 
 #[cfg(test)]
 mod tests {
-    use eventric_core::validation;
+    use eventric_utils::validation;
 
     use crate::error::Error;
 

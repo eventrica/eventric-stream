@@ -16,10 +16,10 @@ darling                = { version = "0.21" }
 dashmap                = { version = "6", features = ["inline"] }
 derive_more            = { version = "2", features = ["full"] }
 double-ended-peekable  = { version = "0.1.0" }
-eventric-core          = { git = "https://github.com/eventrica/eventric-core.git" }
 eventric-stream        = { path = "crates/eventric-stream" }
 eventric-stream-core   = { path = "crates/eventric-stream-core" }
 eventric-stream-macros = { path = "crates/eventric-stream-macros" }
+eventric-utils         = { git = "https://github.com/eventrica/eventric-utils.git" }
 fancy_constructor      = { version = "2" }
 fjall                  = { version = "=3.0.0-rc.3" }
 include-utils          = { version = "0.2" }
