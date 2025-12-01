@@ -25,6 +25,7 @@ use eventric_stream::{
             IterateQuery as _,
         },
         query::{
+            Mask,
             Query,
             Selector,
         },
@@ -327,9 +328,9 @@ fn iterate_queries() -> Result<(), Error> {
     let events = stream.iterate_query(queries, None).0.collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 3);
-    assert_eq!((events[0].0.position(), &events[0].1), (&Position::new(0), &vec![true]));
-    assert_eq!((events[1].0.position(), &events[1].1), (&Position::new(2), &vec![true]));
-    assert_eq!((events[2].0.position(), &events[2].1), (&Position::new(4), &vec![true]));
+    assert_eq!((events[0].0.position(), &events[0].1), (&Position::new(0), &Mask::new(vec![true])));
+    assert_eq!((events[1].0.position(), &events[1].1), (&Position::new(2), &Mask::new(vec![true])));
+    assert_eq!((events[2].0.position(), &events[2].1), (&Position::new(4), &Mask::new(vec![true])));
 
     // A query containing non-overlapping queries should return events matching any
     // query with a correct mask value
@@ -351,8 +352,8 @@ fn iterate_queries() -> Result<(), Error> {
     let events = stream.iterate_query(queries, None).0.collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 2);
-    assert_eq!((events[0].0.position(), &events[0].1), (&Position::new(0), &vec![true, false]));
-    assert_eq!((events[1].0.position(), &events[1].1), (&Position::new(1), &vec![false, true]));
+    assert_eq!((events[0].0.position(), &events[0].1), (&Position::new(0), &Mask::new(vec![true, false])));
+    assert_eq!((events[1].0.position(), &events[1].1), (&Position::new(1), &Mask::new(vec![false, true])));
 
     // A query containing overlapping queries should return events matching any query
     // with a correct mask value
@@ -370,9 +371,9 @@ fn iterate_queries() -> Result<(), Error> {
     let events = stream.iterate_query(queries, None).0.collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 3);
-    assert_eq!((events[0].0.position(), &events[0].1), (&Position::new(0), &vec![true, true]));
-    assert_eq!((events[1].0.position(), &events[1].1), (&Position::new(2), &vec![true, true]));
-    assert_eq!((events[2].0.position(), &events[2].1), (&Position::new(4), &vec![true, false]));
+    assert_eq!((events[0].0.position(), &events[0].1), (&Position::new(0), &Mask::new(vec![true, true])));
+    assert_eq!((events[1].0.position(), &events[1].1), (&Position::new(2), &Mask::new(vec![true, true])));
+    assert_eq!((events[2].0.position(), &events[2].1), (&Position::new(4), &Mask::new(vec![true, false])));
 
     // A query with a from position should only return events greater than or equal
     // to the from position
@@ -390,8 +391,8 @@ fn iterate_queries() -> Result<(), Error> {
     let events = stream.iterate_query(queries, Some(Position::new(2))).0.collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 2);
-    assert_eq!((events[0].0.position(), &events[0].1), (&Position::new(2), &vec![true, true]));
-    assert_eq!((events[1].0.position(), &events[1].1), (&Position::new(4), &vec![true, false]));
+    assert_eq!((events[0].0.position(), &events[0].1), (&Position::new(2), &Mask::new(vec![true, true])));
+    assert_eq!((events[1].0.position(), &events[1].1), (&Position::new(4), &Mask::new(vec![true, false])));
 
     // A query which is iterated and reversed should return the same events as the
     // query but in reverse order
@@ -409,8 +410,8 @@ fn iterate_queries() -> Result<(), Error> {
     let events = stream.iterate_query(queries, Some(Position::new(2))).0.rev().collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 2);
-    assert_eq!((events[0].0.position(), &events[0].1), (&Position::new(4), &vec![true, false]));
-    assert_eq!((events[1].0.position(), &events[1].1), (&Position::new(2), &vec![true, true]));
+    assert_eq!((events[0].0.position(), &events[0].1), (&Position::new(4), &Mask::new(vec![true, false])));
+    assert_eq!((events[1].0.position(), &events[1].1), (&Position::new(2), &Mask::new(vec![true, true])));
 
     // Iterate over a query using the prepared query returns the same events as the
     // original query

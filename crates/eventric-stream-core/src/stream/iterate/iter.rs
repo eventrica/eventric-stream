@@ -39,6 +39,7 @@ use crate::{
                 Filter,
                 Matches as _,
             },
+            mask::Mask,
             prepared::Prepared,
         },
     },
@@ -148,11 +149,12 @@ impl Iterator for Iter<Query> {
 impl Iter<Queries> {
     fn map(&mut self, event: Result<PersistentEventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| {
-            let mask = self
-                .data
-                .iter()
-                .map(|filter| filter.matches(&event))
-                .collect();
+            let mask = Mask::new(
+                self.data
+                    .iter()
+                    .map(|filter| filter.matches(&event))
+                    .collect(),
+            );
 
             self.retrieve.get(event).map(|event| (event, mask))
         })
@@ -181,7 +183,7 @@ impl DoubleEndedIterator for Iter<Queries> {
 }
 
 impl Iterator for Iter<Queries> {
-    type Item = Result<(PersistentEvent, Vec<bool>), Error>;
+    type Item = Result<(PersistentEvent, Mask), Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next().map(|event| self.map(event))

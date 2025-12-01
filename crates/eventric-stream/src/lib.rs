@@ -80,7 +80,9 @@ pub mod stream {
         //! condition models.
 
         pub use eventric_stream_core::stream::query::{
+            Mask,
             Prepared,
+            Queries,
             Query,
             Selector,
             Source,

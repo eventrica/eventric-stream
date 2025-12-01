@@ -2,6 +2,7 @@
 //! module-level documentation.
 
 pub(crate) mod filter;
+pub(crate) mod mask;
 pub(crate) mod prepared;
 pub(crate) mod selector;
 pub(crate) mod source;
@@ -208,6 +209,7 @@ impl Validate for Queries {
 // Re-Exports
 
 pub use self::{
+    mask::Mask,
     prepared::Prepared,
     selector::{
         Selector,
