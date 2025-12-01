@@ -81,6 +81,7 @@ pub mod stream {
 
         pub use eventric_stream_core::stream::query::{
             Mask,
+            PersistentEventMasked,
             Prepared,
             Queries,
             Query,

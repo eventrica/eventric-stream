@@ -33,6 +33,7 @@ use crate::{
             cache::Cache,
         },
         query::{
+            PersistentEventMasked,
             Queries,
             Query,
             filter::{
@@ -156,7 +157,9 @@ impl Iter<Queries> {
                     .collect(),
             );
 
-            self.retrieve.get(event).map(|event| (event, mask))
+            self.retrieve
+                .get(event)
+                .map(|event| PersistentEventMasked::new(event, mask))
         })
     }
 }
@@ -183,7 +186,7 @@ impl DoubleEndedIterator for Iter<Queries> {
 }
 
 impl Iterator for Iter<Queries> {
-    type Item = Result<(PersistentEvent, Mask), Error>;
+    type Item = Result<PersistentEventMasked, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next().map(|event| self.map(event))

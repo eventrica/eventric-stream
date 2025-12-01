@@ -1,6 +1,7 @@
 //! See the `eventric-stream` crate for full documentation, including
 //! module-level documentation.
 
+pub(crate) mod event;
 pub(crate) mod filter;
 pub(crate) mod mask;
 pub(crate) mod prepared;
@@ -209,6 +210,7 @@ impl Validate for Queries {
 // Re-Exports
 
 pub use self::{
+    event::PersistentEventMasked,
     mask::Mask,
     prepared::Prepared,
     selector::{
