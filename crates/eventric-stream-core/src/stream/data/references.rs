@@ -6,7 +6,7 @@ use fancy_constructor::new;
 use fjall::{
     Database,
     KeyspaceCreateOptions,
-    WriteBatch,
+    OwnedWriteBatch,
 };
 
 use crate::{
@@ -63,7 +63,7 @@ impl References {
         self.tags.get(hash)
     }
 
-    pub fn put(&self, batch: &mut WriteBatch, event: &CandidateEventHashRef<'_>) {
+    pub fn put(&self, batch: &mut OwnedWriteBatch, event: &CandidateEventHashRef<'_>) {
         self.identifiers.put(batch, &event.identifier);
         self.tags.put(batch, &event.tags);
     }

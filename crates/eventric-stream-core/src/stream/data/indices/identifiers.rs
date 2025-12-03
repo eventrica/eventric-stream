@@ -12,8 +12,8 @@ use fancy_constructor::new;
 use fjall::{
     Guard,
     Keyspace,
+    OwnedWriteBatch,
     Slice,
-    WriteBatch,
 };
 
 use crate::{
@@ -87,7 +87,7 @@ impl Identifiers {
 impl Identifiers {
     pub fn put(
         &self,
-        batch: &mut WriteBatch,
+        batch: &mut OwnedWriteBatch,
         at: Position,
         identifier: &IdentifierHashRef<'_>,
         version: Version,

@@ -5,7 +5,7 @@ use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::{
     Keyspace,
-    WriteBatch,
+    OwnedWriteBatch,
 };
 
 use crate::{
@@ -56,7 +56,7 @@ impl Tags {
         }
     }
 
-    pub fn put(&self, batch: &mut WriteBatch, tags: &BTreeSet<TagHashRef<'_>>) {
+    pub fn put(&self, batch: &mut OwnedWriteBatch, tags: &BTreeSet<TagHashRef<'_>>) {
         for tag in tags {
             let key: [u8; KEY_LEN] = Hash(tag.hash_val()).into();
             let value: &[u8] = tag.as_ref();

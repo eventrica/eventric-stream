@@ -7,7 +7,7 @@ use fancy_constructor::new;
 use fjall::{
     Database,
     KeyspaceCreateOptions,
-    WriteBatch,
+    OwnedWriteBatch,
 };
 
 use crate::{
@@ -98,7 +98,7 @@ impl Indices {
     #[rustfmt::skip]
     pub fn put(
         &self,
-        batch: &mut WriteBatch,
+        batch: &mut OwnedWriteBatch,
         at: Position,
         event: &CandidateEventHashRef<'_>,
         timestamp: Timestamp,

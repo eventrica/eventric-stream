@@ -13,19 +13,18 @@ use std::sync::{
 use crate::{
     event::position::Position,
     stream::{
-        Stream,
-        data::events::{
-            EventHashIter,
-            MappedEventHashIter,
+        data::{
+            Data,
+            events::{
+                EventHashIter,
+                MappedEventHashIter,
+            },
         },
         iterate::{
             build::Build,
             cache::Cache,
         },
-        select::{
-            SelectionHash,
-            source::Source,
-        },
+        select::source::Source,
     },
 };
 
@@ -41,16 +40,15 @@ pub trait Iterate {
     fn iter(&self, from: Option<Position>) -> Iter<()>;
 }
 
-impl Iterate for Stream {
-    fn iter(&self, from: Option<Position>) -> Iter<()> {
-        let cache = Arc::new(Cache::default());
-        let references = self.data.references.clone();
+pub(crate) fn iter(data: &Data, from: Option<Position>) -> Iter<()> {
+    let cache = Arc::new(Cache::default());
+    let references = data.references.clone();
 
-        let iter = self.iterate_events(from);
-        let iter = Exclusive::new(iter);
+    let iter = data.events.iterate(from);
+    let iter = EventHashIter::Direct(iter);
+    let iter = Exclusive::new(iter);
 
-        Iter::<()>::new(cache, true, references, (), iter)
-    }
+    Iter::<()>::new(cache, true, references, (), iter)
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -82,42 +80,26 @@ pub trait IterateSelect {
         S::Iterator: Build<S::Prepared>;
 }
 
-#[allow(private_bounds)]
-impl IterateSelect for Stream {
-    fn iter_select<S>(&self, source: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
-    where
-        S: Source,
-        S::Iterator: Build<S::Prepared>,
-    {
-        let references = self.data.references.clone();
-        let prepared = source.prepare();
+pub(crate) fn iter_select<S>(
+    data: &Data,
+    source: S,
+    from: Option<Position>,
+) -> (S::Iterator, S::Prepared)
+where
+    S: Source,
+    S::Iterator: Build<S::Prepared>,
+{
+    let events = data.events.clone();
+    let references = data.references.clone();
 
-        let iter = self.iterate_indices(prepared.as_ref(), from);
-        let iter = S::Iterator::build(iter, &prepared, references);
+    let prepared = source.prepare();
 
-        (iter, prepared)
-    }
-}
+    let iter = data.indices.iterate(prepared.as_ref(), from);
+    let iter = MappedEventHashIter::new(events, iter);
+    let iter = EventHashIter::Mapped(iter);
+    let iter = S::Iterator::build(iter, &prepared, references);
 
-// -------------------------------------------------------------------------------------------------
-
-// Stream
-
-impl Stream {
-    fn iterate_events(&self, from: Option<Position>) -> EventHashIter {
-        let iter = self.data.events.iterate(from);
-
-        EventHashIter::Direct(iter)
-    }
-
-    fn iterate_indices(&self, selection: &SelectionHash, from: Option<Position>) -> EventHashIter {
-        let events = self.data.events.clone();
-
-        let iter = self.data.indices.iterate(selection, from);
-        let iter = MappedEventHashIter::new(events, iter);
-
-        EventHashIter::Mapped(iter)
-    }
+    (iter, prepared)
 }
 
 // -------------------------------------------------------------------------------------------------

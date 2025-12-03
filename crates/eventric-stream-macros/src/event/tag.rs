@@ -42,10 +42,8 @@ impl ToTokens for Tag {
         let prefix = &self.prefix;
         let value = &self.value;
 
-        let tag_type = quote! { eventric_stream::event::Tag };
-
         tokens.append_all(quote! {
-            #tag_type::new(format!("{}:{}", #prefix, #value))
+            ::eventric_stream::event::Tag::new(format!("{}:{}", #prefix, #value))
         });
     }
 }

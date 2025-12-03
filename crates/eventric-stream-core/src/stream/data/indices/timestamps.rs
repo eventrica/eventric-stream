@@ -3,7 +3,7 @@ use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::{
     Keyspace,
-    WriteBatch,
+    OwnedWriteBatch,
 };
 
 use crate::{
@@ -39,7 +39,7 @@ pub(crate) struct Timestamps {
 // Get/Put
 
 impl Timestamps {
-    pub fn put(&self, batch: &mut WriteBatch, at: Position, timestamp: Timestamp) {
+    pub fn put(&self, batch: &mut OwnedWriteBatch, at: Position, timestamp: Timestamp) {
         let key: [u8; KEY_LEN] = UnitAndTimestamp((), timestamp).into();
         let value = at.to_be_bytes();
 

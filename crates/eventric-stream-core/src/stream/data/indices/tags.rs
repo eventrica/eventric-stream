@@ -9,8 +9,8 @@ use fancy_constructor::new;
 use fjall::{
     Guard,
     Keyspace,
+    OwnedWriteBatch,
     Slice,
-    WriteBatch,
 };
 
 use crate::{
@@ -81,7 +81,7 @@ impl Tags {
 // Put
 
 impl Tags {
-    pub fn put(&self, batch: &mut WriteBatch, at: Position, tags: &BTreeSet<TagHashRef<'_>>) {
+    pub fn put(&self, batch: &mut OwnedWriteBatch, at: Position, tags: &BTreeSet<TagHashRef<'_>>) {
         for tag in tags {
             let key: [u8; KEY_LEN] = IntoKeyBytes(at, tag.hash_val()).into();
             let value = [];

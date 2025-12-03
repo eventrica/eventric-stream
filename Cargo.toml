@@ -21,7 +21,7 @@ eventric-stream-core   = { path = "crates/eventric-stream-core" }
 eventric-stream-macros = { path = "crates/eventric-stream-macros" }
 eventric-utils         = { git = "https://github.com/eventrica/eventric-utils.git" }
 fancy_constructor      = { version = "2" }
-fjall                  = { version = "=3.0.0-rc.3" }
+fjall                  = { version = "=3.0.0-rc.4" }
 include-utils          = { version = "0.2" }
 proc-macro2            = { version = "1" }
 quote                  = { version = "1" }

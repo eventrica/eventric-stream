@@ -9,8 +9,8 @@ use fjall::{
     Guard,
     Keyspace,
     KeyspaceCreateOptions,
+    OwnedWriteBatch,
     Slice,
-    WriteBatch,
 };
 
 use crate::{
@@ -67,7 +67,7 @@ impl Events {
 
     pub fn put(
         &self,
-        batch: &mut WriteBatch,
+        batch: &mut OwnedWriteBatch,
         at: Position,
         event: &CandidateEventHashRef<'_>,
         timestamp: Timestamp,
@@ -99,8 +99,8 @@ impl Events {
 
 impl Events {
     pub fn len(&self) -> Result<u64, Error> {
-        match self.keyspace.last_key_value()? {
-            Some((key, _)) => Ok(key.as_ref().get_u64() + 1),
+        match self.keyspace.last_key_value() {
+            Some(guard) => Ok(guard.key().map(|key| key.as_ref().get_u64() + 1)?),
             _ => Ok(0),
         }
     }

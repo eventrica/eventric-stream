@@ -3,7 +3,7 @@ use derive_more::Debug;
 use fancy_constructor::new;
 use fjall::{
     Keyspace,
-    WriteBatch,
+    OwnedWriteBatch,
 };
 
 use crate::{
@@ -54,7 +54,7 @@ impl Identifiers {
         }
     }
 
-    pub fn put(&self, batch: &mut WriteBatch, identifier: &IdentifierHashRef<'_>) {
+    pub fn put(&self, batch: &mut OwnedWriteBatch, identifier: &IdentifierHashRef<'_>) {
         let key: [u8; KEY_LEN] = Hash(identifier.hash_val()).into();
         let value: &[u8] = identifier.as_ref();
 

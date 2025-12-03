@@ -16,7 +16,11 @@ use fjall::Database;
 use crate::{
     error::Error,
     event::position::Position,
-    stream::data::Data,
+    stream::{
+        data::Data,
+        iterate::build::Build,
+        select::Source,
+    },
 };
 
 // =================================================================================================
@@ -41,7 +45,7 @@ pub struct Stream {
     next: Position,
 }
 
-// Building
+// Builder
 
 impl Stream {
     /// Constructs a new [`Builder`] which which can be used to configure the
@@ -70,6 +74,82 @@ impl Stream {
     pub fn len(&self) -> u64 {
         *self.next
     }
+}
+
+// Split
+
+impl Stream {
+    /// .
+    #[must_use]
+    pub fn split(self) -> (StreamReader, StreamWriter) {
+        (
+            StreamReader::new(self.data.clone()),
+            StreamWriter::new(self.database, self.data, self.next),
+        )
+    }
+}
+
+// Iterate
+
+impl iterate::Iterate for Stream {
+    fn iter(&self, from: Option<Position>) -> iterate::Iter<()> {
+        iterate::iter(&self.data, from)
+    }
+}
+
+#[allow(private_bounds)]
+impl iterate::IterateSelect for Stream {
+    fn iter_select<S>(&self, source: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
+    where
+        S: Source,
+        S::Iterator: Build<S::Prepared>,
+    {
+        iterate::iter_select(&self.data, source, from)
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Reader
+
+/// .
+#[derive(new, Clone, Debug)]
+#[new(const_fn, vis())]
+pub struct StreamReader {
+    data: Data,
+}
+
+// Iterate
+
+impl iterate::Iterate for StreamReader {
+    fn iter(&self, from: Option<Position>) -> iterate::Iter<()> {
+        iterate::iter(&self.data, from)
+    }
+}
+
+#[allow(private_bounds)]
+impl iterate::IterateSelect for StreamReader {
+    fn iter_select<S>(&self, source: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
+    where
+        S: Source,
+        S::Iterator: Build<S::Prepared>,
+    {
+        iterate::iter_select(&self.data, source, from)
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Writer
+
+/// .
+#[derive(new, Debug)]
+#[new(const_fn, vis())]
+pub struct StreamWriter {
+    #[debug("Database")]
+    _database: Database,
+    _data: Data,
+    _next: Position,
 }
 
 // -------------------------------------------------------------------------------------------------

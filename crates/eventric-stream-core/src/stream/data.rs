@@ -29,7 +29,7 @@ static POSITION_LEN: usize = size_of::<u64>();
 
 // Data
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 #[new(const_fn)]
 pub struct Data {
     pub events: Events,
