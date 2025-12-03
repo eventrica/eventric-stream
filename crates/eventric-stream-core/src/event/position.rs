@@ -7,6 +7,7 @@ use derive_more::{
         SubAssign,
     },
 };
+use fancy_constructor::new;
 
 // =================================================================================================
 // Position
@@ -15,15 +16,10 @@ use derive_more::{
 /// The [`Position`] type is a typed wrapper around a `u64` value representing
 /// the ordinal position of an event in a stream.
 #[rustfmt::skip]
-#[derive(Add, AddAssign, Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd, Sub, SubAssign)]
-pub struct Position(u64);
-
-impl Position {
-    /// Constructs a new [`Position`] instance given a `u64` position value.
-    #[must_use]
-    pub const fn new(position: u64) -> Self {
-        Self(position)
-    }
+#[derive(new, Add, AddAssign, Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd, Sub, SubAssign)]
+#[new(const_fn)]
+pub struct Position {
+    value: u64
 }
 
 impl Position {
@@ -39,13 +35,15 @@ impl Add<u64> for Position {
     type Output = Self;
 
     fn add(self, rhs: u64) -> Self::Output {
-        Self(self.0 + rhs)
+        Self {
+            value: self.value + rhs,
+        }
     }
 }
 
 impl AddAssign<u64> for Position {
     fn add_assign(&mut self, rhs: u64) {
-        self.0 += rhs;
+        self.value += rhs;
     }
 }
 
@@ -59,13 +57,15 @@ impl Sub<u64> for Position {
     type Output = Self;
 
     fn sub(self, rhs: u64) -> Self::Output {
-        Self(self.0 - rhs)
+        Self {
+            value: self.value - rhs,
+        }
     }
 }
 
 impl SubAssign<u64> for Position {
     fn sub_assign(&mut self, rhs: u64) {
-        self.0 -= rhs;
+        self.value -= rhs;
     }
 }
 

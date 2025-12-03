@@ -16,7 +16,7 @@ use fjall::{
 use crate::{
     error::Error,
     event::{
-        CandidateEventHashRef,
+        CandidateEventHashAndValue,
         EventHash,
         data::Data,
         identifier::IdentifierHash,
@@ -69,7 +69,7 @@ impl Events {
         &self,
         batch: &mut OwnedWriteBatch,
         at: Position,
-        event: &CandidateEventHashRef<'_>,
+        event: &CandidateEventHashAndValue,
         timestamp: Timestamp,
     ) {
         let key = at.to_be_bytes();
@@ -243,18 +243,18 @@ impl From<IntoEventHash> for EventHash {
 
 // Event & Timestamp -> Value Byte Vector
 
-struct IntoValueBytes<'a>(&'a CandidateEventHashRef<'a>, Timestamp);
+struct IntoValueBytes<'a>(&'a CandidateEventHashAndValue, Timestamp);
 
 impl From<IntoValueBytes<'_>> for Vec<u8> {
     fn from(IntoValueBytes(event, timestamp): IntoValueBytes<'_>) -> Self {
         let mut value = Vec::new();
 
-        value.put_u64(event.identifier.0);
+        value.put_u64(event.identifier.0.0);
         value.put_u8(*event.version);
         value.put_u8(u8::try_from(event.tags.len()).expect("max tag count exceeded"));
 
         for tag in &event.tags {
-            value.put_u64(tag.hash_val());
+            value.put_u64(tag.0.0);
         }
 
         value.put_u64(*timestamp);

@@ -11,7 +11,7 @@ use crate::{
     event::identifier::{
         Identifier,
         IdentifierHash,
-        IdentifierHashRef,
+        IdentifierHashAndValue,
     },
     stream::data::{
         HASH_LEN,
@@ -55,9 +55,9 @@ impl Identifiers {
         }
     }
 
-    pub fn put(&self, batch: &mut OwnedWriteBatch, identifier: &IdentifierHashRef<'_>) {
-        let key: KeyBytes = IntoKeyBytes(identifier.into()).into();
-        let value: &[u8] = identifier.as_ref();
+    pub fn put(&self, batch: &mut OwnedWriteBatch, identifier: &IdentifierHashAndValue) {
+        let key: KeyBytes = IntoKeyBytes(identifier.0).into();
+        let value: &[u8] = identifier.1.as_ref();
 
         batch.insert(&self.keyspace, key, value);
     }

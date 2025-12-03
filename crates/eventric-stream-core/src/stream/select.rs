@@ -27,7 +27,7 @@ use crate::{
         iterate::iter::Iter,
         select::selector::{
             SelectorHash,
-            SelectorHashRef,
+            SelectorHashAndValue,
         },
     },
 };
@@ -120,39 +120,55 @@ pub struct SelectionHash(pub(crate) Vec<SelectorHash>);
 
 impl From<Selection> for SelectionHash {
     fn from(selection: Selection) -> Self {
-        (&selection).into()
+        Self(selection.selectors.into_iter().map(Into::into).collect())
     }
 }
 
-impl From<&Selection> for SelectionHash {
-    fn from(selection: &Selection) -> Self {
-        Self::new(selection.as_ref().iter().map(Into::into).collect())
+impl From<SelectionHashAndValue> for SelectionHash {
+    fn from(selection: SelectionHashAndValue) -> Self {
+        Self(selection.0.into_iter().map(Into::into).collect())
     }
 }
 
-impl From<SelectionHashRef<'_>> for SelectionHash {
-    fn from(selection: SelectionHashRef<'_>) -> Self {
-        (&selection).into()
-    }
-}
+// impl From<&Selection> for SelectionHash {
+//     fn from(selection: &Selection) -> Self {
+//         Self::new(selection.as_ref().iter().map(Into::into).collect())
+//     }
+// }
 
-impl From<&SelectionHashRef<'_>> for SelectionHash {
-    fn from(selection: &SelectionHashRef<'_>) -> Self {
-        Self::new(selection.as_ref().iter().map(Into::into).collect())
+// impl From<SelectionHashRef<'_>> for SelectionHash {
+//     fn from(selection: SelectionHashRef<'_>) -> Self {
+//         (&selection).into()
+//     }
+// }
+
+// impl From<&SelectionHashRef<'_>> for SelectionHash {
+//     fn from(selection: &SelectionHashRef<'_>) -> Self {
+//         Self::new(selection.as_ref().iter().map(Into::into).collect())
+//     }
+// }
+
+#[derive(new, Debug)]
+#[new(const_fn)]
+pub(crate) struct SelectionHashAndValue(pub(crate) Vec<SelectorHashAndValue>);
+
+impl From<Selection> for SelectionHashAndValue {
+    fn from(selection: Selection) -> Self {
+        Self(selection.selectors.into_iter().map(Into::into).collect())
     }
 }
 
 // Hash Ref
 
-#[derive(new, AsRef, Debug)]
-#[as_ref([SelectorHashRef<'a>])]
-pub(crate) struct SelectionHashRef<'a>(pub(crate) Vec<SelectorHashRef<'a>>);
+// #[derive(new, AsRef, Debug)]
+// #[as_ref([SelectorHashRef<'a>])]
+// pub(crate) struct SelectionHashRef<'a>(pub(crate) Vec<SelectorHashRef<'a>>);
 
-impl<'a> From<&'a Selection> for SelectionHashRef<'a> {
-    fn from(selection: &'a Selection) -> Self {
-        Self::new(selection.as_ref().iter().map(Into::into).collect())
-    }
-}
+// impl<'a> From<&'a Selection> for SelectionHashRef<'a> {
+//     fn from(selection: &'a Selection) -> Self {
+//         Self::new(selection.as_ref().iter().map(Into::into).collect())
+//     }
+// }
 
 // -------------------------------------------------------------------------------------------------
 
@@ -240,7 +256,7 @@ mod tests {
         stream::select::{
             Selection,
             SelectionHash,
-            SelectionHashRef,
+            // SelectionHashRef,
             Selector,
         },
     };
@@ -414,49 +430,49 @@ mod tests {
         let _hash: SelectionHash = query.into();
     }
 
-    #[test]
-    fn from_query_to_query_hash_by_ref() {
-        let id = Identifier::new("TestEvent").unwrap();
-        let spec = Specifier::new(id);
-        let selector = Selector::specifiers(vec![spec]).unwrap();
-        let query = Selection::new(vec![selector]).unwrap();
+    // #[test]
+    // fn from_query_to_query_hash_by_ref() {
+    //     let id = Identifier::new("TestEvent").unwrap();
+    //     let spec = Specifier::new(id);
+    //     let selector = Selector::specifiers(vec![spec]).unwrap();
+    //     let query = Selection::new(vec![selector]).unwrap();
 
-        let _hash: SelectionHash = (&query).into();
-    }
+    //     let _hash: SelectionHash = (&query).into();
+    // }
 
     // From<&Query> for QueryHashRef
 
-    #[test]
-    fn from_query_to_query_hash_ref() {
-        let id = Identifier::new("TestEvent").unwrap();
-        let spec = Specifier::new(id);
-        let selector = Selector::specifiers(vec![spec]).unwrap();
-        let query = Selection::new(vec![selector]).unwrap();
+    // #[test]
+    // fn from_query_to_query_hash_ref() {
+    //     let id = Identifier::new("TestEvent").unwrap();
+    //     let spec = Specifier::new(id);
+    //     let selector = Selector::specifiers(vec![spec]).unwrap();
+    //     let query = Selection::new(vec![selector]).unwrap();
 
-        let _hash_ref: SelectionHashRef<'_> = (&query).into();
-    }
+    //     let _hash_ref: SelectionHashRef<'_> = (&query).into();
+    // }
 
-    // From<QueryHashRef> for QueryHash
+    // // From<QueryHashRef> for QueryHash
 
-    #[test]
-    fn from_query_hash_ref_to_query_hash() {
-        let id = Identifier::new("TestEvent").unwrap();
-        let spec = Specifier::new(id);
-        let selector = Selector::specifiers(vec![spec]).unwrap();
-        let query = Selection::new(vec![selector]).unwrap();
+    // #[test]
+    // fn from_query_hash_ref_to_query_hash() {
+    //     let id = Identifier::new("TestEvent").unwrap();
+    //     let spec = Specifier::new(id);
+    //     let selector = Selector::specifiers(vec![spec]).unwrap();
+    //     let query = Selection::new(vec![selector]).unwrap();
 
-        let hash_ref: SelectionHashRef<'_> = (&query).into();
-        let _hash: SelectionHash = hash_ref.into();
-    }
+    //     let hash_ref: SelectionHashRef<'_> = (&query).into();
+    //     let _hash: SelectionHash = hash_ref.into();
+    // }
 
-    #[test]
-    fn from_query_hash_ref_to_query_hash_by_ref() {
-        let id = Identifier::new("TestEvent").unwrap();
-        let spec = Specifier::new(id);
-        let selector = Selector::specifiers(vec![spec]).unwrap();
-        let query = Selection::new(vec![selector]).unwrap();
+    // #[test]
+    // fn from_query_hash_ref_to_query_hash_by_ref() {
+    //     let id = Identifier::new("TestEvent").unwrap();
+    //     let spec = Specifier::new(id);
+    //     let selector = Selector::specifiers(vec![spec]).unwrap();
+    //     let query = Selection::new(vec![selector]).unwrap();
 
-        let hash_ref: SelectionHashRef<'_> = (&query).into();
-        let _hash: SelectionHash = (&hash_ref).into();
-    }
+    //     let hash_ref: SelectionHashRef<'_> = (&query).into();
+    //     let _hash: SelectionHash = (&hash_ref).into();
+    // }
 }

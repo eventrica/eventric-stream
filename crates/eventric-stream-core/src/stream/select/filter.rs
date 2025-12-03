@@ -177,10 +177,10 @@ mod tests {
     // Helper functions
 
     fn make_event(identifier: &str, version: u8, tags: Vec<&str>) -> EventHash {
-        let identifier = (&Identifier::new_unvalidated(identifier)).into();
+        let identifier = (Identifier::new_unvalidated(identifier)).into();
         let tags = tags
             .into_iter()
-            .map(|tag| (&Tag::new_unvalidated(tag)).into())
+            .map(|tag| Tag::new_unvalidated(tag).into())
             .collect();
 
         EventHash::new(
@@ -197,12 +197,11 @@ mod tests {
         let id = Identifier::new_unvalidated(identifier);
         let spec = Specifier::new(id).range(range);
 
-        (&spec).into()
+        spec.into()
     }
 
     fn make_tag_hash(tag: &str) -> TagHash {
-        let tag = Tag::new_unvalidated(tag);
-        (&tag).into()
+        Tag::new_unvalidated(tag).into()
     }
 
     // Filter::new with Specifiers only

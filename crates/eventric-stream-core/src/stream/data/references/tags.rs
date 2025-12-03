@@ -13,7 +13,7 @@ use crate::{
     event::tag::{
         Tag,
         TagHash,
-        TagHashRef,
+        TagHashAndValue,
     },
     stream::data::{
         HASH_LEN,
@@ -57,10 +57,10 @@ impl Tags {
         }
     }
 
-    pub fn put(&self, batch: &mut OwnedWriteBatch, tags: &BTreeSet<TagHashRef<'_>>) {
+    pub fn put(&self, batch: &mut OwnedWriteBatch, tags: &BTreeSet<TagHashAndValue>) {
         for tag in tags {
-            let key: KeyBytes = IntoKeyBytes(tag.into()).into();
-            let value: &[u8] = tag.as_ref();
+            let key: KeyBytes = IntoKeyBytes(tag.0).into();
+            let value: &[u8] = tag.1.as_ref();
 
             batch.insert(&self.keyspace, key, value);
         }

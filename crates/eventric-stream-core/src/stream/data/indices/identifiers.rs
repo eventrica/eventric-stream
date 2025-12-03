@@ -21,7 +21,7 @@ use crate::{
     event::{
         identifier::{
             IdentifierHash,
-            IdentifierHashRef,
+            IdentifierHashAndValue,
         },
         position::Position,
         specifier::SpecifierHash,
@@ -92,10 +92,10 @@ impl Identifiers {
         &self,
         batch: &mut OwnedWriteBatch,
         at: Position,
-        identifier: &IdentifierHashRef<'_>,
+        identifier: &IdentifierHashAndValue,
         version: Version,
     ) {
-        let key: [u8; KEY_LEN] = IntoKeyBytes(at, identifier.into()).into();
+        let key: [u8; KEY_LEN] = IntoKeyBytes(at, identifier.0).into();
         let value = version.to_be_bytes();
 
         batch.insert(&self.keyspace, key, value);

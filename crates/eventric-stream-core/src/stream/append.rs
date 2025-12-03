@@ -84,14 +84,14 @@ impl AppendSelect for Stream {
     fn append_select<E, S>(
         &mut self,
         events: E,
-        failsourceif_matches: S,
+        source: S,
         after: Option<Position>,
     ) -> Result<(Position, S::Prepared), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
         S: Source,
     {
-        let prepared = failsourceif_matches.prepare();
+        let prepared = source.prepare();
 
         self.check(Some(prepared.as_ref()), after)
             .and_then(|()| self.put(events))
@@ -156,7 +156,7 @@ impl Stream {
         let mut batch = self.database.batch();
 
         for event in events {
-            let event = (&event).into();
+            let event = event.into();
             let timestamp = Timestamp::now()?;
 
             self.data.events.put(&mut batch, next, &event, timestamp);

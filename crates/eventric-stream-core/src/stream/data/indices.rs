@@ -13,7 +13,7 @@ use fjall::{
 use crate::{
     error::Error,
     event::{
-        CandidateEventHashRef,
+        CandidateEventHashAndValue,
         position::Position,
         timestamp::Timestamp,
     },
@@ -100,7 +100,7 @@ impl Indices {
         &self,
         batch: &mut OwnedWriteBatch,
         at: Position,
-        event: &CandidateEventHashRef<'_>,
+        event: &CandidateEventHashAndValue,
         timestamp: Timestamp,
     ) {
         self.identifiers.put(batch, at, &event.identifier, event.version);

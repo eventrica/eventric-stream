@@ -1,7 +1,4 @@
-use derive_more::{
-    AsRef,
-    Deref,
-};
+use derive_more::AsRef;
 use eventric_utils::validation::{
     Validate,
     validate,
@@ -19,10 +16,12 @@ use crate::error::Error;
 /// immutable owned vector of bytes. Higher-level libraries may determine the
 /// meaning of the payload depending on the identifier and version of the event,
 /// but at core level it is opaque.
-#[derive(new, AsRef, Clone, Deref, Debug, Eq, PartialEq)]
+#[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
 #[as_ref([u8])]
 #[new(const_fn, name(new_inner), vis())]
-pub struct Data(Vec<u8>);
+pub struct Data {
+    value: Vec<u8>,
+}
 
 impl Data {
     /// Constructs a new instance of [`Data`] given a value which can be
@@ -55,7 +54,7 @@ impl Validate for Data {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.0, "data", &[&vec::IsEmpty])?;
+        validate(&self.value, "data", &[&vec::IsEmpty])?;
 
         Ok(self)
     }

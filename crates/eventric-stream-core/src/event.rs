@@ -16,11 +16,11 @@ use fancy_constructor::new;
 use crate::event::{
     identifier::{
         IdentifierHash,
-        IdentifierHashRef,
+        IdentifierHashAndValue,
     },
     tag::{
         TagHash,
-        TagHashRef,
+        TagHashAndValue,
     },
 };
 
@@ -90,24 +90,22 @@ impl CandidateEvent {
     }
 }
 
-// Hash Ref
-
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub(crate) struct CandidateEventHashRef<'a> {
-    pub data: &'a Data,
-    pub identifier: IdentifierHashRef<'a>,
-    pub tags: BTreeSet<TagHashRef<'a>>,
+pub(crate) struct CandidateEventHashAndValue {
+    pub data: Data,
+    pub identifier: IdentifierHashAndValue,
+    pub tags: BTreeSet<TagHashAndValue>,
     pub version: Version,
 }
 
-impl<'a> From<&'a CandidateEvent> for CandidateEventHashRef<'a> {
-    fn from(event: &'a CandidateEvent) -> Self {
+impl From<CandidateEvent> for CandidateEventHashAndValue {
+    fn from(event: CandidateEvent) -> Self {
         Self::new(
-            event.data(),
-            event.identifier().into(),
-            event.tags().iter().map(Into::into).collect(),
-            *event.version(),
+            event.data,
+            event.identifier.into(),
+            event.tags.into_iter().map(Into::into).collect(),
+            event.version,
         )
     }
 }

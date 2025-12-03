@@ -19,7 +19,7 @@ use crate::{
         position::Position,
         tag::{
             TagHash,
-            TagHashRef,
+            TagHashAndValue,
         },
     },
     stream::data::{
@@ -61,16 +61,14 @@ impl Tags {
         T: Iterator<Item = &'a TagHash>,
     {
         AndIter::combine(tags.map(|tag| {
-            let hash = tag.hash_val();
-
             let iter = if let Some(from) = from {
                 self.keyspace.range(
-                    Into::<KeyBytes>::into(IntoKeyBytes(from, hash))
-                        ..Into::<KeyBytes>::into(IntoKeyBytes(Position::MAX, hash)),
+                    Into::<KeyBytes>::into(IntoKeyBytes(from, *tag))
+                        ..Into::<KeyBytes>::into(IntoKeyBytes(Position::MAX, *tag)),
                 )
             } else {
                 self.keyspace
-                    .prefix(Into::<PrefixBytes>::into(IntoPrefixBytes(hash)))
+                    .prefix(Into::<PrefixBytes>::into(IntoPrefixBytes(*tag)))
             };
 
             PositionIter::Tags(Iter::new(iter))
@@ -81,9 +79,9 @@ impl Tags {
 // Put
 
 impl Tags {
-    pub fn put(&self, batch: &mut OwnedWriteBatch, at: Position, tags: &BTreeSet<TagHashRef<'_>>) {
+    pub fn put(&self, batch: &mut OwnedWriteBatch, at: Position, tags: &BTreeSet<TagHashAndValue>) {
         for tag in tags {
-            let key: [u8; KEY_LEN] = IntoKeyBytes(at, tag.hash_val()).into();
+            let key: KeyBytes = IntoKeyBytes(at, tag.0).into();
             let value = [];
 
             batch.insert(&self.keyspace, key, value);
@@ -136,17 +134,17 @@ impl Iter {}
 
 type PrefixBytes = [u8; PREFIX_LEN];
 
-struct IntoPrefixBytes(u64);
+struct IntoPrefixBytes(TagHash);
 
 impl From<IntoPrefixBytes> for PrefixBytes {
-    fn from(IntoPrefixBytes(hash): IntoPrefixBytes) -> Self {
+    fn from(IntoPrefixBytes(tag): IntoPrefixBytes) -> Self {
         let mut prefix = [0u8; PREFIX_LEN];
 
         {
             let mut prefix = &mut prefix[..];
 
             prefix.put_u8(INDEX_ID);
-            prefix.put_u64(hash);
+            prefix.put_u64(tag.0);
         }
 
         prefix
@@ -171,17 +169,17 @@ impl From<IntoPosition> for Position {
 
 type KeyBytes = [u8; KEY_LEN];
 
-struct IntoKeyBytes(Position, u64);
+struct IntoKeyBytes(Position, TagHash);
 
 impl From<IntoKeyBytes> for KeyBytes {
-    fn from(IntoKeyBytes(position, hash): IntoKeyBytes) -> Self {
+    fn from(IntoKeyBytes(position, tag): IntoKeyBytes) -> Self {
         let mut key = [0u8; KEY_LEN];
 
         {
             let mut key = &mut key[..];
 
             key.put_u8(INDEX_ID);
-            key.put_u64(hash);
+            key.put_u64(tag.0);
             key.put_u64(*position);
         }
 

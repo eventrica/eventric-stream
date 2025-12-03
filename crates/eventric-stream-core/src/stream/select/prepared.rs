@@ -11,7 +11,7 @@ use crate::stream::{
     select::{
         Selection,
         SelectionHash,
-        SelectionHashRef,
+        SelectionHashAndValue,
         Selections,
         filter::Filter,
         source::Source,
@@ -67,10 +67,11 @@ where
 impl From<Selection> for Prepared<Selection> {
     fn from(selection: Selection) -> Self {
         let cache = Arc::new(Cache::default());
-        let selection_hash_ref: SelectionHashRef<'_> = (&selection).into();
-        let selection_hash: SelectionHash = (&selection_hash_ref).into();
+        let selection_hash_and_value: SelectionHashAndValue = selection.into();
 
-        cache.populate(&selection_hash_ref);
+        cache.populate(&selection_hash_and_value);
+
+        let selection_hash: SelectionHash = selection_hash_and_value.into();
 
         Self::new(cache, (), selection_hash)
     }
@@ -93,7 +94,7 @@ impl From<Selections> for Prepared<Selections> {
 
         let selection_hashes = selections
             .0
-            .iter()
+            .into_iter()
             .map(Into::into)
             .inspect(|query_hash_ref| cache.populate(query_hash_ref))
             .map(Into::into)
