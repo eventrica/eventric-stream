@@ -70,7 +70,8 @@ impl References {
     }
 
     pub fn put(&self, batch: &mut OwnedWriteBatch, event: &CandidateEventHashAndValue) {
-        self.identifiers.put(batch, &event.identifier);
+        self.identifiers
+            .put(batch, &event.identifier_hash_and_value);
         self.tags.put(batch, &event.tags);
     }
 }

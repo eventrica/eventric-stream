@@ -82,7 +82,7 @@ pub mod stream {
         //! condition models.
 
         pub use eventric_stream_core::stream::select::{
-            EventMasked,
+            EventAndMask,
             Mask,
             Prepared,
             Selection,

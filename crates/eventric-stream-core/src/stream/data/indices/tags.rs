@@ -81,7 +81,7 @@ impl Tags {
 impl Tags {
     pub fn put(&self, batch: &mut OwnedWriteBatch, at: Position, tags: &BTreeSet<TagHashAndValue>) {
         for tag in tags {
-            let key: KeyBytes = IntoKeyBytes(at, tag.0).into();
+            let key: KeyBytes = IntoKeyBytes(at, tag.tag_hash).into();
             let value = [];
 
             batch.insert(&self.keyspace, key, value);
@@ -144,7 +144,7 @@ impl From<IntoPrefixBytes> for PrefixBytes {
             let mut prefix = &mut prefix[..];
 
             prefix.put_u8(INDEX_ID);
-            prefix.put_u64(tag.0);
+            prefix.put_u64(tag.hash);
         }
 
         prefix
@@ -179,8 +179,8 @@ impl From<IntoKeyBytes> for KeyBytes {
             let mut key = &mut key[..];
 
             key.put_u8(INDEX_ID);
-            key.put_u64(tag.0);
-            key.put_u64(*position);
+            key.put_u64(tag.hash);
+            key.put_u64(position.value);
         }
 
         key

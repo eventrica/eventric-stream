@@ -94,7 +94,7 @@ impl CandidateEvent {
 #[new(const_fn)]
 pub(crate) struct CandidateEventHashAndValue {
     pub data: Data,
-    pub identifier: IdentifierHashAndValue,
+    pub identifier_hash_and_value: IdentifierHashAndValue,
     pub tags: BTreeSet<TagHashAndValue>,
     pub version: Version,
 }

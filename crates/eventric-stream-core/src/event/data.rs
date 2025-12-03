@@ -18,8 +18,9 @@ use crate::error::Error;
 /// but at core level it is opaque.
 #[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
 #[as_ref([u8])]
-#[new(const_fn, name(new_inner), vis())]
+#[new(const_fn, name(new_unvalidated))]
 pub struct Data {
+    #[new(name(data))]
     value: Vec<u8>,
 }
 
@@ -37,16 +38,7 @@ impl Data {
     where
         D: Into<Vec<u8>>,
     {
-        Self::new_unvalidated(data).validate()
-    }
-
-    #[doc(hidden)]
-    #[must_use]
-    pub fn new_unvalidated<D>(data: D) -> Self
-    where
-        D: Into<Vec<u8>>,
-    {
-        Self::new_inner(data.into())
+        Self::new_unvalidated(data.into()).validate()
     }
 }
 

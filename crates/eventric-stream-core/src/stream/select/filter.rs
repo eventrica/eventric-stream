@@ -56,10 +56,10 @@ impl Filter {
                 SelectorHash::Specifiers(specifiers) => {
                     for specifier in specifiers {
                         filters
-                            .entry(specifier.0)
+                            .entry(specifier.identifier_hash)
                             .or_insert_with(|| (Vec::new(), Vec::new()))
                             .0
-                            .push(specifier.1.clone());
+                            .push(specifier.range.clone());
                     }
                 }
 
@@ -68,10 +68,10 @@ impl Filter {
                 SelectorHash::SpecifiersAndTags(specifiers, tags) => {
                     for specifier in specifiers {
                         filters
-                            .entry(specifier.0)
+                            .entry(specifier.identifier_hash)
                             .or_insert_with(|| (Vec::new(), Vec::new()))
                             .1
-                            .push((specifier.1.clone(), tags.clone()));
+                            .push((specifier.range.clone(), tags.clone()));
                     }
                 }
             }
@@ -177,10 +177,10 @@ mod tests {
     // Helper functions
 
     fn make_event(identifier: &str, version: u8, tags: Vec<&str>) -> EventHash {
-        let identifier = (Identifier::new_unvalidated(identifier)).into();
+        let identifier = (Identifier::new_unvalidated(identifier.into())).into();
         let tags = tags
             .into_iter()
-            .map(|tag| Tag::new_unvalidated(tag).into())
+            .map(|tag| Tag::new_unvalidated(tag.into()).into())
             .collect();
 
         EventHash::new(
@@ -194,14 +194,14 @@ mod tests {
     }
 
     fn make_specifier_hash(identifier: &str, range: std::ops::Range<Version>) -> SpecifierHash {
-        let id = Identifier::new_unvalidated(identifier);
-        let spec = Specifier::new(id).range(range);
+        let id = Identifier::new_unvalidated(identifier.into());
+        let spec = Specifier::new(id).with_range(range);
 
         spec.into()
     }
 
     fn make_tag_hash(tag: &str) -> TagHash {
-        Tag::new_unvalidated(tag).into()
+        Tag::new_unvalidated(tag.into()).into()
     }
 
     // Filter::new with Specifiers only

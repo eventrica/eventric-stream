@@ -33,45 +33,38 @@ use crate::event::{
 /// Where no range is given, the meaning is **ALL** (or **ANY**)versions of the
 /// given type, rather than **NO** versions.
 #[derive(new, Clone, Debug, Eq, PartialEq)]
-#[new(name(new_inner), vis())]
-pub struct Specifier(
-    pub(crate) Identifier,
-    #[new(val(Version::MIN..Version::MAX))] pub(crate) Range<Version>,
-);
-
-impl Specifier {
-    /// Constructs a new [`Specifier`] instance given an [`Identifier`].
-    #[must_use]
-    pub fn new(identifier: Identifier) -> Self {
-        Self::new_inner(identifier)
-    }
+#[new(const_fn)]
+pub struct Specifier {
+    pub(crate) identifier: Identifier,
+    #[new(val(Version::MIN..Version::MAX))]
+    pub(crate) range: Range<Version>,
 }
 
 impl Specifier {
     /// Adds a [`Version`] range to the [`Specifier`].
     #[must_use]
-    pub fn range<R>(mut self, range: R) -> Self
+    pub fn with_range<R>(mut self, range: R) -> Self
     where
         R: Into<range::Range>,
     {
-        self.1 = range.into().into();
+        self.range = range.into().into();
         self
     }
 }
 
 impl Hash for Specifier {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
-        self.1.start.hash(state);
-        self.1.end.hash(state);
+        self.identifier.hash(state);
+        self.range.start.hash(state);
+        self.range.end.hash(state);
     }
 }
 
 impl Ord for Specifier {
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.0.cmp(&other.0) {
-            Ordering::Equal => match self.1.start.cmp(&other.1.start) {
-                Ordering::Equal => self.1.end.cmp(&other.1.end),
+        match self.identifier.cmp(&other.identifier) {
+            Ordering::Equal => match self.range.start.cmp(&other.range.start) {
+                Ordering::Equal => self.range.end.cmp(&other.range.end),
                 ordering => ordering,
             },
             ordering => ordering,
@@ -89,36 +82,42 @@ impl PartialOrd for Specifier {
 
 #[derive(new, Clone, Debug, Eq, PartialEq)]
 #[new(const_fn)]
-pub(crate) struct SpecifierHash(pub IdentifierHash, pub Range<Version>);
+pub(crate) struct SpecifierHash {
+    pub(crate) identifier_hash: IdentifierHash,
+    pub(crate) range: Range<Version>,
+}
 
 impl From<Specifier> for SpecifierHash {
     fn from(specifier: Specifier) -> Self {
-        let identifier = specifier.0.into();
-        let range = specifier.1;
+        let identifier_hash = specifier.identifier.into();
+        let range = specifier.range;
 
-        Self::new(identifier, range)
+        Self::new(identifier_hash, range)
     }
 }
 
 impl From<SpecifierHashAndValue> for SpecifierHash {
     fn from(specifier: SpecifierHashAndValue) -> Self {
-        Self(specifier.0.0, specifier.1)
+        Self::new(
+            specifier.identifier_hash_and_value.identifier_hash,
+            specifier.range,
+        )
     }
 }
 
 impl Hash for SpecifierHash {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
-        self.1.start.hash(state);
-        self.1.end.hash(state);
+        self.identifier_hash.hash(state);
+        self.range.start.hash(state);
+        self.range.end.hash(state);
     }
 }
 
 impl Ord for SpecifierHash {
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.0.cmp(&other.0) {
-            Ordering::Equal => match self.1.start.cmp(&other.1.start) {
-                Ordering::Equal => self.1.end.cmp(&other.1.end),
+        match self.identifier_hash.cmp(&other.identifier_hash) {
+            Ordering::Equal => match self.range.start.cmp(&other.range.start) {
+                Ordering::Equal => self.range.end.cmp(&other.range.end),
                 ordering => ordering,
             },
             ordering => ordering,
@@ -136,33 +135,37 @@ impl PartialOrd for SpecifierHash {
 
 #[derive(new, Debug, Eq, PartialEq)]
 #[new(const_fn)]
-pub(crate) struct SpecifierHashAndValue(
-    pub(crate) IdentifierHashAndValue,
-    pub(crate) Range<Version>,
-);
+pub(crate) struct SpecifierHashAndValue {
+    pub(crate) identifier_hash_and_value: IdentifierHashAndValue,
+    pub(crate) range: Range<Version>,
+}
 
 impl From<Specifier> for SpecifierHashAndValue {
     fn from(specifier: Specifier) -> Self {
-        let identifier = specifier.0.into();
-        let range = specifier.1;
+        let identifier = specifier.identifier.into();
+        let range = specifier.range;
 
-        Self(identifier, range)
+        Self::new(identifier, range)
     }
 }
 
 impl Hash for SpecifierHashAndValue {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.0.hash(state);
-        self.1.start.hash(state);
-        self.1.end.hash(state);
+        self.identifier_hash_and_value.identifier_hash.hash(state);
+        self.range.start.hash(state);
+        self.range.end.hash(state);
     }
 }
 
 impl Ord for SpecifierHashAndValue {
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.0.1.cmp(&other.0.1) {
-            Ordering::Equal => match self.1.start.cmp(&other.1.start) {
-                Ordering::Equal => self.1.end.cmp(&other.1.end),
+        match self
+            .identifier_hash_and_value
+            .identifier
+            .cmp(&other.identifier_hash_and_value.identifier)
+        {
+            Ordering::Equal => match self.range.start.cmp(&other.range.start) {
+                Ordering::Equal => self.range.end.cmp(&other.range.end),
                 ordering => ordering,
             },
             ordering => ordering,
@@ -210,17 +213,17 @@ mod tests {
         let id = Identifier::new("Event").unwrap();
         let spec = Specifier::new(id);
 
-        assert_eq!(spec.1.start, Version::MIN);
-        assert_eq!(spec.1.end, Version::MAX);
+        assert_eq!(spec.range.start, Version::MIN);
+        assert_eq!(spec.range.end, Version::MAX);
     }
 
     #[test]
     fn specifier_with_range() {
         let id = Identifier::new("Event").unwrap();
-        let spec = Specifier::new(id).range(Version::new(1)..Version::new(5));
+        let spec = Specifier::new(id).with_range(Version::new(1)..Version::new(5));
 
-        assert_eq!(spec.1.start, Version::new(1));
-        assert_eq!(spec.1.end, Version::new(5));
+        assert_eq!(spec.range.start, Version::new(1));
+        assert_eq!(spec.range.end, Version::new(5));
     }
 
     // Eq and PartialEq
@@ -230,8 +233,8 @@ mod tests {
         let id1 = Identifier::new("Event").unwrap();
         let id2 = Identifier::new("Event").unwrap();
 
-        let spec1 = Specifier::new(id1).range(Version::new(1)..Version::new(5));
-        let spec2 = Specifier::new(id2).range(Version::new(1)..Version::new(5));
+        let spec1 = Specifier::new(id1).with_range(Version::new(1)..Version::new(5));
+        let spec2 = Specifier::new(id2).with_range(Version::new(1)..Version::new(5));
 
         assert_eq!(spec1, spec2);
     }
@@ -241,8 +244,8 @@ mod tests {
         let id1 = Identifier::new("EventA").unwrap();
         let id2 = Identifier::new("EventB").unwrap();
 
-        let spec1 = Specifier::new(id1).range(Version::new(1)..Version::new(5));
-        let spec2 = Specifier::new(id2).range(Version::new(1)..Version::new(5));
+        let spec1 = Specifier::new(id1).with_range(Version::new(1)..Version::new(5));
+        let spec2 = Specifier::new(id2).with_range(Version::new(1)..Version::new(5));
 
         assert_ne!(spec1, spec2);
     }
@@ -252,8 +255,8 @@ mod tests {
         let id1 = Identifier::new("Event").unwrap();
         let id2 = Identifier::new("Event").unwrap();
 
-        let spec1 = Specifier::new(id1).range(Version::new(1)..Version::new(5));
-        let spec2 = Specifier::new(id2).range(Version::new(2)..Version::new(6));
+        let spec1 = Specifier::new(id1).with_range(Version::new(1)..Version::new(5));
+        let spec2 = Specifier::new(id2).with_range(Version::new(2)..Version::new(6));
 
         assert_ne!(spec1, spec2);
     }
@@ -276,8 +279,8 @@ mod tests {
         let id1 = Identifier::new("Event").unwrap();
         let id2 = Identifier::new("Event").unwrap();
 
-        let spec1 = Specifier::new(id1).range(Version::new(1)..Version::new(5));
-        let spec2 = Specifier::new(id2).range(Version::new(1)..Version::new(5));
+        let spec1 = Specifier::new(id1).with_range(Version::new(1)..Version::new(5));
+        let spec2 = Specifier::new(id2).with_range(Version::new(1)..Version::new(5));
 
         let mut hasher1 = DefaultHasher::new();
         let mut hasher2 = DefaultHasher::new();
@@ -310,8 +313,8 @@ mod tests {
         let id1 = Identifier::new("Event").unwrap();
         let id2 = Identifier::new("Event").unwrap();
 
-        let spec1 = Specifier::new(id1).range(Version::new(1)..Version::new(5));
-        let spec2 = Specifier::new(id2).range(Version::new(2)..Version::new(6));
+        let spec1 = Specifier::new(id1).with_range(Version::new(1)..Version::new(5));
+        let spec2 = Specifier::new(id2).with_range(Version::new(2)..Version::new(6));
 
         let mut hasher1 = DefaultHasher::new();
         let mut hasher2 = DefaultHasher::new();
@@ -345,8 +348,8 @@ mod tests {
         let id1 = Identifier::new("Event").unwrap();
         let id2 = Identifier::new("Event").unwrap();
 
-        let spec1 = Specifier::new(id1).range(Version::new(1)..Version::new(10));
-        let spec2 = Specifier::new(id2).range(Version::new(5)..Version::new(10));
+        let spec1 = Specifier::new(id1).with_range(Version::new(1)..Version::new(10));
+        let spec2 = Specifier::new(id2).with_range(Version::new(5)..Version::new(10));
 
         assert!(spec1 < spec2);
         assert!(spec2 > spec1);
@@ -357,8 +360,8 @@ mod tests {
         let id1 = Identifier::new("Event").unwrap();
         let id2 = Identifier::new("Event").unwrap();
 
-        let spec1 = Specifier::new(id1).range(Version::new(1)..Version::new(5));
-        let spec2 = Specifier::new(id2).range(Version::new(1)..Version::new(10));
+        let spec1 = Specifier::new(id1).with_range(Version::new(1)..Version::new(5));
+        let spec2 = Specifier::new(id2).with_range(Version::new(1)..Version::new(10));
 
         assert!(spec1 < spec2);
         assert!(spec2 > spec1);
@@ -367,7 +370,7 @@ mod tests {
     #[test]
     fn specifier_ordering_reflexive() {
         let id = Identifier::new("Event").unwrap();
-        let spec = Specifier::new(id).range(Version::new(1)..Version::new(5));
+        let spec = Specifier::new(id).with_range(Version::new(1)..Version::new(5));
 
         assert!(spec <= spec);
         assert!(spec >= spec);
@@ -392,7 +395,7 @@ mod tests {
     #[test]
     fn specifier_clone() {
         let id = Identifier::new("Event").unwrap();
-        let spec1 = Specifier::new(id).range(Version::new(1)..Version::new(5));
+        let spec1 = Specifier::new(id).with_range(Version::new(1)..Version::new(5));
         let spec2 = spec1.clone();
 
         assert_eq!(spec1, spec2);
@@ -403,7 +406,7 @@ mod tests {
     #[test]
     fn specifier_debug_format() {
         let id = Identifier::new("Event").unwrap();
-        let spec = Specifier::new(id).range(Version::new(1)..Version::new(5));
+        let spec = Specifier::new(id).with_range(Version::new(1)..Version::new(5));
         let debug_str = format!("{spec:?}");
 
         assert!(debug_str.contains("Specifier"));

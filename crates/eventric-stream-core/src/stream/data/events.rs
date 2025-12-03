@@ -59,7 +59,7 @@ impl Events {
 
 impl Events {
     pub fn get(&self, at: Position) -> Result<Option<EventHash>, Error> {
-        let key = at.to_be_bytes();
+        let key = at.value.to_be_bytes();
         let value = self.keyspace.get(key)?;
 
         Ok(value.map(|value| IntoEventHash(at, value).into()))
@@ -72,7 +72,7 @@ impl Events {
         event: &CandidateEventHashAndValue,
         timestamp: Timestamp,
     ) {
-        let key = at.to_be_bytes();
+        let key = at.value.to_be_bytes();
         let value: Vec<u8> = IntoValueBytes(event, timestamp).into();
 
         batch.insert(&self.keyspace, key, value);
@@ -86,7 +86,7 @@ impl Events {
     #[rustfmt::skip]
     pub fn iterate(&self, from: Option<Position>) -> DirectEventHashIter {
         let iter = if let Some(from) = from {
-            self.keyspace.range(from.to_be_bytes()..)
+            self.keyspace.range(from.value.to_be_bytes()..)
         } else {
             self.keyspace.iter()
         };
@@ -249,15 +249,15 @@ impl From<IntoValueBytes<'_>> for Vec<u8> {
     fn from(IntoValueBytes(event, timestamp): IntoValueBytes<'_>) -> Self {
         let mut value = Vec::new();
 
-        value.put_u64(event.identifier.0.0);
-        value.put_u8(*event.version);
+        value.put_u64(event.identifier_hash_and_value.identifier_hash.hash);
+        value.put_u8(event.version.value);
         value.put_u8(u8::try_from(event.tags.len()).expect("max tag count exceeded"));
 
         for tag in &event.tags {
-            value.put_u64(tag.0.0);
+            value.put_u64(tag.tag_hash.hash);
         }
 
-        value.put_u64(*timestamp);
+        value.put_u64(timestamp.value);
         value.put_slice(event.data.as_ref());
 
         value

@@ -3,10 +3,8 @@ use std::time::{
     UNIX_EPOCH,
 };
 
-use derive_more::{
-    Debug,
-    Deref,
-};
+use derive_more::Debug;
+use fancy_constructor::new;
 
 use crate::error::Error;
 
@@ -18,16 +16,10 @@ use crate::error::Error;
 /// used to represent the insertion time of an event in a stream. The value
 /// represents nanoseconds since Unix Epoch, a u64 being sufficient to represent
 /// comfortably over a century.
-#[derive(Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd)]
-pub struct Timestamp(u64);
-
-impl Timestamp {
-    /// Constructs a new instance of [`Timestamp`] from a given `u64` nanosecond
-    /// value.
-    #[must_use]
-    pub const fn new(nanos: u64) -> Self {
-        Self(nanos)
-    }
+#[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct Timestamp {
+    #[new(name(nanos))]
+    pub(crate) value: u64,
 }
 
 impl Timestamp {
@@ -54,7 +46,7 @@ impl Timestamp {
         let nanos = u64::try_from(duration.as_nanos())
             .map_err(|_| Error::data("duration size error: {err}"))?;
 
-        Ok(Self(nanos))
+        Ok(Self::new(nanos))
     }
 }
 
@@ -72,21 +64,21 @@ mod tests {
     fn new_creates_timestamp_with_given_value() {
         let timestamp = Timestamp::new(123_456_789);
 
-        assert_eq!(123_456_789, *timestamp);
+        assert_eq!(123_456_789, timestamp.value);
     }
 
     #[test]
     fn new_creates_timestamp_with_zero() {
         let timestamp = Timestamp::new(0);
 
-        assert_eq!(0, *timestamp);
+        assert_eq!(0, timestamp.value);
     }
 
     #[test]
     fn new_creates_timestamp_with_max_value() {
         let timestamp = Timestamp::new(u64::MAX);
 
-        assert_eq!(u64::MAX, *timestamp);
+        assert_eq!(u64::MAX, timestamp.value);
     }
 
     // Timestamp::now
@@ -96,17 +88,6 @@ mod tests {
         let result = Timestamp::now();
 
         assert!(result.is_ok());
-    }
-
-    // Deref
-
-    #[test]
-    fn deref_returns_inner_value() {
-        let timestamp = Timestamp::new(123_456_789);
-
-        let value: u64 = *timestamp;
-
-        assert_eq!(123_456_789, value);
     }
 
     // Clone
@@ -119,7 +100,6 @@ mod tests {
         let cloned = timestamp.clone();
 
         assert_eq!(timestamp, cloned);
-        assert_eq!(*timestamp, *cloned);
     }
 
     // Copy
@@ -131,7 +111,7 @@ mod tests {
         let copied = timestamp;
 
         assert_eq!(timestamp, copied);
-        assert_eq!(*timestamp, *copied);
+        assert_eq!(timestamp, copied);
     }
 
     // PartialEq / Eq

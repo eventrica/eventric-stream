@@ -56,8 +56,8 @@ impl Identifiers {
     }
 
     pub fn put(&self, batch: &mut OwnedWriteBatch, identifier: &IdentifierHashAndValue) {
-        let key: KeyBytes = IntoKeyBytes(identifier.0).into();
-        let value: &[u8] = identifier.1.as_ref();
+        let key: KeyBytes = IntoKeyBytes(identifier.identifier_hash).into();
+        let value: &[u8] = identifier.identifier.as_ref();
 
         batch.insert(&self.keyspace, key, value);
     }
@@ -81,7 +81,7 @@ impl From<IntoKeyBytes> for KeyBytes {
             let mut key = &mut key[..];
 
             key.put_u8(REFERENCE_ID);
-            key.put_u64(identifier.0);
+            key.put_u64(identifier.hash);
         }
 
         key

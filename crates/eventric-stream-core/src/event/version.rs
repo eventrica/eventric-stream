@@ -9,7 +9,7 @@ use std::{
     },
 };
 
-use derive_more::Deref;
+use fancy_constructor::new;
 
 // =================================================================================================
 // Version
@@ -21,16 +21,11 @@ use derive_more::Deref;
 /// specification of the logical versioned *type* of the event.
 ///
 /// [ident]: crate::event::identifier::Identifier
-#[derive(Clone, Copy, Debug, Deref, Eq, Ord, PartialEq, PartialOrd)]
-pub struct Version(u8);
-
-impl Version {
-    /// Constructs a new instance of [`Version`] from a given `u8` version
-    /// value.
-    #[must_use]
-    pub const fn new(version: u8) -> Self {
-        Self(version)
-    }
+#[derive(new, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[new(const_fn)]
+pub struct Version {
+    #[new(name(version))]
+    pub(crate) value: u8,
 }
 
 impl Version {
@@ -46,13 +41,13 @@ impl Add<u8> for Version {
     type Output = Self;
 
     fn add(self, rhs: u8) -> Self::Output {
-        Self(self.0 + rhs)
+        Self::new(self.value + rhs)
     }
 }
 
 impl AddAssign<u8> for Version {
     fn add_assign(&mut self, rhs: u8) {
-        self.0 += rhs;
+        self.value += rhs;
     }
 }
 
@@ -82,13 +77,13 @@ impl Sub<u8> for Version {
     type Output = Self;
 
     fn sub(self, rhs: u8) -> Self::Output {
-        Self(self.0 - rhs)
+        Self::new(self.value - rhs)
     }
 }
 
 impl SubAssign<u8> for Version {
     fn sub_assign(&mut self, rhs: u8) {
-        self.0 -= rhs;
+        self.value -= rhs;
     }
 }
 
@@ -106,31 +101,31 @@ mod tests {
     fn new_creates_version_with_given_value() {
         let ver = Version::new(42);
 
-        assert_eq!(*ver, 42);
+        assert_eq!(ver.value, 42);
     }
 
     #[test]
     fn min_constant_equals_zero() {
-        assert_eq!(*Version::MIN, 0);
-        assert_eq!(*Version::MIN, u8::MIN);
+        assert_eq!(Version::MIN.value, 0);
+        assert_eq!(Version::MIN.value, u8::MIN);
     }
 
     #[test]
     fn max_constant_equals_u8_max() {
-        assert_eq!(*Version::MAX, u8::MAX);
-        assert_eq!(*Version::MAX, 255);
+        assert_eq!(Version::MAX.value, u8::MAX);
+        assert_eq!(Version::MAX.value, 255);
     }
 
     #[test]
     fn default_equals_min() {
         assert_eq!(Version::default(), Version::MIN);
-        assert_eq!(*Version::default(), 0);
+        assert_eq!(Version::default().value, 0);
     }
 
     #[test]
     fn deref_returns_inner_value() {
         let ver = Version::new(123);
-        let value: &u8 = &ver;
+        let value: &u8 = &ver.value;
 
         assert_eq!(*value, 123);
     }
@@ -142,7 +137,6 @@ mod tests {
         let ver2 = ver1.clone();
 
         assert_eq!(ver1, ver2);
-        assert_eq!(*ver1, *ver2);
     }
 
     #[test]
@@ -158,7 +152,7 @@ mod tests {
         let ver = Version::new(10);
         let result = ver + 20u8;
 
-        assert_eq!(*result, 30);
+        assert_eq!(result.value, 30);
     }
 
     #[test]
@@ -166,7 +160,7 @@ mod tests {
         let mut ver = Version::new(10);
         ver += 20u8;
 
-        assert_eq!(*ver, 30);
+        assert_eq!(ver.value, 30);
     }
 
     #[test]
@@ -174,7 +168,7 @@ mod tests {
         let ver = Version::new(50);
         let result = ver - 20u8;
 
-        assert_eq!(*result, 30);
+        assert_eq!(result.value, 30);
     }
 
     #[test]
@@ -182,7 +176,7 @@ mod tests {
         let mut ver = Version::new(50);
         ver -= 20u8;
 
-        assert_eq!(*ver, 30);
+        assert_eq!(ver.value, 30);
     }
 
     #[test]
@@ -226,28 +220,28 @@ mod tests {
         let ver = Version::new(100);
         let result = ver + 50u8 - 30u8;
 
-        assert_eq!(*result, 120);
+        assert_eq!(result.value, 120);
     }
 
     #[test]
     fn min_plus_one() {
         let ver = Version::MIN + 1u8;
 
-        assert_eq!(*ver, 1);
+        assert_eq!(ver.value, 1);
     }
 
     #[test]
     fn max_minus_one() {
         let ver = Version::MAX - 1u8;
 
-        assert_eq!(*ver, 254);
+        assert_eq!(ver.value, 254);
     }
 
     #[test]
     fn version_zero_is_valid() {
         let ver = Version::new(0);
 
-        assert_eq!(*ver, 0);
+        assert_eq!(ver.value, 0);
         assert_eq!(ver, Version::MIN);
     }
 
@@ -255,7 +249,7 @@ mod tests {
     fn version_max_is_valid() {
         let ver = Version::new(255);
 
-        assert_eq!(*ver, 255);
+        assert_eq!(ver.value, 255);
         assert_eq!(ver, Version::MAX);
     }
 
@@ -264,11 +258,11 @@ mod tests {
         let mut ver = Version::new(1);
         ver += 1u8;
 
-        assert_eq!(*ver, 2);
+        assert_eq!(ver.value, 2);
 
         ver += 1u8;
 
-        assert_eq!(*ver, 3);
+        assert_eq!(ver.value, 3);
     }
 
     #[test]
@@ -276,11 +270,11 @@ mod tests {
         let mut ver = Version::new(10);
         ver -= 1u8;
 
-        assert_eq!(*ver, 9);
+        assert_eq!(ver.value, 9);
 
         ver -= 1u8;
 
-        assert_eq!(*ver, 8);
+        assert_eq!(ver.value, 8);
     }
 
     // PartialEq<Range<Self>>

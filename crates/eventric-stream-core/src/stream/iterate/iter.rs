@@ -34,7 +34,7 @@ use crate::{
             cache::Cache,
         },
         select::{
-            EventMasked,
+            EventAndMask,
             Selection,
             Selections,
             filter::{
@@ -156,7 +156,7 @@ impl Iter<Selections> {
 
             self.retrieve
                 .get(event)
-                .map(|event| EventMasked::new(event, mask))
+                .map(|event| EventAndMask::new(event, mask))
         })
     }
 }
@@ -179,7 +179,7 @@ impl DoubleEndedIterator for Iter<Selections> {
 }
 
 impl Iterator for Iter<Selections> {
-    type Item = Result<EventMasked, Error>;
+    type Item = Result<EventAndMask, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next().map(|event| self.map(event))

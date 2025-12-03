@@ -63,14 +63,16 @@ impl Cache {
     fn populate_identifiers(&self, specifiers: &BTreeSet<SpecifierHashAndValue>) {
         for specifier in specifiers {
             self.identifiers
-                .entry(specifier.0.0)
-                .or_insert_with(|| specifier.0.1.clone());
+                .entry(specifier.identifier_hash_and_value.identifier_hash)
+                .or_insert_with(|| specifier.identifier_hash_and_value.identifier.clone());
         }
     }
 
     fn populate_tags(&self, tags: &BTreeSet<TagHashAndValue>) {
         for tag in tags {
-            self.tags.entry(tag.0).or_insert_with(|| tag.1.clone());
+            self.tags
+                .entry(tag.tag_hash)
+                .or_insert_with(|| tag.tag.clone());
         }
     }
 }

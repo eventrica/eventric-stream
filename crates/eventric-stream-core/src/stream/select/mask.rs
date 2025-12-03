@@ -1,9 +1,6 @@
 use std::ops::Index;
 
-use derive_more::{
-    AsRef,
-    Deref,
-};
+use derive_more::AsRef;
 use fancy_constructor::new;
 use smallvec::SmallVec;
 
@@ -16,7 +13,7 @@ use smallvec::SmallVec;
 ///
 /// [selection]: crate::stream::select::Selection
 /// [selections]: crate::stream::select::Selections
-#[derive(new, AsRef, Clone, Deref, Debug, Eq, PartialEq)]
+#[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
 #[as_ref([bool])]
 #[new(const_fn)]
 pub struct Mask(#[new(name(mask))] pub(crate) SmallVec<[bool; 8]>);

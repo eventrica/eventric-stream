@@ -227,7 +227,7 @@ impl Validate for Selections {
 // Re-Exports
 
 pub use self::{
-    event::EventMasked,
+    event::EventAndMask,
     mask::Mask,
     prepared::Prepared,
     selector::{

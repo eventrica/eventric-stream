@@ -67,8 +67,8 @@ impl Identifiers {
         S: Iterator<Item = &'a SpecifierHash>,
     {
         OrIter::combine(specifiers.map(|specifier| {
-            let identifier = specifier.0;
-            let range = specifier.1.clone();
+            let identifier = specifier.identifier_hash;
+            let range = specifier.range.clone();
 
             let iter = if let Some(from) = from {
                 self.keyspace
@@ -95,8 +95,8 @@ impl Identifiers {
         identifier: &IdentifierHashAndValue,
         version: Version,
     ) {
-        let key: [u8; KEY_LEN] = IntoKeyBytes(at, identifier.0).into();
-        let value = version.to_be_bytes();
+        let key: [u8; KEY_LEN] = IntoKeyBytes(at, identifier.identifier_hash).into();
+        let value = version.value.to_be_bytes();
 
         batch.insert(&self.keyspace, key, value);
     }
@@ -169,7 +169,7 @@ impl From<IntoPrefixBytes> for PrefixBytes {
             let mut prefix = &mut prefix[..];
 
             prefix.put_u8(INDEX_ID);
-            prefix.put_u64(identifier.0);
+            prefix.put_u64(identifier.hash);
         }
 
         prefix
@@ -204,8 +204,8 @@ impl From<IntoKeyBytes> for KeyBytes {
             let mut key = &mut key[..];
 
             key.put_u8(INDEX_ID);
-            key.put_u64(identifier.0);
-            key.put_u64(*position);
+            key.put_u64(identifier.hash);
+            key.put_u64(position.value);
         }
 
         key

@@ -41,7 +41,7 @@ pub(crate) struct Timestamps {
 impl Timestamps {
     pub fn put(&self, batch: &mut OwnedWriteBatch, at: Position, timestamp: Timestamp) {
         let key: [u8; KEY_LEN] = UnitAndTimestamp((), timestamp).into();
-        let value = at.to_be_bytes();
+        let value = at.value.to_be_bytes();
 
         batch.insert(&self.keyspace, key, value);
     }
@@ -63,7 +63,7 @@ impl From<UnitAndTimestamp> for [u8; KEY_LEN] {
             let mut key = &mut key[..];
 
             key.put_u8(INDEX_ID);
-            key.put_u64(*timestamp);
+            key.put_u64(timestamp.value);
         }
 
         key

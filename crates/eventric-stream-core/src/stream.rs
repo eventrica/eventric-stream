@@ -72,7 +72,7 @@ impl Stream {
     /// contained within it).
     #[must_use]
     pub fn len(&self) -> u64 {
-        *self.next
+        self.next.value
     }
 }
 

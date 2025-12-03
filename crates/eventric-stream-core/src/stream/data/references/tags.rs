@@ -59,8 +59,8 @@ impl Tags {
 
     pub fn put(&self, batch: &mut OwnedWriteBatch, tags: &BTreeSet<TagHashAndValue>) {
         for tag in tags {
-            let key: KeyBytes = IntoKeyBytes(tag.0).into();
-            let value: &[u8] = tag.1.as_ref();
+            let key: KeyBytes = IntoKeyBytes(tag.tag_hash).into();
+            let value: &[u8] = tag.tag.as_ref();
 
             batch.insert(&self.keyspace, key, value);
         }
@@ -85,7 +85,7 @@ impl From<IntoKeyBytes> for KeyBytes {
             let mut key = &mut key[..];
 
             key.put_u8(REFERENCE_ID);
-            key.put_u64(tag.hash_val());
+            key.put_u64(tag.hash);
         }
 
         key

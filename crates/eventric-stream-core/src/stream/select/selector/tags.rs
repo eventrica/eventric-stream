@@ -13,7 +13,6 @@ use crate::{
         Tag,
         TagHash,
         TagHashAndValue,
-        TagHashRef,
     },
 };
 
@@ -64,12 +63,6 @@ impl From<Tags> for BTreeSet<TagHash> {
 impl From<Tags> for BTreeSet<TagHashAndValue> {
     fn from(tags: Tags) -> Self {
         tags.0.into_iter().map(Into::into).collect()
-    }
-}
-
-impl<'a> From<&'a Tags> for BTreeSet<TagHashRef<'a>> {
-    fn from(tags: &'a Tags) -> Self {
-        tags.0.iter().map(Into::into).collect()
     }
 }
 
@@ -185,20 +178,20 @@ mod tests {
 
     // From<&Tags> for Vec<TagHashRef>
 
-    #[allow(clippy::similar_names)]
-    #[test]
-    fn from_tags_to_tag_hash_ref_set() {
-        use crate::event::tag::TagHashRef;
+    // #[allow(clippy::similar_names)]
+    // #[test]
+    // fn from_tags_to_tag_hash_ref_set() {
+    //     use crate::event::tag::TagHashRef;
 
-        let tag1 = Tag::new("user:123").unwrap();
-        let tag2 = Tag::new("course:456").unwrap();
+    //     let tag1 = Tag::new("user:123").unwrap();
+    //     let tag2 = Tag::new("course:456").unwrap();
 
-        let tags = Tags::new(vec![tag1, tag2]).unwrap();
+    //     let tags = Tags::new(vec![tag1, tag2]).unwrap();
 
-        let hash_refs: BTreeSet<TagHashRef<'_>> = (&tags).into();
+    //     let hash_refs: BTreeSet<TagHashRef<'_>> = (&tags).into();
 
-        assert_eq!(2, hash_refs.len());
-    }
+    //     assert_eq!(2, hash_refs.len());
+    // }
 
     // Validate
 

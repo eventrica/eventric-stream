@@ -103,7 +103,7 @@ impl Indices {
         event: &CandidateEventHashAndValue,
         timestamp: Timestamp,
     ) {
-        self.identifiers.put(batch, at, &event.identifier, event.version);
+        self.identifiers.put(batch, at, &event.identifier_hash_and_value, event.version);
         self.tags.put(batch, at, &event.tags);
         self.timestamps.put(batch, at, timestamp);
     }

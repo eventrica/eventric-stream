@@ -28,9 +28,10 @@ use crate::{
 /// [version]: crate::event::version::Version
 #[derive(new, AsRef, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 #[as_ref(str, [u8])]
-#[new(const_fn, name(new_inner), vis())]
+#[new(const_fn, name(new_unvalidated))]
 pub struct Identifier {
-    value: String,
+    #[new(name(identifier))]
+    pub(crate) value: String,
 }
 
 impl Identifier {
@@ -49,16 +50,7 @@ impl Identifier {
     where
         I: Into<String>,
     {
-        Self::new_unvalidated(identifier).validate()
-    }
-
-    #[doc(hidden)]
-    #[must_use]
-    pub fn new_unvalidated<T>(identifier: T) -> Self
-    where
-        T: Into<String>,
-    {
-        Self::new_inner(identifier.into())
+        Self::new_unvalidated(identifier.into()).validate()
     }
 }
 
@@ -85,9 +77,11 @@ impl Validate for Identifier {
 
 // Hash
 
-#[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(new, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[new(const_fn)]
-pub(crate) struct IdentifierHash(pub(crate) u64);
+pub(crate) struct IdentifierHash {
+    pub(crate) hash: u64,
+}
 
 impl From<Identifier> for IdentifierHash {
     fn from(identifier: Identifier) -> Self {
@@ -97,30 +91,27 @@ impl From<Identifier> for IdentifierHash {
     }
 }
 
-impl Hash for IdentifierHash {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
-    }
-}
-
 // Hash and Value
 
 #[derive(new, Debug, Eq)]
 #[new(const_fn)]
-pub(crate) struct IdentifierHashAndValue(pub(crate) IdentifierHash, pub(crate) Identifier);
+pub(crate) struct IdentifierHashAndValue {
+    pub(crate) identifier: Identifier,
+    pub(crate) identifier_hash: IdentifierHash,
+}
 
 impl From<Identifier> for IdentifierHashAndValue {
     fn from(identifier: Identifier) -> Self {
         let hash = hashing::get(&identifier);
         let identifier_hash = IdentifierHash::new(hash);
 
-        Self(identifier_hash, identifier)
+        Self::new(identifier, identifier_hash)
     }
 }
 
 impl PartialEq for IdentifierHashAndValue {
     fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
+        self.identifier_hash == other.identifier_hash
     }
 }
 

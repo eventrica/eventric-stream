@@ -1,4 +1,3 @@
-use derive_more::Deref;
 use fancy_constructor::new;
 
 use crate::{
@@ -11,18 +10,11 @@ use crate::{
 // =================================================================================================
 
 /// .
-#[derive(new, Debug, Deref, Eq, PartialEq)]
+#[derive(new, Debug, Eq, PartialEq)]
 #[new(const_fn, vis(pub(crate)))]
-pub struct EventMasked {
-    #[deref]
-    event: Event,
-    mask: Mask,
-}
-
-impl EventMasked {
+pub struct EventAndMask {
     /// .
-    #[must_use]
-    pub fn mask(&self) -> &Mask {
-        &self.mask
-    }
+    pub event: Event,
+    /// .
+    pub mask: Mask,
 }
