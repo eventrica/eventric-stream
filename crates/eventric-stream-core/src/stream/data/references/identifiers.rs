@@ -36,7 +36,7 @@ static KEY_LEN: usize = ID_LEN + HASH_LEN;
 #[derive(new, Clone, Debug)]
 #[new(const_fn)]
 pub(crate) struct Identifiers {
-    #[debug("Keyspace(\"{}\")", keyspace.name)]
+    #[debug("Keyspace(\"{}\")", keyspace.name())]
     keyspace: Keyspace,
 }
 

@@ -43,7 +43,7 @@ static KEYSPACE_NAME: &str = "events";
 #[derive(new, Clone, Debug)]
 #[new(const_fn, vis())]
 pub(crate) struct Events {
-    #[debug("Keyspace(\"{}\")", keyspace.name)]
+    #[debug("Keyspace(\"{}\")", keyspace.name())]
     keyspace: Keyspace,
 }
 
