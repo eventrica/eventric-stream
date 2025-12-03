@@ -13,8 +13,14 @@ use crate::{
     error::Error,
     event::{
         CandidateEventHashRef,
-        identifier::Identifier,
-        tag::Tag,
+        identifier::{
+            Identifier,
+            IdentifierHash,
+        },
+        tag::{
+            Tag,
+            TagHash,
+        },
     },
     stream::data::references::{
         identifiers::Identifiers,
@@ -55,12 +61,12 @@ impl References {
 // Get/Put
 
 impl References {
-    pub fn get_identifier(&self, hash: u64) -> Result<Option<Identifier>, Error> {
-        self.identifiers.get(hash)
+    pub fn get_identifier(&self, identifier: IdentifierHash) -> Result<Option<Identifier>, Error> {
+        self.identifiers.get(identifier)
     }
 
-    pub fn get_tag(&self, hash: u64) -> Result<Option<Tag>, Error> {
-        self.tags.get(hash)
+    pub fn get_tag(&self, tag: TagHash) -> Result<Option<Tag>, Error> {
+        self.tags.get(tag)
     }
 
     pub fn put(&self, batch: &mut OwnedWriteBatch, event: &CandidateEventHashRef<'_>) {

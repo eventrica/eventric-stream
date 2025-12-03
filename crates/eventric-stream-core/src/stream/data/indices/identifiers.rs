@@ -19,7 +19,10 @@ use fjall::{
 use crate::{
     error::Error,
     event::{
-        identifier::IdentifierHashRef,
+        identifier::{
+            IdentifierHash,
+            IdentifierHashRef,
+        },
         position::Position,
         specifier::SpecifierHash,
         version::Version,
@@ -64,17 +67,17 @@ impl Identifiers {
         S: Iterator<Item = &'a SpecifierHash>,
     {
         OrIter::combine(specifiers.map(|specifier| {
-            let hash = specifier.0.hash_val();
+            let identifier = specifier.0;
             let range = specifier.1.clone();
 
             let iter = if let Some(from) = from {
                 self.keyspace
-                    .range(Into::<KeyBytes>::into(IntoKeyBytes(from, hash))
-                         ..Into::<KeyBytes>::into(IntoKeyBytes(Position::MAX, hash)),
+                    .range(Into::<KeyBytes>::into(IntoKeyBytes(from, identifier))
+                         ..Into::<KeyBytes>::into(IntoKeyBytes(Position::MAX, identifier)),
                 )
             } else {
                 self.keyspace
-                    .prefix(Into::<PrefixBytes>::into(IntoPrefixBytes(hash)))
+                    .prefix(Into::<PrefixBytes>::into(IntoPrefixBytes(identifier)))
             };
 
             PositionIter::Identifiers(Iter::new(iter, range))
@@ -92,7 +95,7 @@ impl Identifiers {
         identifier: &IdentifierHashRef<'_>,
         version: Version,
     ) {
-        let key: [u8; KEY_LEN] = IntoKeyBytes(at, identifier.hash_val()).into();
+        let key: [u8; KEY_LEN] = IntoKeyBytes(at, identifier.into()).into();
         let value = version.to_be_bytes();
 
         batch.insert(&self.keyspace, key, value);
@@ -156,17 +159,17 @@ fn check<T, U>(mut f: impl FnMut(T) -> Option<U>) -> impl FnMut((), T) -> Contro
 
 type PrefixBytes = [u8; PREFIX_LEN];
 
-struct IntoPrefixBytes(u64);
+struct IntoPrefixBytes(IdentifierHash);
 
 impl From<IntoPrefixBytes> for PrefixBytes {
-    fn from(IntoPrefixBytes(hash): IntoPrefixBytes) -> Self {
+    fn from(IntoPrefixBytes(identifier): IntoPrefixBytes) -> Self {
         let mut prefix = [0u8; PREFIX_LEN];
 
         {
             let mut prefix = &mut prefix[..];
 
             prefix.put_u8(INDEX_ID);
-            prefix.put_u64(hash);
+            prefix.put_u64(identifier.0);
         }
 
         prefix
@@ -191,17 +194,17 @@ impl From<IntoPosition> for Position {
 
 type KeyBytes = [u8; KEY_LEN];
 
-struct IntoKeyBytes(Position, u64);
+struct IntoKeyBytes(Position, IdentifierHash);
 
 impl From<IntoKeyBytes> for KeyBytes {
-    fn from(IntoKeyBytes(position, hash): IntoKeyBytes) -> Self {
+    fn from(IntoKeyBytes(position, identifier): IntoKeyBytes) -> Self {
         let mut key = [0u8; KEY_LEN];
 
         {
             let mut key = &mut key[..];
 
             key.put_u8(INDEX_ID);
-            key.put_u64(hash);
+            key.put_u64(identifier.0);
             key.put_u64(*position);
         }
 

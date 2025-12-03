@@ -12,6 +12,7 @@ use crate::{
     error::Error,
     event::tag::{
         Tag,
+        TagHash,
         TagHashRef,
     },
     stream::data::{
@@ -44,8 +45,8 @@ pub(crate) struct Tags {
 // Get/Put
 
 impl Tags {
-    pub fn get(&self, hash: u64) -> Result<Option<Tag>, Error> {
-        let key: [u8; KEY_LEN] = Hash(hash).into();
+    pub fn get(&self, tag: TagHash) -> Result<Option<Tag>, Error> {
+        let key: KeyBytes = IntoKeyBytes(tag).into();
 
         match self.keyspace.get(key)? {
             Some(value) => String::from_utf8(value.to_vec())
@@ -58,7 +59,7 @@ impl Tags {
 
     pub fn put(&self, batch: &mut OwnedWriteBatch, tags: &BTreeSet<TagHashRef<'_>>) {
         for tag in tags {
-            let key: [u8; KEY_LEN] = Hash(tag.hash_val()).into();
+            let key: KeyBytes = IntoKeyBytes(tag.into()).into();
             let value: &[u8] = tag.as_ref();
 
             batch.insert(&self.keyspace, key, value);
@@ -72,17 +73,19 @@ impl Tags {
 
 // Hash -> Key Byte Array
 
-struct Hash(u64);
+type KeyBytes = [u8; KEY_LEN];
 
-impl From<Hash> for [u8; KEY_LEN] {
-    fn from(Hash(hash): Hash) -> Self {
+struct IntoKeyBytes(TagHash);
+
+impl From<IntoKeyBytes> for KeyBytes {
+    fn from(IntoKeyBytes(tag): IntoKeyBytes) -> Self {
         let mut key = [0u8; KEY_LEN];
 
         {
             let mut key = &mut key[..];
 
             key.put_u8(REFERENCE_ID);
-            key.put_u64(hash);
+            key.put_u64(tag.hash_val());
         }
 
         key

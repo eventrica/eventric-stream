@@ -10,6 +10,7 @@ use crate::{
     error::Error,
     event::identifier::{
         Identifier,
+        IdentifierHash,
         IdentifierHashRef,
     },
     stream::data::{
@@ -42,8 +43,8 @@ pub(crate) struct Identifiers {
 // Get/Put
 
 impl Identifiers {
-    pub fn get(&self, hash: u64) -> Result<Option<Identifier>, Error> {
-        let key: [u8; KEY_LEN] = Hash(hash).into();
+    pub fn get(&self, identifier: IdentifierHash) -> Result<Option<Identifier>, Error> {
+        let key: KeyBytes = IntoKeyBytes(identifier).into();
 
         match self.keyspace.get(key)? {
             Some(value) => String::from_utf8(value.to_vec())
@@ -55,7 +56,7 @@ impl Identifiers {
     }
 
     pub fn put(&self, batch: &mut OwnedWriteBatch, identifier: &IdentifierHashRef<'_>) {
-        let key: [u8; KEY_LEN] = Hash(identifier.hash_val()).into();
+        let key: KeyBytes = IntoKeyBytes(identifier.into()).into();
         let value: &[u8] = identifier.as_ref();
 
         batch.insert(&self.keyspace, key, value);
@@ -68,17 +69,19 @@ impl Identifiers {
 
 // Hash -> Key Byte Array
 
-struct Hash(u64);
+type KeyBytes = [u8; KEY_LEN];
 
-impl From<Hash> for [u8; KEY_LEN] {
-    fn from(Hash(hash): Hash) -> Self {
+struct IntoKeyBytes(IdentifierHash);
+
+impl From<IntoKeyBytes> for KeyBytes {
+    fn from(IntoKeyBytes(identifier): IntoKeyBytes) -> Self {
         let mut key = [0u8; KEY_LEN];
 
         {
             let mut key = &mut key[..];
 
             key.put_u8(REFERENCE_ID);
-            key.put_u64(hash);
+            key.put_u64(identifier.0);
         }
 
         key

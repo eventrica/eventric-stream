@@ -5,10 +5,14 @@ use derive_more::Debug;
 
 use crate::{
     event::{
-        identifier::Identifier,
+        identifier::{
+            Identifier,
+            IdentifierHash,
+        },
         specifier::SpecifierHashRef,
         tag::{
             Tag,
+            TagHash,
             TagHashRef,
         },
     },
@@ -37,8 +41,8 @@ use crate::{
 /// dropped.
 #[derive(Debug, Default)]
 pub struct Cache {
-    pub(crate) identifiers: DashMap<u64, Identifier>,
-    pub(crate) tags: DashMap<u64, Tag>,
+    pub(crate) identifiers: DashMap<IdentifierHash, Identifier>,
+    pub(crate) tags: DashMap<TagHash, Tag>,
 }
 
 impl Cache {
@@ -57,7 +61,7 @@ impl Cache {
     fn populate_identifiers(&self, specifiers: &BTreeSet<SpecifierHashRef<'_>>) {
         for specifier in specifiers {
             self.identifiers
-                .entry(specifier.0.hash_val())
+                .entry((&specifier.0).into())
                 .or_insert_with(|| specifier.0.clone());
         }
     }
@@ -65,7 +69,7 @@ impl Cache {
     fn populate_tags(&self, tags: &BTreeSet<TagHashRef<'_>>) {
         for tag in tags {
             self.tags
-                .entry(tag.hash_val())
+                .entry(tag.into())
                 .or_insert_with(|| (*tag).clone());
         }
     }

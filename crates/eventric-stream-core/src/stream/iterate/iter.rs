@@ -214,16 +214,16 @@ impl Retrieve {
         let identifiers = &self.cache.identifiers;
 
         identifiers
-            .entry(identifier.hash_val())
-            .or_try_insert_with(|| self.fetch_identifier(identifier.hash_val()))
+            .entry(identifier)
+            .or_try_insert_with(|| self.fetch_identifier(identifier))
             .map(|entry| entry.value().clone())
     }
 
     #[rustfmt::skip]
-    fn fetch_identifier(&self, hash: u64) -> Result<Identifier, Error> {
+    fn fetch_identifier(&self, identifier: IdentifierHash) -> Result<Identifier, Error> {
         self.references
-            .get_identifier(hash)
-            .and_then(|identifier| identifier.ok_or_else(|| Error::data(format!("identifier not found: {hash}"))))
+            .get_identifier(identifier)
+            .and_then(|identifier| identifier.ok_or_else(|| Error::data("identifier not found")))
     }
 }
 
@@ -239,17 +239,17 @@ impl Retrieve {
 
         fetch_tags
             .then(|| Some(
-                tags.entry(tag.hash_val())
-                    .or_try_insert_with(|| self.fetch_tag(tag.hash_val()))
+                tags.entry(tag)
+                    .or_try_insert_with(|| self.fetch_tag(tag))
                     .map(|entry| entry.value().clone())))
             .unwrap_or_else(||
-                tags.get(&tag.hash_val())
+                tags.get(&tag)
                     .map(|entry| Ok(entry.value().clone())))
     }
 
-    fn fetch_tag(&self, hash: u64) -> Result<Tag, Error> {
+    fn fetch_tag(&self, tag: TagHash) -> Result<Tag, Error> {
         self.references
-            .get_tag(hash)
-            .and_then(|tag| tag.ok_or_else(|| Error::data(format!("tag not found: {hash}"))))
+            .get_tag(tag)
+            .and_then(|tag| tag.ok_or_else(|| Error::data("tag not found")))
     }
 }

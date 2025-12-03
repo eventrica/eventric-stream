@@ -5,6 +5,12 @@
 //!
 //! [hashing]: self
 
+use std::hash::{
+    DefaultHasher,
+    Hash,
+    Hasher,
+};
+
 use rapidhash::v3::{
     self,
     RapidSecrets,
@@ -29,4 +35,14 @@ where
     T: AsRef<[u8]>,
 {
     v3::rapidhash_v3_seeded(target.as_ref(), &SEED)
+}
+
+pub fn get<T>(target: &T) -> u64
+where
+    T: Hash,
+{
+    let mut hasher = DefaultHasher::new();
+
+    Hash::hash(target, &mut hasher);
+    Hasher::finish(&hasher)
 }
