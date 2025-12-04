@@ -15,10 +15,22 @@ use fjall::Database;
 
 use crate::{
     error::Error,
-    event::position::Position,
+    event::{
+        CandidateEvent,
+        position::Position,
+    },
     stream::{
+        append::{
+            Append,
+            AppendSelect,
+        },
         data::Data,
-        iterate::build::Build,
+        iterate::{
+            Iterate,
+            IterateSelect,
+            build::Build,
+            iter::Iter,
+        },
         select::Source,
     },
 };
@@ -89,16 +101,38 @@ impl Stream {
     }
 }
 
+// Append
+
+impl Append for Stream {
+    fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
+    where
+        E: IntoIterator<Item = CandidateEvent>,
+    {
+        append::append(&self.database, &self.data, &mut self.next, events, after)
+    }
+}
+
+impl AppendSelect for Stream {
+    #[rustfmt::skip]
+    fn append_select<E, S>(&mut self, events: E, source: S, after: Option<Position>) -> Result<(Position, S::Prepared), Error>
+    where
+        E: IntoIterator<Item = CandidateEvent>,
+        S: Source,
+    {
+        append::append_select(&self.database, &self.data, &mut self.next, events, source, after)
+    }
+}
+
 // Iterate
 
-impl iterate::Iterate for Stream {
-    fn iter(&self, from: Option<Position>) -> iterate::Iter<()> {
+impl Iterate for Stream {
+    fn iter(&self, from: Option<Position>) -> Iter<()> {
         iterate::iter(&self.data, from)
     }
 }
 
 #[allow(private_bounds)]
-impl iterate::IterateSelect for Stream {
+impl IterateSelect for Stream {
     fn iter_select<S>(&self, source: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
     where
         S: Source,
@@ -121,14 +155,14 @@ pub struct StreamReader {
 
 // Iterate
 
-impl iterate::Iterate for StreamReader {
-    fn iter(&self, from: Option<Position>) -> iterate::Iter<()> {
+impl Iterate for StreamReader {
+    fn iter(&self, from: Option<Position>) -> Iter<()> {
         iterate::iter(&self.data, from)
     }
 }
 
 #[allow(private_bounds)]
-impl iterate::IterateSelect for StreamReader {
+impl IterateSelect for StreamReader {
     fn iter_select<S>(&self, source: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
     where
         S: Source,
@@ -147,9 +181,31 @@ impl iterate::IterateSelect for StreamReader {
 #[new(const_fn, vis())]
 pub struct StreamWriter {
     #[debug("Database")]
-    _database: Database,
-    _data: Data,
-    _next: Position,
+    database: Database,
+    data: Data,
+    next: Position,
+}
+
+// Append
+
+impl Append for StreamWriter {
+    fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
+    where
+        E: IntoIterator<Item = CandidateEvent>,
+    {
+        append::append(&self.database, &self.data, &mut self.next, events, after)
+    }
+}
+
+impl AppendSelect for StreamWriter {
+    #[rustfmt::skip]
+    fn append_select<E, S>(&mut self, events: E, source: S, after: Option<Position>) -> Result<(Position, S::Prepared), Error>
+    where
+        E: IntoIterator<Item = CandidateEvent>,
+        S: Source,
+    {
+        append::append_select(&self.database, &self.data, &mut self.next, events, source, after)
+    }
 }
 
 // -------------------------------------------------------------------------------------------------

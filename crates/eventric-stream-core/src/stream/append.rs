@@ -1,6 +1,8 @@
 //! See the `eventric-stream` crate for full documentation, including
 //! module-level documentation.
 
+use fjall::Database;
+
 use crate::{
     error::Error,
     event::{
@@ -9,7 +11,7 @@ use crate::{
         timestamp::Timestamp,
     },
     stream::{
-        Stream,
+        data::Data,
         select::{
             SelectionHash,
             source::Source,
@@ -49,13 +51,17 @@ pub trait Append {
         E: IntoIterator<Item = CandidateEvent>;
 }
 
-impl Append for Stream {
-    fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
-    where
-        E: IntoIterator<Item = CandidateEvent>,
-    {
-        self.check(None, after).and_then(|()| self.put(events))
-    }
+pub(crate) fn append<E>(
+    database: &Database,
+    data: &Data,
+    next: &mut Position,
+    events: E,
+    after: Option<Position>,
+) -> Result<Position, Error>
+where
+    E: IntoIterator<Item = CandidateEvent>,
+{
+    check(data, *next, None, after).and_then(|()| put(database, data, next, events))
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -69,113 +75,113 @@ pub trait AppendSelect {
     /// # Errors
     ///
     /// This function will return an error if .
-    fn append_select<E, S>(
-        &mut self,
-        events: E,
-        source: S,
-        after: Option<Position>,
-    ) -> Result<(Position, S::Prepared), Error>
+    #[rustfmt::skip]
+    fn append_select<E, S>(&mut self, events: E, source: S, after: Option<Position>) -> Result<(Position, S::Prepared), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
         S: Source;
 }
 
-impl AppendSelect for Stream {
-    fn append_select<E, S>(
-        &mut self,
-        events: E,
-        source: S,
-        after: Option<Position>,
-    ) -> Result<(Position, S::Prepared), Error>
-    where
-        E: IntoIterator<Item = CandidateEvent>,
-        S: Source,
-    {
-        let prepared = source.prepare();
+pub(crate) fn append_select<E, S>(
+    database: &Database,
+    data: &Data,
+    next: &mut Position,
+    events: E,
+    source: S,
+    after: Option<Position>,
+) -> Result<(Position, S::Prepared), Error>
+where
+    E: IntoIterator<Item = CandidateEvent>,
+    S: Source,
+{
+    let prepared = source.prepare();
 
-        self.check(Some(prepared.as_ref()), after)
-            .and_then(|()| self.put(events))
-            .map(|position| (position, prepared))
-    }
+    check(data, *next, Some(prepared.as_ref()), after)
+        .and_then(|()| put(database, data, next, events))
+        .map(|position| (position, prepared))
 }
 
 // -------------------------------------------------------------------------------------------------
 
-// Stream Extension
+// Common
 
-impl Stream {
-    fn check(
-        &self,
-        selection: Option<&SelectionHash>,
-        after: Option<Position>,
-    ) -> Result<(), Error> {
-        // Shortcut the append concurrency check if the "after" position is at least the
-        // current stream position. If it is, no events have been written after
-        // the given position, so the condition will never match.
+fn check(
+    data: &Data,
+    next: Position,
+    selection: Option<&SelectionHash>,
+    after: Option<Position>,
+) -> Result<(), Error> {
+    // Shortcut the append concurrency check if the "after" position is at least the
+    // current stream position. If it is, no events have been written after
+    // the given position, so the condition will never match.
 
-        let from = after.map(|after| after + 1);
+    let from = after.map(|after| after + 1);
 
-        if let Some(from) = from
-            && from >= self.next
-        {
-            return Ok(());
-        }
+    if let Some(from) = from
+        && from >= next
+    {
+        return Ok(());
+    }
 
-        // Determine the query and from position. Note that queries internally are
-        // always from, rather than after, a particular position, so we increment the
-        // position here (if it exists) to ensure a correct from position.
+    // Determine the query and from position. Note that queries internally are
+    // always from, rather than after, a particular position, so we increment the
+    // position here (if it exists) to ensure a correct from position.
 
-        if let Some(selection) = selection {
-            // We don't need to actually examine the events at all, the underlying
-            // implementation only needs to check if there is any matching event in the
-            // resultant query stream - contains avoids mapping positions to events, etc.
+    if let Some(selection) = selection {
+        // We don't need to actually examine the events at all, the underlying
+        // implementation only needs to check if there is any matching event in the
+        // resultant query stream - contains avoids mapping positions to events, etc.
 
-            if self.data.indices.contains(selection, from) {
-                return Err(Error::Concurrency);
-            }
-        } else if let Some(from) = from
-            && from < self.next
-        {
+        if data.indices.contains(selection, from) {
             return Err(Error::Concurrency);
         }
-
-        Ok(())
-    }
-
-    fn put<E>(&mut self, events: E) -> Result<Position, Error>
-    where
-        E: IntoIterator<Item = CandidateEvent>,
+    } else if let Some(from) = from
+        && from < next
     {
-        // Create a local copy of the "next" position here, so that it can be
-        // incremented independently of the stream instance. As we only set the stream
-        // next position to the incremented position after the batch has committed
-        // successfully, this ensures that we don't create a gap in the sequence should
-        // the batch commit fail.
-
-        let mut next = self.next;
-        let mut batch = self.database.batch();
-
-        for event in events {
-            let event = event.into();
-            let timestamp = Timestamp::now()?;
-
-            self.data.events.put(&mut batch, next, &event, timestamp);
-            self.data.indices.put(&mut batch, next, &event, timestamp);
-            self.data.references.put(&mut batch, &event);
-
-            next += 1;
-        }
-
-        // Commit the batch...
-
-        batch.commit()?;
-
-        // ...and only update the stream next position if successful.
-
-        self.next = next;
-
-        // TODO: Deal with edge case of appending zero events to an empty stream!
-
-        Ok(self.next - 1)
+        return Err(Error::Concurrency);
     }
+
+    Ok(())
+}
+
+fn put<E>(
+    database: &Database,
+    data: &Data,
+    next: &mut Position,
+    events: E,
+) -> Result<Position, Error>
+where
+    E: IntoIterator<Item = CandidateEvent>,
+{
+    // Create a local copy of the "next" position here, so that it can be
+    // incremented independently of the stream instance. As we only set the stream
+    // next position to the incremented position after the batch has committed
+    // successfully, this ensures that we don't create a gap in the sequence should
+    // the batch commit fail.
+
+    let mut local_next = *next;
+    let mut batch = database.batch();
+
+    for event in events {
+        let event = event.into();
+        let timestamp = Timestamp::now()?;
+
+        data.events.put(&mut batch, local_next, &event, timestamp);
+        data.indices.put(&mut batch, local_next, &event, timestamp);
+        data.references.put(&mut batch, &event);
+
+        local_next += 1;
+    }
+
+    // Commit the batch...
+
+    batch.commit()?;
+
+    // ...and only update the stream next position if successful.
+
+    *next = local_next;
+
+    // TODO: Deal with edge case of appending zero events to an empty stream!
+
+    Ok(*next - 1)
 }
