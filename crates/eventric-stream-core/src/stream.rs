@@ -93,10 +93,10 @@ impl Stream {
 impl Stream {
     /// .
     #[must_use]
-    pub fn split(self) -> (StreamReader, StreamWriter) {
+    pub fn split(self) -> (Reader, Writer) {
         (
-            StreamReader::new(self.data.clone()),
-            StreamWriter::new(self.database, self.data, self.next),
+            Reader::new(self.data.clone()),
+            Writer::new(self.database, self.data, self.next),
         )
     }
 }
@@ -149,20 +149,20 @@ impl IterateSelect for Stream {
 /// .
 #[derive(new, Clone, Debug)]
 #[new(const_fn, vis())]
-pub struct StreamReader {
+pub struct Reader {
     data: Data,
 }
 
 // Iterate
 
-impl Iterate for StreamReader {
+impl Iterate for Reader {
     fn iter(&self, from: Option<Position>) -> Iter<()> {
         iterate::iter(&self.data, from)
     }
 }
 
 #[allow(private_bounds)]
-impl IterateSelect for StreamReader {
+impl IterateSelect for Reader {
     fn iter_select<S>(&self, source: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
     where
         S: Source,
@@ -179,7 +179,7 @@ impl IterateSelect for StreamReader {
 /// .
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
-pub struct StreamWriter {
+pub struct Writer {
     #[debug("Database")]
     database: Database,
     data: Data,
@@ -188,7 +188,7 @@ pub struct StreamWriter {
 
 // Append
 
-impl Append for StreamWriter {
+impl Append for Writer {
     fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
@@ -197,7 +197,7 @@ impl Append for StreamWriter {
     }
 }
 
-impl AppendSelect for StreamWriter {
+impl AppendSelect for Writer {
     #[rustfmt::skip]
     fn append_select<E, S>(&mut self, events: E, source: S, after: Option<Position>) -> Result<(Position, S::Prepared), Error>
     where

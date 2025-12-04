@@ -47,9 +47,9 @@ pub mod stream {
 
     pub use eventric_stream_core::stream::{
         Builder,
+        Reader,
         Stream,
-        StreamReader,
-        StreamWriter,
+        Writer,
     };
 
     pub mod append {
