@@ -14,9 +14,8 @@ use crate::{
         data::Data,
         select::{
             Prepared,
-            Selection,
             SelectionHash,
-            Selections,
+            prepared::MultiPrepared,
         },
     },
 };
@@ -62,25 +61,25 @@ pub trait Append {
         events: E,
         selection: S,
         after: Option<Position>,
-    ) -> Result<(Position, Prepared<Selection>), Error>
+    ) -> Result<(Position, Prepared), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
-        S: Into<Prepared<Selection>>;
+        S: Into<Prepared>;
 
     /// .
     ///
     /// # Errors
     ///
     /// This function will return an error if .
-    fn append_select_multi<E, S>(
+    fn append_multi_select<E, S>(
         &mut self,
         events: E,
-        selections: S,
+        multi_selection: S,
         after: Option<Position>,
-    ) -> Result<(Position, Prepared<Selections>), Error>
+    ) -> Result<(Position, MultiPrepared), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
-        S: Into<Prepared<Selections>>;
+        S: Into<MultiPrepared>;
 }
 
 // Implementations
@@ -105,10 +104,10 @@ pub(crate) fn append_select<E, S>(
     events: E,
     selection: S,
     after: Option<Position>,
-) -> Result<(Position, Prepared<Selection>), Error>
+) -> Result<(Position, Prepared), Error>
 where
     E: IntoIterator<Item = CandidateEvent>,
-    S: Into<Prepared<Selection>>,
+    S: Into<Prepared>,
 {
     let prepared = selection.into();
 
@@ -117,17 +116,17 @@ where
         .map(|position| (position, prepared))
 }
 
-pub(crate) fn append_select_multi<E, S>(
+pub(crate) fn append_multi_select<E, S>(
     database: &Database,
     data: &Data,
     next: &mut Position,
     events: E,
     selection: S,
     after: Option<Position>,
-) -> Result<(Position, Prepared<Selections>), Error>
+) -> Result<(Position, MultiPrepared), Error>
 where
     E: IntoIterator<Item = CandidateEvent>,
-    S: Into<Prepared<Selections>>,
+    S: Into<MultiPrepared>,
 {
     let prepared = selection.into();
 

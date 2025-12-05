@@ -23,8 +23,8 @@ use eventric_stream::{
         iterate::Iterate as _,
         select::{
             Mask,
+            MultiSelection,
             Selection,
-            Selections,
             Selector,
         },
     },
@@ -315,9 +315,9 @@ fn iterate_selection_selections() -> Result<(), Error> {
     // Iterate with selectors on an empty stream should return no events
 
     let student_enrolled = Specifier::new(Identifier::new("student_enrolled")?);
-    let selections = Selections::new([Selection::new([Selector::specifiers([student_enrolled.clone()])?])?])?;
+    let selections = MultiSelection::new([Selection::new([Selector::specifiers([student_enrolled.clone()])?])?])?;
 
-    assert_none!(stream.iter_select_multi(selections, None).0.next());
+    assert_none!(stream.iter_multi_select(selections, None).0.next());
 
     // Using the standard set of events
 
@@ -327,9 +327,9 @@ fn iterate_selection_selections() -> Result<(), Error> {
     // (identical to the selection alone), and with a mask value where all events
     // match the single selection
 
-    let selections = Selections::new([Selection::new([Selector::specifiers([student_enrolled.clone()])?])?])?;
+    let selections = MultiSelection::new([Selection::new([Selector::specifiers([student_enrolled.clone()])?])?])?;
 
-    let events = stream.iter_select_multi(selections, None).0.collect::<Result<Vec<_>, _>>()?;
+    let events = stream.iter_multi_select(selections, None).0.collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 3);
     assert_eq!((events[0].event.position(), &events[0].mask), (&Position::new(0), &Mask::new(vec![true].into())));
@@ -342,7 +342,7 @@ fn iterate_selection_selections() -> Result<(), Error> {
     let course_created = Specifier::new(Identifier::new("course_created")?);
     let course_200 = Tag::new("course:200")?;
     let student_100 = Tag::new("student:100")?;
-    let selections = Selections::new([
+    let selections = MultiSelection::new([
         Selection::new([Selector::specifiers_and_tags(
             vec![student_enrolled.clone()],
             vec![student_100.clone()]
@@ -353,7 +353,7 @@ fn iterate_selection_selections() -> Result<(), Error> {
         )?])?
     ])?;
 
-    let events = stream.iter_select_multi(selections, None).0.collect::<Result<Vec<_>, _>>()?;
+    let events = stream.iter_multi_select(selections, None).0.collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 2);
     assert_eq!((events[0].event.position(), &events[0].mask), (&Position::new(0), &Mask::new(vec![true, false].into())));
@@ -362,7 +362,7 @@ fn iterate_selection_selections() -> Result<(), Error> {
     // A selection containing overlapping selections should return events matching
     // any selection with a correct mask value
 
-    let selections = Selections::new([
+    let selections = MultiSelection::new([
         Selection::new([Selector::specifiers(
             vec![student_enrolled.clone()]
         )?])?,
@@ -372,7 +372,7 @@ fn iterate_selection_selections() -> Result<(), Error> {
         )?])?
     ])?;
 
-    let events = stream.iter_select_multi(selections, None).0.collect::<Result<Vec<_>, _>>()?;
+    let events = stream.iter_multi_select(selections, None).0.collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 3);
     assert_eq!((events[0].event.position(), &events[0].mask), (&Position::new(0), &Mask::new(vec![true, true].into())));
@@ -382,7 +382,7 @@ fn iterate_selection_selections() -> Result<(), Error> {
     // A selection with a from position should only return events greater than or
     // equal to the from position
 
-    let selections = Selections::new([
+    let selections = MultiSelection::new([
         Selection::new([Selector::specifiers(
             vec![student_enrolled.clone()]
         )?])?,
@@ -392,7 +392,7 @@ fn iterate_selection_selections() -> Result<(), Error> {
         )?])?
     ])?;
 
-    let events = stream.iter_select_multi(selections, Some(Position::new(2))).0.collect::<Result<Vec<_>, _>>()?;
+    let events = stream.iter_multi_select(selections, Some(Position::new(2))).0.collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 2);
     assert_eq!((events[0].event.position(), &events[0].mask), (&Position::new(2), &Mask::new(vec![true, true].into())));
@@ -401,7 +401,7 @@ fn iterate_selection_selections() -> Result<(), Error> {
     // A selection which is iterated and reversed should return the same events
     // as the selection but in reverse order
 
-    let selections = Selections::new([
+    let selections = MultiSelection::new([
         Selection::new([Selector::specifiers(
             vec![student_enrolled.clone()]
         )?])?,
@@ -411,7 +411,7 @@ fn iterate_selection_selections() -> Result<(), Error> {
         )?])?
     ])?;
 
-    let events = stream.iter_select_multi(selections, Some(Position::new(2))).0.rev().collect::<Result<Vec<_>, _>>()?;
+    let events = stream.iter_multi_select(selections, Some(Position::new(2))).0.rev().collect::<Result<Vec<_>, _>>()?;
 
     assert_eq!(events.len(), 2);
     assert_eq!((events[0].event.position(), &events[0].mask), (&Position::new(4), &Mask::new(vec![true, false].into())));
@@ -420,7 +420,7 @@ fn iterate_selection_selections() -> Result<(), Error> {
     // Iterate over a selection using the prepared selection returns the same events
     // as the original selection
 
-    let selections = Selections::new([
+    let selections = MultiSelection::new([
         Selection::new([Selector::specifiers(
             vec![student_enrolled.clone()]
         )?])?,
@@ -430,8 +430,8 @@ fn iterate_selection_selections() -> Result<(), Error> {
         )?])?
     ])?;
 
-    let (events_a, prepared_a) = stream.iter_select_multi(selections, None);
-    let (events_b, _) = stream.iter_select_multi(prepared_a, None);
+    let (events_a, prepared_a) = stream.iter_multi_select(selections, None);
+    let (events_b, _) = stream.iter_multi_select(prepared_a, None);
 
     let events_a = events_a.collect::<Result<Vec<_>, _>>()?;
     let events_b = events_b.collect::<Result<Vec<_>, _>>()?;

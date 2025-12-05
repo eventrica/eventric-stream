@@ -6,10 +6,10 @@ use smallvec::SmallVec;
 use crate::stream::{
     iterate::cache::Cache,
     select::{
+        MultiSelection,
         Selection,
         SelectionHash,
         SelectionHashAndValue,
-        Selections,
         filter::Filter,
     },
 };
@@ -18,41 +18,17 @@ use crate::stream::{
 // Preparation
 // =================================================================================================
 
-// Data
-
-pub(crate) trait Data {
-    type Data;
-}
-
-impl Data for Selection {
-    type Data = ();
-}
-
-impl Data for Selections {
-    type Data = Arc<SmallVec<[Filter; 8]>>;
-}
-
-// -------------------------------------------------------------------------------------------------
-
 // Prepared
 
 /// .
-#[allow(private_bounds)]
 #[derive(new, Debug)]
 #[new(const_fn, vis(pub(crate)))]
-pub struct Prepared<T>
-where
-    T: Data,
-{
+pub struct Prepared {
     pub(crate) cache: Arc<Cache>,
-    pub(crate) data: T::Data,
     pub(crate) selection: SelectionHash,
 }
 
-impl<T> AsRef<SelectionHash> for Prepared<T>
-where
-    T: Data,
-{
+impl AsRef<SelectionHash> for Prepared {
     fn as_ref(&self) -> &SelectionHash {
         &self.selection
     }
@@ -60,7 +36,7 @@ where
 
 // Selection
 
-impl From<Selection> for Prepared<Selection> {
+impl From<Selection> for Prepared {
     fn from(selection: Selection) -> Self {
         let cache = Arc::new(Cache::default());
         let selection_hash_and_value: SelectionHashAndValue = selection.into();
@@ -69,17 +45,32 @@ impl From<Selection> for Prepared<Selection> {
 
         let selection_hash: SelectionHash = selection_hash_and_value.into();
 
-        Self::new(cache, (), selection_hash)
+        Self::new(cache, selection_hash)
     }
 }
 
-// Selections
+// Multi
 
-impl From<Selections> for Prepared<Selections> {
-    fn from(selections: Selections) -> Self {
+/// .
+#[derive(new, Debug)]
+#[new(const_fn, vis(pub(crate)))]
+pub struct MultiPrepared {
+    pub(crate) cache: Arc<Cache>,
+    pub(crate) filters: Arc<SmallVec<[Filter; 8]>>,
+    pub(crate) selection: SelectionHash,
+}
+
+impl AsRef<SelectionHash> for MultiPrepared {
+    fn as_ref(&self) -> &SelectionHash {
+        &self.selection
+    }
+}
+
+impl From<MultiSelection> for MultiPrepared {
+    fn from(multi_selection: MultiSelection) -> Self {
         let cache = Arc::new(Cache::default());
 
-        let selection_hashes = selections
+        let selection_hashes = multi_selection
             .0
             .into_iter()
             .map(Into::into)

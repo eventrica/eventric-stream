@@ -159,15 +159,15 @@ impl From<Selection> for SelectionHashAndValue {
 
 // -------------------------------------------------------------------------------------------------
 
-// Selections
+// Selection Multi
 
-/// The [`Selections`] type is a validating collection of [`Query`]
+/// The [`SelectionMulti`] type is a validating collection of [`Query`]
 /// instances, used to ensure that invariants are met when constructing queries.
 #[derive(new, Clone, Debug)]
 #[new(const_fn, name(new_inner), vis())]
-pub struct Selections(pub(crate) Vec<Selection>);
+pub struct MultiSelection(pub(crate) Vec<Selection>);
 
-impl Selections {
+impl MultiSelection {
     /// Constructs a new [`Selections`] instance given an array of [`Selection`]
     /// instances.
     ///
@@ -190,7 +190,7 @@ impl Selections {
     }
 }
 
-impl Validate for Selections {
+impl Validate for MultiSelection {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
@@ -207,7 +207,10 @@ impl Validate for Selections {
 pub use self::{
     event::EventAndMask,
     mask::Mask,
-    prepared::Prepared,
+    prepared::{
+        MultiPrepared,
+        Prepared,
+    },
     selector::{
         Selector,
         specifiers::Specifiers,

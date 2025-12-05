@@ -67,6 +67,8 @@ pub mod stream {
 
         pub use eventric_stream_core::stream::iterate::{
             Iter,
+            IterMultiSelect,
+            IterSelect,
             Iterate,
         };
     }
@@ -80,9 +82,10 @@ pub mod stream {
         pub use eventric_stream_core::stream::select::{
             EventAndMask,
             Mask,
+            MultiPrepared,
+            MultiSelection,
             Prepared,
             Selection,
-            Selections,
             Selector,
             Specifiers,
             Tags,

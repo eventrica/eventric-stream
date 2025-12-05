@@ -1,14 +1,10 @@
 //! See the `eventric-stream` crate for full documentation, including
 //! module-level documentation.
 
-pub(crate) mod build;
 pub(crate) mod cache;
 pub(crate) mod iter;
 
-use std::sync::{
-    Arc,
-    Exclusive,
-};
+use std::sync::Arc;
 
 use crate::{
     event::position::Position,
@@ -20,14 +16,10 @@ use crate::{
                 MappedEventHashIter,
             },
         },
-        iterate::{
-            build::Build,
-            cache::Cache,
-        },
+        iterate::cache::Cache,
         select::{
             Prepared,
-            Selection,
-            Selections,
+            prepared::MultiPrepared,
         },
     },
 };
@@ -41,7 +33,7 @@ use crate::{
 /// .
 pub trait Iterate {
     /// .
-    fn iter(&self, from: Option<Position>) -> Iter<()>;
+    fn iter(&self, from: Option<Position>) -> Iter;
 
     /// Iterates over the stream or stream-like instance using the given
     /// [`Query`] to determine which matching events should be returned. Will
@@ -56,44 +48,39 @@ pub trait Iterate {
     /// [identifier]: crate::event::identifier::Identifier
     /// [tag]: crate::event::tag::Tag
     /// [issue]: https://github.com/eventrica/eventric-stream/issues/21
-    fn iter_select<S>(
-        &self,
-        selection: S,
-        from: Option<Position>,
-    ) -> (Iter<Selection>, Prepared<Selection>)
+    fn iter_select<S>(&self, selection: S, from: Option<Position>) -> (IterSelect, Prepared)
     where
-        S: Into<Prepared<Selection>>;
+        S: Into<Prepared>;
 
     /// .
-    fn iter_select_multi<S>(
+    fn iter_multi_select<S>(
         &self,
         selections: S,
         from: Option<Position>,
-    ) -> (Iter<Selections>, Prepared<Selections>)
+    ) -> (IterMultiSelect, MultiPrepared)
     where
-        S: Into<Prepared<Selections>>;
+        S: Into<MultiPrepared>;
 }
 
 // Implementations
 
-pub(crate) fn iter(data: &Data, from: Option<Position>) -> Iter<()> {
+pub(crate) fn iter(data: &Data, from: Option<Position>) -> Iter {
     let cache = Arc::new(Cache::default());
     let references = data.references.clone();
 
     let iter = data.events.iterate(from);
     let iter = EventHashIter::Direct(iter);
-    let iter = Exclusive::new(iter);
 
-    Iter::<()>::new(cache, true, references, (), iter)
+    Iter::new(cache, iter, references)
 }
 
 pub(crate) fn iter_select<S>(
     data: &Data,
     selection: S,
     from: Option<Position>,
-) -> (Iter<Selection>, Prepared<Selection>)
+) -> (IterSelect, Prepared)
 where
-    S: Into<Prepared<Selection>>,
+    S: Into<Prepared>,
 {
     let events = data.events.clone();
     let references = data.references.clone();
@@ -103,18 +90,18 @@ where
     let iter = data.indices.iterate(prepared.as_ref(), from);
     let iter = MappedEventHashIter::new(events, iter);
     let iter = EventHashIter::Mapped(iter);
-    let iter = Iter::<Selection>::build(iter, &prepared, references);
+    let iter = IterSelect::new(iter, &prepared, references);
 
     (iter, prepared)
 }
 
-pub(crate) fn iter_select_multi<S>(
+pub(crate) fn iter_multi_select<S>(
     data: &Data,
     selection: S,
     from: Option<Position>,
-) -> (Iter<Selections>, Prepared<Selections>)
+) -> (IterMultiSelect, MultiPrepared)
 where
-    S: Into<Prepared<Selections>>,
+    S: Into<MultiPrepared>,
 {
     let events = data.events.clone();
     let references = data.references.clone();
@@ -124,7 +111,7 @@ where
     let iter = data.indices.iterate(prepared.as_ref(), from);
     let iter = MappedEventHashIter::new(events, iter);
     let iter = EventHashIter::Mapped(iter);
-    let iter = Iter::<Selections>::build(iter, &prepared, references);
+    let iter = IterMultiSelect::new(iter, &prepared, references);
 
     (iter, prepared)
 }
@@ -133,4 +120,8 @@ where
 
 // Re-Export
 
-pub use self::iter::Iter;
+pub use self::iter::{
+    Iter,
+    IterMultiSelect,
+    IterSelect,
+};
