@@ -22,8 +22,6 @@ use crate::{
     stream::{
         data::events::EventHashIter,
         select::{
-            Selection,
-            Selections,
             event::EventAndMask,
             filter::{
                 Filter,
@@ -32,9 +30,8 @@ use crate::{
             lookup::Lookup,
             mask::Mask,
             prepared::{
-                PreparedGen,
-                PreparedSelection,
-                PreparedSelections,
+                Prepared,
+                PreparedMultiple,
             },
         },
     },
@@ -44,92 +41,16 @@ use crate::{
 // Iterator
 // =================================================================================================
 
-pub(crate) trait IterDefinition
-where
-    Self: Into<Self::Prepared>,
-    Self::Data: Clone,
-    Self::Iter: for<'a> From<(EventHashIter, &'a Self::Prepared)>,
-{
-    type Data;
-    type Iter;
-    type Prepared;
-}
-
-impl IterDefinition for PreparedGen<Selection> {
-    type Data = ();
-    type Iter = IterGen<Selection>;
-    type Prepared = Self;
-}
-
-impl IterDefinition for PreparedGen<Selections> {
-    type Data = Arc<SmallVec<[Filter; 8]>>;
-    type Iter = IterGen<Selections>;
-    type Prepared = Self;
-}
-
-impl IterDefinition for Selection {
-    type Data = ();
-    type Iter = IterGen<Selection>;
-    type Prepared = PreparedGen<Self>;
-}
-
-impl IterDefinition for Selections {
-    type Data = Arc<SmallVec<[Filter; 8]>>;
-    type Iter = IterGen<Selections>;
-    type Prepared = PreparedGen<Self>;
-}
-
-#[derive(new, Debug)]
-#[new(const_fn, name(new_inner), vis(pub(crate)))]
-pub struct IterGen<T>
-where
-    T: IterDefinition,
-{
-    data: T::Data,
-    iter: Exclusive<EventHashIter>,
-    retrieve: Retrieve,
-}
-
-impl<T> From<(EventHashIter, &PreparedGen<T>)> for IterGen<T>
-where
-    T: IterDefinition,
-{
-    fn from((iter, prepared): (EventHashIter, &PreparedGen<T>)) -> Self {
-        Self::new(iter, prepared)
-    }
-}
-
-impl<T> IterGen<T>
-where
-    T: IterDefinition,
-{
-    pub(crate) fn new(iter: EventHashIter, prepared: &PreparedGen<T>) -> Self {
-        let data = prepared.data.clone();
-        let iter = Exclusive::new(iter);
-        let lookup = prepared.lookup.clone();
-        let retrieve = Retrieve::new(lookup);
-
-        Self::new_inner(data, iter, retrieve)
-    }
-}
-
 /// .
 #[derive(new, Debug)]
-#[new(const_fn, name(new_inner), vis(pub(crate)))]
+#[new(args(prepared: &Prepared), vis(pub(crate)))]
 pub struct Iter {
     iter: Exclusive<EventHashIter>,
+    #[new(val(Retrieve::new(prepared.lookup.clone())))]
     retrieve: Retrieve,
 }
 
 impl Iter {
-    pub(crate) fn new(iter: EventHashIter, prepared: &PreparedSelection) -> Self {
-        let iter = Exclusive::new(iter);
-        let lookup = prepared.lookup.clone();
-        let retrieve = Retrieve::new(lookup);
-
-        Self::new_inner(iter, retrieve)
-    }
-
     fn map(&mut self, event: Result<EventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| self.retrieve.get(event))
     }
@@ -151,23 +72,16 @@ impl Iterator for Iter {
 
 /// .
 #[derive(new, Debug)]
-#[new(const_fn, name(new_inner), vis(pub(crate)))]
+#[new(args(prepared: &PreparedMultiple),  vis(pub(crate)))]
 pub struct IterMultiple {
     iter: Exclusive<EventHashIter>,
+    #[new(val(prepared.filters.clone()))]
     filters: Arc<SmallVec<[Filter; 8]>>,
+    #[new(val(Retrieve::new(prepared.lookup.clone())))]
     retrieve: Retrieve,
 }
 
 impl IterMultiple {
-    pub(crate) fn new(iter: EventHashIter, prepared: &PreparedSelections) -> Self {
-        let filters = prepared.filters.clone();
-        let iter = Exclusive::new(iter);
-        let lookup = prepared.lookup.clone();
-        let retrieve = Retrieve::new(lookup);
-
-        Self::new_inner(iter, filters, retrieve)
-    }
-
     fn map(&mut self, event: Result<EventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| {
             let mask = Mask::new(

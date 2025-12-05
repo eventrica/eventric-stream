@@ -4,7 +4,10 @@
 pub(crate) mod cache;
 pub(crate) mod iter;
 
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    Exclusive,
+};
 
 use crate::{
     event::position::Position,
@@ -37,8 +40,9 @@ pub(crate) fn iter(data: &Data, from: Option<Position>) -> Iter {
 
     let iter = data.events.iterate(from);
     let iter = EventHashIter::Direct(iter);
+    let iter = Exclusive::new(iter);
 
-    Iter::new(cache, iter, references)
+    Iter::new(cache, references, iter)
 }
 
 // -------------------------------------------------------------------------------------------------

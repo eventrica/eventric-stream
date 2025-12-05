@@ -11,6 +11,8 @@ pub(crate) mod selector;
 
 // use std::borrow::Cow;
 
+use std::sync::Exclusive;
+
 use derive_more::{
     AsRef,
     Debug,
@@ -61,36 +63,28 @@ pub trait Select {
     /// [identifier]: crate::event::identifier::Identifier
     /// [tag]: crate::event::tag::Tag
     /// [issue]: https://github.com/eventrica/eventric-stream/issues/21
-    fn select<S>(&self, selection: S, from: Option<Position>) -> (Iter, PreparedSelection)
+    fn select<S>(&self, selection: S, from: Option<Position>) -> (Iter, Prepared)
     where
-        S: Into<PreparedSelection>;
+        S: Into<Prepared>;
 
     /// .
     fn select_multiple<S>(
         &self,
         multi_selection: S,
         from: Option<Position>,
-    ) -> (IterMultiple, PreparedSelections)
+    ) -> (IterMultiple, PreparedMultiple)
     where
-        S: Into<PreparedSelections>;
+        S: Into<PreparedMultiple>;
 }
 
-pub(crate) fn select<S>(
-    data: &Data,
-    selection: S,
-    from: Option<Position>,
-) -> (Iter, PreparedSelection)
+pub(crate) fn select<S>(data: &Data, selection: S, from: Option<Position>) -> (Iter, Prepared)
 where
-    S: Into<PreparedSelection>,
+    S: Into<Prepared>,
 {
-    let events = data.events.clone();
-
     let prepared = selection.into();
 
-    let iter = data.indices.iterate(prepared.as_ref(), from);
-    let iter = MappedEventHashIter::new(events, iter);
-    let iter = EventHashIter::Mapped(iter);
-    let iter = Iter::new(iter, &prepared);
+    let iter = select_iter(data, prepared.as_ref(), from);
+    let iter = Iter::new(&prepared, iter);
 
     (iter, prepared)
 }
@@ -99,20 +93,30 @@ pub(crate) fn select_multiple<S>(
     data: &Data,
     selections: S,
     from: Option<Position>,
-) -> (IterMultiple, PreparedSelections)
+) -> (IterMultiple, PreparedMultiple)
 where
-    S: Into<PreparedSelections>,
+    S: Into<PreparedMultiple>,
 {
+    let prepared_multiple = selections.into();
+
+    let iter = select_iter(data, prepared_multiple.as_ref(), from);
+    let iter = IterMultiple::new(&prepared_multiple, iter);
+
+    (iter, prepared_multiple)
+}
+
+fn select_iter(
+    data: &Data,
+    selection: &SelectionHash,
+    from: Option<Position>,
+) -> Exclusive<EventHashIter> {
     let events = data.events.clone();
 
-    let multi_prepared = selections.into();
-
-    let iter = data.indices.iterate(multi_prepared.as_ref(), from);
+    let iter = data.indices.iterate(selection, from);
     let iter = MappedEventHashIter::new(events, iter);
     let iter = EventHashIter::Mapped(iter);
-    let iter = IterMultiple::new(iter, &multi_prepared);
 
-    (iter, multi_prepared)
+    Exclusive::new(iter)
 }
 
 /// The [`Selection`] type a key type when interacting with a [`Stream`],
@@ -295,8 +299,8 @@ pub use self::{
     },
     mask::Mask,
     prepared::{
-        PreparedSelection,
-        PreparedSelections,
+        Prepared,
+        PreparedMultiple,
     },
     selector::{
         Selector,

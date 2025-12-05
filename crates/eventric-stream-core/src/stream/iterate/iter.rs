@@ -40,20 +40,12 @@ use crate::{
 
 /// .
 #[derive(new, Debug)]
-#[new(const_fn, name(new_inner), vis())]
+#[new(args(cache: Arc<Cache>, references: References), vis(pub(crate)))]
 pub struct Iter {
     #[allow(clippy::struct_field_names)]
     iter: Exclusive<EventHashIter>,
+    #[new(val(Retrieve::new(cache, references)))]
     retrieve: Retrieve,
-}
-
-impl Iter {
-    pub(crate) fn new(cache: Arc<Cache>, iter: EventHashIter, references: References) -> Self {
-        let iter = Exclusive::new(iter);
-        let retrieve = Retrieve::new(cache, true, references);
-
-        Self::new_inner(iter, retrieve)
-    }
 }
 
 impl Iter {
@@ -84,7 +76,6 @@ impl Iterator for Iter {
 #[new(const_fn)]
 struct Retrieve {
     cache: Arc<Cache>,
-    fetch_tags: bool,
     references: References,
 }
 
@@ -101,15 +92,13 @@ impl Retrieve {
 
 impl Retrieve {
     fn get_identifier(&self, identifier: IdentifierHash) -> Result<Identifier, Error> {
-        let identifiers = &self.cache.identifiers;
-
-        identifiers
+        self.cache
+            .identifiers
             .entry(identifier)
             .or_try_insert_with(|| self.fetch_identifier(identifier))
             .map(|entry| entry.value().clone())
     }
 
-    #[rustfmt::skip]
     fn fetch_identifier(&self, identifier: IdentifierHash) -> Result<Identifier, Error> {
         self.references
             .get_identifier(identifier)
@@ -119,22 +108,15 @@ impl Retrieve {
 
 impl Retrieve {
     fn get_tags(&self, tags: &BTreeSet<TagHash>) -> Result<BTreeSet<Tag>, Error> {
-        tags.iter().filter_map(|tag| self.get_tag(*tag)).collect()
+        tags.iter().map(|tag| self.get_tag(*tag)).collect()
     }
 
-    #[rustfmt::skip]
-    fn get_tag(&self, tag: TagHash) -> Option<Result<Tag, Error>> {
-        let fetch_tags = &self.fetch_tags;
-        let tags = &self.cache.tags;
-
-        fetch_tags
-            .then(|| Some(
-                tags.entry(tag)
-                    .or_try_insert_with(|| self.fetch_tag(tag))
-                    .map(|entry| entry.value().clone())))
-            .unwrap_or_else(||
-                tags.get(&tag)
-                    .map(|entry| Ok(entry.value().clone())))
+    fn get_tag(&self, tag: TagHash) -> Result<Tag, Error> {
+        self.cache
+            .tags
+            .entry(tag)
+            .or_try_insert_with(|| self.fetch_tag(tag))
+            .map(|entry| entry.value().clone())
     }
 
     fn fetch_tag(&self, tag: TagHash) -> Result<Tag, Error> {

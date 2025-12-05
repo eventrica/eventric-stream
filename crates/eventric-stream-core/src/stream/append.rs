@@ -15,8 +15,8 @@ use crate::{
         select::{
             SelectionHash,
             prepared::{
-                PreparedSelection,
-                PreparedSelections,
+                Prepared,
+                PreparedMultiple,
             },
         },
     },
@@ -85,10 +85,10 @@ pub trait AppendSelect {
         events: E,
         selection: S,
         after: Option<Position>,
-    ) -> Result<(Position, PreparedSelection), Error>
+    ) -> Result<(Position, Prepared), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
-        S: Into<PreparedSelection>;
+        S: Into<Prepared>;
 
     /// .
     ///
@@ -100,10 +100,10 @@ pub trait AppendSelect {
         events: E,
         selections: S,
         after: Option<Position>,
-    ) -> Result<(Position, PreparedSelections), Error>
+    ) -> Result<(Position, PreparedMultiple), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
-        S: Into<PreparedSelections>;
+        S: Into<PreparedMultiple>;
 }
 
 pub(crate) fn append_select<E, S>(
@@ -113,10 +113,10 @@ pub(crate) fn append_select<E, S>(
     events: E,
     selection: S,
     after: Option<Position>,
-) -> Result<(Position, PreparedSelection), Error>
+) -> Result<(Position, Prepared), Error>
 where
     E: IntoIterator<Item = CandidateEvent>,
-    S: Into<PreparedSelection>,
+    S: Into<Prepared>,
 {
     let prepared = selection.into();
 
@@ -132,16 +132,16 @@ pub(crate) fn append_select_multiple<E, S>(
     events: E,
     selection: S,
     after: Option<Position>,
-) -> Result<(Position, PreparedSelections), Error>
+) -> Result<(Position, PreparedMultiple), Error>
 where
     E: IntoIterator<Item = CandidateEvent>,
-    S: Into<PreparedSelections>,
+    S: Into<PreparedMultiple>,
 {
-    let prepared = selection.into();
+    let prepared_multiple = selection.into();
 
-    check(data, *next, Some(prepared.as_ref()), after)
+    check(data, *next, Some(prepared_multiple.as_ref()), after)
         .and_then(|()| put(database, data, next, events))
-        .map(|position| (position, prepared))
+        .map(|position| (position, prepared_multiple))
 }
 
 // -------------------------------------------------------------------------------------------------
