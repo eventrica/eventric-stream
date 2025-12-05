@@ -19,6 +19,7 @@ double-ended-peekable  = { version = "0.1.0" }
 eventric-stream        = { path = "crates/eventric-stream" }
 eventric-stream-core   = { path = "crates/eventric-stream-core" }
 eventric-stream-macros = { path = "crates/eventric-stream-macros" }
+eventric-stream-server = { path = "crates/eventric-stream-server" }
 eventric-utils         = { git = "https://github.com/eventrica/eventric-utils.git" }
 fancy_constructor      = { version = "2" }
 fjall                  = { version = "=3.0.0-rc.5" }

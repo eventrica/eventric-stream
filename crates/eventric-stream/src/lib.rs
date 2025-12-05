@@ -57,10 +57,7 @@ pub mod stream {
         //! to the [`Stream::append`] operation, such as the
         //! append-specific [`Condition`] type.
 
-        pub use eventric_stream_core::stream::append::{
-            Append,
-            AppendSelect,
-        };
+        pub use eventric_stream_core::stream::append::Append;
     }
 
     pub mod iterate {

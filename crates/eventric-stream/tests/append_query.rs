@@ -9,7 +9,7 @@ use eventric_stream::{
         Tag,
     },
     stream::{
-        append::AppendSelect,
+        append::Append,
         iterate::Iterate,
         select::{
             Selection,
@@ -601,7 +601,7 @@ fn append_query_with_vec_query_basic_usage() -> Result<(), Error> {
         )])?])?,
     ])?;
 
-    let (position, _query_multi_opt) = stream.append_select(
+    let (position, _query_multi_opt) = stream.append_select_multi(
         [fixtures::event("event1", "EventC", &[], 0)?],
         queries,
         None,
@@ -624,7 +624,7 @@ fn append_query_with_vec_query_returns_multi_optimized() -> Result<(), Error> {
         )])?])?,
     ])?;
 
-    let (_position, query_multi_opt) = stream.append_select(
+    let (_position, query_multi_opt) = stream.append_select_multi(
         [fixtures::event("event1", "EventC", &[], 0)?],
         queries,
         None,
@@ -650,7 +650,7 @@ fn append_query_reuses_multi_optimized_query() -> Result<(), Error> {
         )])?])?,
     ])?;
 
-    let (position1, query_multi_opt) = stream.append_select(
+    let (position1, query_multi_opt) = stream.append_select_multi(
         [fixtures::event("event1", "EventC", &[], 0)?],
         queries,
         None,
@@ -658,7 +658,7 @@ fn append_query_reuses_multi_optimized_query() -> Result<(), Error> {
 
     assert_eq!(position1, Position::new(0));
 
-    let (position2, _) = stream.append_select(
+    let (position2, _) = stream.append_select_multi(
         [fixtures::event("event2", "EventD", &[], 0)?],
         query_multi_opt,
         None,
@@ -681,7 +681,7 @@ fn append_query_with_vec_query_appends_events() -> Result<(), Error> {
         )])?])?,
     ])?;
 
-    stream.append_select(
+    stream.append_select_multi(
         [
             fixtures::event("event1", "EventA", &[], 0)?,
             fixtures::event("event2", "EventB", &[], 0)?,
@@ -704,7 +704,7 @@ fn append_query_vec_query_with_single_query() -> Result<(), Error> {
         Specifier::new(Identifier::new("EventA")?),
     ])?])?])?;
 
-    let (position, _) = stream.append_select(
+    let (position, _) = stream.append_select_multi(
         [fixtures::event("event1", "EventB", &[], 0)?],
         queries,
         None,
@@ -727,7 +727,7 @@ fn append_query_vec_query_sequential_operations() -> Result<(), Error> {
         )])?])?,
     ])?;
 
-    let (pos1, _) = stream.append_select(
+    let (pos1, _) = stream.append_select_multi(
         [fixtures::event("event1", "EventA", &[], 0)?],
         queries.clone(),
         None,
@@ -735,7 +735,7 @@ fn append_query_vec_query_sequential_operations() -> Result<(), Error> {
 
     assert_eq!(pos1, Position::new(0));
 
-    let (pos2, _) = stream.append_select(
+    let (pos2, _) = stream.append_select_multi(
         [fixtures::event("event2", "EventB", &[], 0)?],
         queries.clone(),
         None,
@@ -743,7 +743,7 @@ fn append_query_vec_query_sequential_operations() -> Result<(), Error> {
 
     assert_eq!(pos2, Position::new(1));
 
-    let (pos3, _) = stream.append_select(
+    let (pos3, _) = stream.append_select_multi(
         [fixtures::event("event3", "EventC", &[], 0)?],
         queries,
         Some(pos2),
@@ -757,7 +757,7 @@ fn append_query_vec_query_sequential_operations() -> Result<(), Error> {
 #[test]
 fn append_query_vec_query_fails_if_first_query_matches() -> Result<(), Error> {
     let mut stream = fixtures::stream()?;
-    stream.append_select(
+    stream.append_select_multi(
         [fixtures::event("event1", "EventA", &[], 0)?],
         Selections::new([Selection::new([Selector::specifiers(vec![
             Specifier::new(Identifier::new("ConflictEvent")?),
@@ -774,7 +774,7 @@ fn append_query_vec_query_fails_if_first_query_matches() -> Result<(), Error> {
         )])?])?,
     ])?;
 
-    let result = stream.append_select(
+    let result = stream.append_select_multi(
         [fixtures::event("event2", "EventC", &[], 0)?],
         queries,
         None,
@@ -791,7 +791,7 @@ fn append_query_vec_query_fails_if_first_query_matches() -> Result<(), Error> {
 #[test]
 fn append_query_vec_query_fails_if_second_query_matches() -> Result<(), Error> {
     let mut stream = fixtures::stream()?;
-    stream.append_select(
+    stream.append_select_multi(
         [fixtures::event("event1", "EventB", &[], 0)?],
         Selections::new([Selection::new([Selector::specifiers(vec![
             Specifier::new(Identifier::new("ConflictEvent")?),
@@ -808,7 +808,7 @@ fn append_query_vec_query_fails_if_second_query_matches() -> Result<(), Error> {
         )])?])?,
     ])?;
 
-    let result = stream.append_select(
+    let result = stream.append_select_multi(
         [fixtures::event("event2", "EventC", &[], 0)?],
         queries,
         None,
@@ -825,7 +825,7 @@ fn append_query_vec_query_fails_if_second_query_matches() -> Result<(), Error> {
 #[test]
 fn append_query_vec_query_fails_if_any_query_matches() -> Result<(), Error> {
     let mut stream = fixtures::stream()?;
-    stream.append_select(
+    stream.append_select_multi(
         [fixtures::event("event1", "EventA", &[], 0)?],
         Selections::new([Selection::new([Selector::specifiers(vec![
             Specifier::new(Identifier::new("ConflictEvent")?),
@@ -833,7 +833,7 @@ fn append_query_vec_query_fails_if_any_query_matches() -> Result<(), Error> {
         None,
     )?;
 
-    stream.append_select(
+    stream.append_select_multi(
         [fixtures::event("event2", "EventB", &[], 0)?],
         Selections::new([Selection::new([Selector::specifiers(vec![
             Specifier::new(Identifier::new("ConflictEvent")?),
@@ -841,7 +841,7 @@ fn append_query_vec_query_fails_if_any_query_matches() -> Result<(), Error> {
         None,
     )?;
 
-    stream.append_select(
+    stream.append_select_multi(
         [fixtures::event("event3", "EventC", &[], 0)?],
         Selections::new([Selection::new([Selector::specifiers(vec![
             Specifier::new(Identifier::new("ConflictEvent")?),
@@ -861,7 +861,7 @@ fn append_query_vec_query_fails_if_any_query_matches() -> Result<(), Error> {
         )])?])?,
     ])?;
 
-    let result = stream.append_select(
+    let result = stream.append_select_multi(
         [fixtures::event("event4", "EventD", &[], 0)?],
         queries,
         None,
@@ -878,7 +878,7 @@ fn append_query_vec_query_fails_if_any_query_matches() -> Result<(), Error> {
 #[test]
 fn append_query_vec_query_succeeds_if_no_queries_match() -> Result<(), Error> {
     let mut stream = fixtures::stream()?;
-    stream.append_select(
+    stream.append_select_multi(
         [fixtures::event("event1", "EventA", &[], 0)?],
         Selections::new([Selection::new([Selector::specifiers(vec![
             Specifier::new(Identifier::new("ConflictEvent")?),
@@ -886,7 +886,7 @@ fn append_query_vec_query_succeeds_if_no_queries_match() -> Result<(), Error> {
         None,
     )?;
 
-    stream.append_select(
+    stream.append_select_multi(
         [fixtures::event("event2", "EventB", &[], 0)?],
         Selections::new([Selection::new([Selector::specifiers(vec![
             Specifier::new(Identifier::new("ConflictEvent")?),
@@ -906,7 +906,7 @@ fn append_query_vec_query_succeeds_if_no_queries_match() -> Result<(), Error> {
         )])?])?,
     ])?;
 
-    let (position, _) = stream.append_select(
+    let (position, _) = stream.append_select_multi(
         [fixtures::event("event3", "EventF", &[], 0)?],
         queries,
         None,
@@ -920,7 +920,7 @@ fn append_query_vec_query_succeeds_if_no_queries_match() -> Result<(), Error> {
 #[test]
 fn append_query_vec_query_with_tags_any_match() -> Result<(), Error> {
     let mut stream = fixtures::stream()?;
-    stream.append_select(
+    stream.append_select_multi(
         [fixtures::event("event1", "EventA", &["tag:1"], 0)?],
         Selections::new([Selection::new([Selector::specifiers(vec![
             Specifier::new(Identifier::new("ConflictEvent")?),
@@ -938,7 +938,7 @@ fn append_query_vec_query_with_tags_any_match() -> Result<(), Error> {
         )])?])?,
     ])?;
 
-    let result = stream.append_select(
+    let result = stream.append_select_multi(
         [fixtures::event("event2", "EventC", &[], 0)?],
         queries,
         None,
@@ -955,7 +955,7 @@ fn append_query_vec_query_with_tags_any_match() -> Result<(), Error> {
 #[test]
 fn append_query_vec_query_position_check_any_match() -> Result<(), Error> {
     let mut stream = fixtures::stream()?;
-    stream.append_select(
+    stream.append_select_multi(
         [fixtures::event("event1", "EventA", &[], 0)?],
         Selections::new([Selection::new([Selector::specifiers(vec![
             Specifier::new(Identifier::new("ConflictEvent")?),
@@ -963,7 +963,7 @@ fn append_query_vec_query_position_check_any_match() -> Result<(), Error> {
         None,
     )?;
 
-    stream.append_select(
+    stream.append_select_multi(
         [fixtures::event("event2", "EventB", &[], 0)?],
         Selections::new([Selection::new([Selector::specifiers(vec![
             Specifier::new(Identifier::new("ConflictEvent")?),
@@ -980,7 +980,7 @@ fn append_query_vec_query_position_check_any_match() -> Result<(), Error> {
         )])?])?,
     ])?;
 
-    let result = stream.append_select(
+    let result = stream.append_select_multi(
         [fixtures::event("event3", "EventD", &[], 0)?],
         queries,
         Some(Position::new(0)),
@@ -997,7 +997,7 @@ fn append_query_vec_query_position_check_any_match() -> Result<(), Error> {
 #[test]
 fn append_query_vec_query_or_semantics_demonstration() -> Result<(), Error> {
     let mut stream = fixtures::stream()?;
-    stream.append_select(
+    stream.append_select_multi(
         [fixtures::event("only_a", "EventA", &[], 0)?],
         Selections::new([Selection::new([Selector::specifiers(vec![
             Specifier::new(Identifier::new("ConflictEvent")?),
@@ -1014,7 +1014,7 @@ fn append_query_vec_query_or_semantics_demonstration() -> Result<(), Error> {
         )])?])?,
     ])?;
 
-    let result = stream.append_select(
+    let result = stream.append_select_multi(
         [fixtures::event("new_event", "EventC", &[], 0)?],
         queries,
         None,
