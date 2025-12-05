@@ -15,8 +15,8 @@ use crate::{
         select::{
             SelectionHash,
             prepared::{
-                MultiPrepared,
-                Prepared,
+                PreparedSelection,
+                PreparedSelections,
             },
         },
     },
@@ -52,36 +52,6 @@ pub trait Append {
     fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
     where
         E: IntoIterator<Item = CandidateEvent>;
-
-    /// .
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if .
-    fn append_select<E, S>(
-        &mut self,
-        events: E,
-        selection: S,
-        after: Option<Position>,
-    ) -> Result<(Position, Prepared), Error>
-    where
-        E: IntoIterator<Item = CandidateEvent>,
-        S: Into<Prepared>;
-
-    /// .
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if .
-    fn append_multi_select<E, S>(
-        &mut self,
-        events: E,
-        multi_selection: S,
-        after: Option<Position>,
-    ) -> Result<(Position, MultiPrepared), Error>
-    where
-        E: IntoIterator<Item = CandidateEvent>,
-        S: Into<MultiPrepared>;
 }
 
 // Implementations
@@ -99,6 +69,43 @@ where
     check(data, *next, None, after).and_then(|()| put(database, data, next, events))
 }
 
+// -------------------------------------------------------------------------------------------------
+
+// Append Select
+
+/// .
+pub trait AppendSelect {
+    /// .
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if .
+    fn append_select<E, S>(
+        &mut self,
+        events: E,
+        selection: S,
+        after: Option<Position>,
+    ) -> Result<(Position, PreparedSelection), Error>
+    where
+        E: IntoIterator<Item = CandidateEvent>,
+        S: Into<PreparedSelection>;
+
+    /// .
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if .
+    fn append_select_multiple<E, S>(
+        &mut self,
+        events: E,
+        selections: S,
+        after: Option<Position>,
+    ) -> Result<(Position, PreparedSelections), Error>
+    where
+        E: IntoIterator<Item = CandidateEvent>,
+        S: Into<PreparedSelections>;
+}
+
 pub(crate) fn append_select<E, S>(
     database: &Database,
     data: &Data,
@@ -106,10 +113,10 @@ pub(crate) fn append_select<E, S>(
     events: E,
     selection: S,
     after: Option<Position>,
-) -> Result<(Position, Prepared), Error>
+) -> Result<(Position, PreparedSelection), Error>
 where
     E: IntoIterator<Item = CandidateEvent>,
-    S: Into<Prepared>,
+    S: Into<PreparedSelection>,
 {
     let prepared = selection.into();
 
@@ -118,17 +125,17 @@ where
         .map(|position| (position, prepared))
 }
 
-pub(crate) fn append_multi_select<E, S>(
+pub(crate) fn append_select_multiple<E, S>(
     database: &Database,
     data: &Data,
     next: &mut Position,
     events: E,
     selection: S,
     after: Option<Position>,
-) -> Result<(Position, MultiPrepared), Error>
+) -> Result<(Position, PreparedSelections), Error>
 where
     E: IntoIterator<Item = CandidateEvent>,
-    S: Into<MultiPrepared>,
+    S: Into<PreparedSelections>,
 {
     let prepared = selection.into();
 
@@ -136,6 +143,10 @@ where
         .and_then(|()| put(database, data, next, events))
         .map(|position| (position, prepared))
 }
+
+// -------------------------------------------------------------------------------------------------
+
+// Common
 
 fn check(
     data: &Data,

@@ -57,7 +57,10 @@ pub mod stream {
         //! to the [`Stream::append`] operation, such as the
         //! append-specific [`Condition`] type.
 
-        pub use eventric_stream_core::stream::append::Append;
+        pub use eventric_stream_core::stream::append::{
+            Append,
+            AppendSelect,
+        };
     }
 
     pub mod iterate {
@@ -67,8 +70,6 @@ pub mod stream {
 
         pub use eventric_stream_core::stream::iterate::{
             Iter,
-            IterMultiSelect,
-            IterSelect,
             Iterate,
         };
     }
@@ -81,11 +82,14 @@ pub mod stream {
 
         pub use eventric_stream_core::stream::select::{
             EventAndMask,
+            Iter,
+            IterMultiple,
             Mask,
-            MultiPrepared,
-            MultiSelection,
-            Prepared,
+            PreparedSelection,
+            PreparedSelections,
+            Select,
             Selection,
+            Selections,
             Selector,
             Specifiers,
             Tags,

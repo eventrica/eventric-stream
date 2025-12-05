@@ -8,7 +8,6 @@ use std::{
 
 use derive_more::Debug;
 use fancy_constructor::new;
-use smallvec::SmallVec;
 
 use crate::{
     error::Error,
@@ -30,18 +29,6 @@ use crate::{
             references::References,
         },
         iterate::cache::Cache,
-        select::{
-            event::EventAndMask,
-            filter::{
-                Filter,
-                Matches as _,
-            },
-            mask::Mask,
-            prepared::{
-                MultiPrepared,
-                Prepared,
-            },
-        },
     },
 };
 
@@ -60,8 +47,6 @@ pub struct Iter {
     retrieve: Retrieve,
 }
 
-// ()
-
 impl Iter {
     pub(crate) fn new(cache: Arc<Cache>, iter: EventHashIter, references: References) -> Self {
         let iter = Exclusive::new(iter);
@@ -69,7 +54,9 @@ impl Iter {
 
         Self::new_inner(iter, retrieve)
     }
+}
 
+impl Iter {
     fn map(&mut self, event: Result<EventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| self.retrieve.get(event))
     }
@@ -83,95 +70,6 @@ impl DoubleEndedIterator for Iter {
 
 impl Iterator for Iter {
     type Item = Result<Event, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next().map(|event| self.map(event))
-    }
-}
-
-/// .
-#[derive(new, Debug)]
-#[new(const_fn, name(new_inner), vis(pub(crate)))]
-pub struct IterSelect {
-    iter: Exclusive<EventHashIter>,
-    retrieve: Retrieve,
-}
-
-impl IterSelect {
-    pub(crate) fn new(iter: EventHashIter, prepared: &Prepared, references: References) -> Self {
-        let cache = prepared.cache.clone();
-        let iter = Exclusive::new(iter);
-        let retrieve = Retrieve::new(cache, false, references);
-
-        Self::new_inner(iter, retrieve)
-    }
-
-    fn map(&mut self, event: Result<EventHash, Error>) -> <Self as Iterator>::Item {
-        event.and_then(|event| self.retrieve.get(event))
-    }
-}
-
-impl DoubleEndedIterator for IterSelect {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next_back().map(|event| self.map(event))
-    }
-}
-
-impl Iterator for IterSelect {
-    type Item = Result<Event, Error>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next().map(|event| self.map(event))
-    }
-}
-
-/// .
-#[derive(new, Debug)]
-#[new(const_fn, name(new_inner), vis(pub(crate)))]
-pub struct IterMultiSelect {
-    iter: Exclusive<EventHashIter>,
-    filters: Arc<SmallVec<[Filter; 8]>>,
-    retrieve: Retrieve,
-}
-
-impl IterMultiSelect {
-    pub(crate) fn new(
-        iter: EventHashIter,
-        prepared: &MultiPrepared,
-        references: References,
-    ) -> Self {
-        let cache = prepared.cache.clone();
-        let filters = prepared.filters.clone();
-        let iter = Exclusive::new(iter);
-        let retrieve = Retrieve::new(cache, false, references);
-
-        Self::new_inner(iter, filters, retrieve)
-    }
-
-    fn map(&mut self, event: Result<EventHash, Error>) -> <Self as Iterator>::Item {
-        event.and_then(|event| {
-            let mask = Mask::new(
-                self.filters
-                    .iter()
-                    .map(|filter| filter.matches(&event))
-                    .collect(),
-            );
-
-            self.retrieve
-                .get(event)
-                .map(|event| EventAndMask::new(event, mask))
-        })
-    }
-}
-
-impl DoubleEndedIterator for IterMultiSelect {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next_back().map(|event| self.map(event))
-    }
-}
-
-impl Iterator for IterMultiSelect {
-    type Item = Result<EventAndMask, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next().map(|event| self.map(event))

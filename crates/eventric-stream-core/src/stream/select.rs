@@ -3,6 +3,8 @@
 
 pub(crate) mod event;
 pub(crate) mod filter;
+pub(crate) mod iter;
+pub(crate) mod lookup;
 pub(crate) mod mask;
 pub(crate) mod prepared;
 pub(crate) mod selector;
@@ -22,15 +24,96 @@ use fancy_constructor::new;
 
 use crate::{
     error::Error,
-    stream::select::selector::{
-        SelectorHash,
-        SelectorHashAndValue,
+    event::Position,
+    stream::{
+        data::{
+            Data,
+            events::{
+                EventHashIter,
+                MappedEventHashIter,
+            },
+        },
+        select::selector::{
+            SelectorHash,
+            SelectorHashAndValue,
+        },
     },
 };
 
 // =================================================================================================
 // Select
 // =================================================================================================
+
+// Select
+
+/// .
+pub trait Select {
+    /// Iterates over the stream or stream-like instance using the given
+    /// [`Query`] to determine which matching events should be returned. Will
+    /// begin iteration at given `from` [`Position`] if one is supplied.
+    ///
+    /// TODO: [Full query documentation + examples][issue]
+    ///
+    /// # Errors
+    ///
+    /// Returns an error in the case of an underlying IO/database error.
+    ///
+    /// [identifier]: crate::event::identifier::Identifier
+    /// [tag]: crate::event::tag::Tag
+    /// [issue]: https://github.com/eventrica/eventric-stream/issues/21
+    fn select<S>(&self, selection: S, from: Option<Position>) -> (Iter, PreparedSelection)
+    where
+        S: Into<PreparedSelection>;
+
+    /// .
+    fn select_multiple<S>(
+        &self,
+        multi_selection: S,
+        from: Option<Position>,
+    ) -> (IterMultiple, PreparedSelections)
+    where
+        S: Into<PreparedSelections>;
+}
+
+pub(crate) fn select<S>(
+    data: &Data,
+    selection: S,
+    from: Option<Position>,
+) -> (Iter, PreparedSelection)
+where
+    S: Into<PreparedSelection>,
+{
+    let events = data.events.clone();
+
+    let prepared = selection.into();
+
+    let iter = data.indices.iterate(prepared.as_ref(), from);
+    let iter = MappedEventHashIter::new(events, iter);
+    let iter = EventHashIter::Mapped(iter);
+    let iter = Iter::new(iter, &prepared);
+
+    (iter, prepared)
+}
+
+pub(crate) fn select_multiple<S>(
+    data: &Data,
+    selections: S,
+    from: Option<Position>,
+) -> (IterMultiple, PreparedSelections)
+where
+    S: Into<PreparedSelections>,
+{
+    let events = data.events.clone();
+
+    let multi_prepared = selections.into();
+
+    let iter = data.indices.iterate(multi_prepared.as_ref(), from);
+    let iter = MappedEventHashIter::new(events, iter);
+    let iter = EventHashIter::Mapped(iter);
+    let iter = IterMultiple::new(iter, &multi_prepared);
+
+    (iter, multi_prepared)
+}
 
 /// The [`Selection`] type a key type when interacting with a [`Stream`],
 /// being used both directly in query [`Condition`] to determine the events to
@@ -159,15 +242,15 @@ impl From<Selection> for SelectionHashAndValue {
 
 // -------------------------------------------------------------------------------------------------
 
-// Selection Multi
+// Selections
 
-/// The [`SelectionMulti`] type is a validating collection of [`Query`]
+/// The [`Selections`] type is a validating collection of [`Selection`]
 /// instances, used to ensure that invariants are met when constructing queries.
 #[derive(new, Clone, Debug)]
 #[new(const_fn, name(new_inner), vis())]
-pub struct MultiSelection(pub(crate) Vec<Selection>);
+pub struct Selections(pub(crate) Vec<Selection>);
 
-impl MultiSelection {
+impl Selections {
     /// Constructs a new [`Selections`] instance given an array of [`Selection`]
     /// instances.
     ///
@@ -190,7 +273,7 @@ impl MultiSelection {
     }
 }
 
-impl Validate for MultiSelection {
+impl Validate for Selections {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
@@ -206,10 +289,14 @@ impl Validate for MultiSelection {
 
 pub use self::{
     event::EventAndMask,
+    iter::{
+        Iter,
+        IterMultiple,
+    },
     mask::Mask,
     prepared::{
-        MultiPrepared,
-        Prepared,
+        PreparedSelection,
+        PreparedSelections,
     },
     selector::{
         Selector,

@@ -12,8 +12,8 @@ use eventric_stream::{
     stream::{
         Stream,
         append::Append as _,
-        iterate::Iterate as _,
         select::{
+            Select as _,
             Selection,
             Selector,
             Specifiers,
@@ -59,7 +59,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         Tags::new([Tag::new("course:523")?])?,
     )])?;
 
-    let (events, prepared) = stream.iter_select(selection, None);
+    let (events, prepared) = stream.select(selection, None);
 
     for event in events {
         println!("event: {event:#?}");
