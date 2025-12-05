@@ -17,9 +17,9 @@ use crate::{
             },
         },
         iterate::cache::Cache,
-        select::{
+        select::prepared::{
+            MultiPrepared,
             Prepared,
-            prepared::MultiPrepared,
         },
     },
 };
@@ -55,7 +55,7 @@ pub trait Iterate {
     /// .
     fn iter_multi_select<S>(
         &self,
-        selections: S,
+        multi_selection: S,
         from: Option<Position>,
     ) -> (IterMultiSelect, MultiPrepared)
     where
@@ -97,7 +97,7 @@ where
 
 pub(crate) fn iter_multi_select<S>(
     data: &Data,
-    selection: S,
+    multi_selection: S,
     from: Option<Position>,
 ) -> (IterMultiSelect, MultiPrepared)
 where
@@ -106,14 +106,14 @@ where
     let events = data.events.clone();
     let references = data.references.clone();
 
-    let prepared = selection.into();
+    let multi_prepared = multi_selection.into();
 
-    let iter = data.indices.iterate(prepared.as_ref(), from);
+    let iter = data.indices.iterate(multi_prepared.as_ref(), from);
     let iter = MappedEventHashIter::new(events, iter);
     let iter = EventHashIter::Mapped(iter);
-    let iter = IterMultiSelect::new(iter, &prepared, references);
+    let iter = IterMultiSelect::new(iter, &multi_prepared, references);
 
-    (iter, prepared)
+    (iter, multi_prepared)
 }
 
 // -------------------------------------------------------------------------------------------------

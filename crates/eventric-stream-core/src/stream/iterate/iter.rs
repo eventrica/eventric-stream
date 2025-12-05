@@ -31,7 +31,7 @@ use crate::{
         },
         iterate::cache::Cache,
         select::{
-            EventAndMask,
+            event::EventAndMask,
             filter::{
                 Filter,
                 Matches as _,

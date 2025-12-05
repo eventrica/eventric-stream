@@ -136,7 +136,7 @@ impl Append for Stream {
     fn append_multi_select<E, S>(
         &mut self,
         events: E,
-        selections: S,
+        multi_selection: S,
         after: Option<Position>,
     ) -> Result<(Position, MultiPrepared), Error>
     where
@@ -148,7 +148,7 @@ impl Append for Stream {
             &self.data,
             &mut self.next,
             events,
-            selections,
+            multi_selection,
             after,
         )
     }
@@ -161,22 +161,22 @@ impl Iterate for Stream {
         iterate::iter(&self.data, from)
     }
 
-    fn iter_select<S>(&self, source: S, from: Option<Position>) -> (IterSelect, Prepared)
+    fn iter_select<S>(&self, selection: S, from: Option<Position>) -> (IterSelect, Prepared)
     where
         S: Into<Prepared>,
     {
-        iterate::iter_select(&self.data, source, from)
+        iterate::iter_select(&self.data, selection, from)
     }
 
     fn iter_multi_select<S>(
         &self,
-        source: S,
+        multi_selection: S,
         from: Option<Position>,
     ) -> (IterMultiSelect, MultiPrepared)
     where
         S: Into<MultiPrepared>,
     {
-        iterate::iter_multi_select(&self.data, source, from)
+        iterate::iter_multi_select(&self.data, multi_selection, from)
     }
 }
 
@@ -198,22 +198,22 @@ impl Iterate for Reader {
         iterate::iter(&self.data, from)
     }
 
-    fn iter_select<S>(&self, source: S, from: Option<Position>) -> (IterSelect, Prepared)
+    fn iter_select<S>(&self, selection: S, from: Option<Position>) -> (IterSelect, Prepared)
     where
         S: Into<Prepared>,
     {
-        iterate::iter_select(&self.data, source, from)
+        iterate::iter_select(&self.data, selection, from)
     }
 
     fn iter_multi_select<S>(
         &self,
-        source: S,
+        multi_selection: S,
         from: Option<Position>,
     ) -> (IterMultiSelect, MultiPrepared)
     where
         S: Into<MultiPrepared>,
     {
-        iterate::iter_multi_select(&self.data, source, from)
+        iterate::iter_multi_select(&self.data, multi_selection, from)
     }
 }
 
@@ -264,7 +264,7 @@ impl Append for Writer {
     fn append_multi_select<E, S>(
         &mut self,
         events: E,
-        selections: S,
+        multi_selection: S,
         after: Option<Position>,
     ) -> Result<(Position, MultiPrepared), Error>
     where
@@ -276,7 +276,7 @@ impl Append for Writer {
             &self.data,
             &mut self.next,
             events,
-            selections,
+            multi_selection,
             after,
         )
     }

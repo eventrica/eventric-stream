@@ -13,9 +13,11 @@ use crate::{
     stream::{
         data::Data,
         select::{
-            Prepared,
             SelectionHash,
-            prepared::MultiPrepared,
+            prepared::{
+                MultiPrepared,
+                Prepared,
+            },
         },
     },
 };
