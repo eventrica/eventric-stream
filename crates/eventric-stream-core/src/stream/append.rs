@@ -57,8 +57,12 @@ pub trait Append {
     /// # Errors
     ///
     /// This function will return an error if .
-    #[rustfmt::skip]
-    fn append_select<E, S>(&mut self, events: E, selection: S, after: Option<Position>) -> Result<(Position, Prepared<Selection>), Error>
+    fn append_select<E, S>(
+        &mut self,
+        events: E,
+        selection: S,
+        after: Option<Position>,
+    ) -> Result<(Position, Prepared<Selection>), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
         S: Into<Prepared<Selection>>;
@@ -68,8 +72,12 @@ pub trait Append {
     /// # Errors
     ///
     /// This function will return an error if .
-    #[rustfmt::skip]
-    fn append_select_multi<E, S>(&mut self, events: E, selections: S, after: Option<Position>) -> Result<(Position, Prepared<Selections>), Error>
+    fn append_select_multi<E, S>(
+        &mut self,
+        events: E,
+        selections: S,
+        after: Option<Position>,
+    ) -> Result<(Position, Prepared<Selections>), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
         S: Into<Prepared<Selections>>;

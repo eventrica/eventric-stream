@@ -9,8 +9,8 @@ use eventric_stream::{
         Tag,
     },
     stream::{
-        append::Append,
-        iterate::Iterate,
+        append::Append as _,
+        iterate::Iterate as _,
         select::{
             Selection,
             Selector,

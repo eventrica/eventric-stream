@@ -3,7 +3,7 @@ mod fixtures;
 use eventric_stream::{
     error::Error,
     event::Position,
-    stream::append::Append,
+    stream::append::Append as _,
 };
 
 // =================================================================================================

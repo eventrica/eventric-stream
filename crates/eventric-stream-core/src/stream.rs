@@ -24,15 +24,12 @@ use crate::{
         data::Data,
         iterate::{
             Iterate,
-            IterateSelect,
-            build::Build,
             iter::Iter,
         },
         select::{
             Prepared,
             Selection,
             Selections,
-            Source,
         },
     },
 };
@@ -113,22 +110,44 @@ impl Append for Stream {
         append::append(&self.database, &self.data, &mut self.next, events, after)
     }
 
-    #[rustfmt::skip]
-    fn append_select<E, S>(&mut self, events: E, selection: S, after: Option<Position>) -> Result<(Position, Prepared<Selection>), Error>
+    fn append_select<E, S>(
+        &mut self,
+        events: E,
+        selection: S,
+        after: Option<Position>,
+    ) -> Result<(Position, Prepared<Selection>), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
         S: Into<Prepared<Selection>>,
     {
-        append::append_select(&self.database, &self.data, &mut self.next, events, selection, after)
+        append::append_select(
+            &self.database,
+            &self.data,
+            &mut self.next,
+            events,
+            selection,
+            after,
+        )
     }
 
-    #[rustfmt::skip]
-    fn append_select_multi<E, S>(&mut self, events: E, selections: S, after: Option<Position>) -> Result<(Position, Prepared<Selections>), Error>
+    fn append_select_multi<E, S>(
+        &mut self,
+        events: E,
+        selections: S,
+        after: Option<Position>,
+    ) -> Result<(Position, Prepared<Selections>), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
         S: Into<Prepared<Selections>>,
     {
-        append::append_select_multi(&self.database, &self.data, &mut self.next, events, selections, after)
+        append::append_select_multi(
+            &self.database,
+            &self.data,
+            &mut self.next,
+            events,
+            selections,
+            after,
+        )
     }
 }
 
@@ -138,16 +157,27 @@ impl Iterate for Stream {
     fn iter(&self, from: Option<Position>) -> Iter<()> {
         iterate::iter(&self.data, from)
     }
-}
 
-#[allow(private_bounds)]
-impl IterateSelect for Stream {
-    fn iter_select<S>(&self, source: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
+    fn iter_select<S>(
+        &self,
+        source: S,
+        from: Option<Position>,
+    ) -> (Iter<Selection>, Prepared<Selection>)
     where
-        S: Source,
-        S::Iterator: Build<S::Prepared>,
+        S: Into<Prepared<Selection>>,
     {
         iterate::iter_select(&self.data, source, from)
+    }
+
+    fn iter_select_multi<S>(
+        &self,
+        source: S,
+        from: Option<Position>,
+    ) -> (Iter<Selections>, Prepared<Selections>)
+    where
+        S: Into<Prepared<Selections>>,
+    {
+        iterate::iter_select_multi(&self.data, source, from)
     }
 }
 
@@ -168,16 +198,27 @@ impl Iterate for Reader {
     fn iter(&self, from: Option<Position>) -> Iter<()> {
         iterate::iter(&self.data, from)
     }
-}
 
-#[allow(private_bounds)]
-impl IterateSelect for Reader {
-    fn iter_select<S>(&self, source: S, from: Option<Position>) -> (S::Iterator, S::Prepared)
+    fn iter_select<S>(
+        &self,
+        source: S,
+        from: Option<Position>,
+    ) -> (Iter<Selection>, Prepared<Selection>)
     where
-        S: Source,
-        S::Iterator: Build<S::Prepared>,
+        S: Into<Prepared<Selection>>,
     {
         iterate::iter_select(&self.data, source, from)
+    }
+
+    fn iter_select_multi<S>(
+        &self,
+        source: S,
+        from: Option<Position>,
+    ) -> (Iter<Selections>, Prepared<Selections>)
+    where
+        S: Into<Prepared<Selections>>,
+    {
+        iterate::iter_select_multi(&self.data, source, from)
     }
 }
 

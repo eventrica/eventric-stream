@@ -6,7 +6,6 @@ pub(crate) mod filter;
 pub(crate) mod mask;
 pub(crate) mod prepared;
 pub(crate) mod selector;
-pub(crate) mod source;
 
 // use std::borrow::Cow;
 
@@ -23,12 +22,9 @@ use fancy_constructor::new;
 
 use crate::{
     error::Error,
-    stream::{
-        iterate::iter::Iter,
-        select::selector::{
-            SelectorHash,
-            SelectorHashAndValue,
-        },
+    stream::select::selector::{
+        SelectorHash,
+        SelectorHashAndValue,
     },
 };
 
@@ -81,15 +77,6 @@ impl Selection {
 impl From<Selection> for Vec<Selector> {
     fn from(selection: Selection) -> Self {
         selection.selectors
-    }
-}
-
-impl Source for Selection {
-    type Iterator = Iter<Selection>;
-    type Prepared = Prepared<Selection>;
-
-    fn prepare(self) -> Self::Prepared {
-        self.into()
     }
 }
 
@@ -203,15 +190,6 @@ impl Selections {
     }
 }
 
-impl Source for Selections {
-    type Iterator = Iter<Selections>;
-    type Prepared = Prepared<Selections>;
-
-    fn prepare(self) -> Self::Prepared {
-        self.into()
-    }
-}
-
 impl Validate for Selections {
     type Err = Error;
 
@@ -235,7 +213,6 @@ pub use self::{
         specifiers::Specifiers,
         tags::Tags,
     },
-    source::Source,
 };
 
 // -------------------------------------------------------------------------------------------------

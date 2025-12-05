@@ -4,7 +4,7 @@ use eventric_stream::{
     error::Error,
     stream::{
         Stream,
-        append::Append,
+        append::Append as _,
     },
 };
 

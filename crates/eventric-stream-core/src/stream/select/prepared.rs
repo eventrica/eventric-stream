@@ -4,17 +4,13 @@ use fancy_constructor::new;
 use smallvec::SmallVec;
 
 use crate::stream::{
-    iterate::{
-        cache::Cache,
-        iter::Iter,
-    },
+    iterate::cache::Cache,
     select::{
         Selection,
         SelectionHash,
         SelectionHashAndValue,
         Selections,
         filter::Filter,
-        source::Source,
     },
 };
 
@@ -77,15 +73,6 @@ impl From<Selection> for Prepared<Selection> {
     }
 }
 
-impl Source for Prepared<Selection> {
-    type Iterator = Iter<Selection>;
-    type Prepared = Self;
-
-    fn prepare(self) -> Self::Prepared {
-        self
-    }
-}
-
 // Selections
 
 impl From<Selections> for Prepared<Selections> {
@@ -115,14 +102,5 @@ impl From<Selections> for Prepared<Selections> {
         );
 
         Self::new(cache, filters, selection)
-    }
-}
-
-impl Source for Prepared<Selections> {
-    type Iterator = Iter<Selections>;
-    type Prepared = Self;
-
-    fn prepare(self) -> Self::Prepared {
-        self
     }
 }
