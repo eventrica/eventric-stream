@@ -50,7 +50,7 @@ impl Tags {
 
         match self.keyspace.get(key)? {
             Some(value) => String::from_utf8(value.to_vec())
-                .map_err(|err| Error::data(format!("tag utf8: {err}")))
+                .map_err(|err| Error::general(format!("Tag/Get/UTF-8: {err}")))
                 .map(Tag::new_unvalidated)
                 .map(Some),
             None => Ok(None),

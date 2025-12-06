@@ -102,7 +102,10 @@ impl Retrieve {
     fn fetch_identifier(&self, identifier: IdentifierHash) -> Result<Identifier, Error> {
         self.references
             .get_identifier(identifier)
-            .and_then(|identifier| identifier.ok_or_else(|| Error::data("identifier not found")))
+            .and_then(|identifier| {
+                identifier
+                    .ok_or_else(|| Error::general("Iter/Fetch Identifier/Identifier Not Found"))
+            })
     }
 }
 
@@ -122,6 +125,6 @@ impl Retrieve {
     fn fetch_tag(&self, tag: TagHash) -> Result<Tag, Error> {
         self.references
             .get_tag(tag)
-            .and_then(|tag| tag.ok_or_else(|| Error::data("tag not found")))
+            .and_then(|tag| tag.ok_or_else(|| Error::general("Iter/Fetch Tag/Tag Not Found")))
     }
 }

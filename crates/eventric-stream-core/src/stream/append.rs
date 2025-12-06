@@ -51,7 +51,8 @@ pub trait Append {
     //#[rustfmt::skip]
     fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
     where
-        E: IntoIterator<Item = CandidateEvent>;
+        E: IntoIterator<Item = CandidateEvent>,
+        E::IntoIter: Send + 'static;
 }
 
 // Implementations
@@ -88,6 +89,7 @@ pub trait AppendSelect {
     ) -> Result<(Position, Prepared), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
+        E::IntoIter: Send + 'static,
         S: Into<Prepared>;
 
     /// .
@@ -103,6 +105,7 @@ pub trait AppendSelect {
     ) -> Result<(Position, PreparedMultiple), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
+        E::IntoIter: Send + 'static,
         S: Into<PreparedMultiple>;
 }
 

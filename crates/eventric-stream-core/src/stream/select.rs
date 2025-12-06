@@ -63,28 +63,28 @@ pub trait Select {
     /// [identifier]: crate::event::identifier::Identifier
     /// [tag]: crate::event::tag::Tag
     /// [issue]: https://github.com/eventrica/eventric-stream/issues/21
-    fn select<S>(&self, selection: S, from: Option<Position>) -> (Iter, Prepared)
+    fn select<S>(&self, selection: S, from: Option<Position>) -> (IterSelect, Prepared)
     where
         S: Into<Prepared>;
 
     /// .
     fn select_multiple<S>(
         &self,
-        multi_selection: S,
+        selections: S,
         from: Option<Position>,
-    ) -> (IterMultiple, PreparedMultiple)
+    ) -> (IterSelectMultiple, PreparedMultiple)
     where
         S: Into<PreparedMultiple>;
 }
 
-pub(crate) fn select<S>(data: &Data, selection: S, from: Option<Position>) -> (Iter, Prepared)
+pub(crate) fn select<S>(data: &Data, selection: S, from: Option<Position>) -> (IterSelect, Prepared)
 where
     S: Into<Prepared>,
 {
     let prepared = selection.into();
 
     let iter = select_iter(data, prepared.as_ref(), from);
-    let iter = Iter::new(&prepared, iter);
+    let iter = IterSelect::new(&prepared, iter);
 
     (iter, prepared)
 }
@@ -93,14 +93,14 @@ pub(crate) fn select_multiple<S>(
     data: &Data,
     selections: S,
     from: Option<Position>,
-) -> (IterMultiple, PreparedMultiple)
+) -> (IterSelectMultiple, PreparedMultiple)
 where
     S: Into<PreparedMultiple>,
 {
     let prepared_multiple = selections.into();
 
     let iter = select_iter(data, prepared_multiple.as_ref(), from);
-    let iter = IterMultiple::new(&prepared_multiple, iter);
+    let iter = IterSelectMultiple::new(&prepared_multiple, iter);
 
     (iter, prepared_multiple)
 }
@@ -294,8 +294,8 @@ impl Validate for Selections {
 pub use self::{
     event::EventAndMask,
     iter::{
-        Iter,
-        IterMultiple,
+        IterSelect,
+        IterSelectMultiple,
     },
     mask::Mask,
     prepared::{

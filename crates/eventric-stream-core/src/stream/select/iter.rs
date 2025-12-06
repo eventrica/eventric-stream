@@ -44,25 +44,25 @@ use crate::{
 /// .
 #[derive(new, Debug)]
 #[new(args(prepared: &Prepared), vis(pub(crate)))]
-pub struct Iter {
+pub struct IterSelect {
     iter: Exclusive<EventHashIter>,
     #[new(val(Retrieve::new(prepared.lookup.clone())))]
     retrieve: Retrieve,
 }
 
-impl Iter {
+impl IterSelect {
     fn map(&mut self, event: Result<EventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| self.retrieve.get(event))
     }
 }
 
-impl DoubleEndedIterator for Iter {
+impl DoubleEndedIterator for IterSelect {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next_back().map(|event| self.map(event))
     }
 }
 
-impl Iterator for Iter {
+impl Iterator for IterSelect {
     type Item = Result<Event, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -73,7 +73,7 @@ impl Iterator for Iter {
 /// .
 #[derive(new, Debug)]
 #[new(args(prepared: &PreparedMultiple),  vis(pub(crate)))]
-pub struct IterMultiple {
+pub struct IterSelectMultiple {
     iter: Exclusive<EventHashIter>,
     #[new(val(prepared.filters.clone()))]
     filters: Arc<SmallVec<[Filter; 8]>>,
@@ -81,7 +81,7 @@ pub struct IterMultiple {
     retrieve: Retrieve,
 }
 
-impl IterMultiple {
+impl IterSelectMultiple {
     fn map(&mut self, event: Result<EventHash, Error>) -> <Self as Iterator>::Item {
         event.and_then(|event| {
             let mask = Mask::new(
@@ -98,13 +98,13 @@ impl IterMultiple {
     }
 }
 
-impl DoubleEndedIterator for IterMultiple {
+impl DoubleEndedIterator for IterSelectMultiple {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.iter.get_mut().next_back().map(|event| self.map(event))
     }
 }
 
-impl Iterator for IterMultiple {
+impl Iterator for IterSelectMultiple {
     type Item = Result<EventAndMask, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -139,7 +139,7 @@ impl Retrieve {
             .identifiers
             .get(&identifier)
             .cloned()
-            .ok_or_else(|| Error::data("identifier not found"))
+            .ok_or_else(|| Error::general("Retrieve/Get Identifier/Identifier Not Found"))
     }
 }
 

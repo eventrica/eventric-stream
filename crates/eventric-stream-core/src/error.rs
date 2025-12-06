@@ -1,6 +1,8 @@
 //! See the `eventric-stream` crate for full documentation, including
 //! module-level documentation.
 
+use std::error;
+
 use eventric_utils::validation;
 use thiserror::Error;
 
@@ -17,14 +19,16 @@ pub enum Error {
     /// but may also be returned from other operations in future.
     #[error("Concurrency Error")]
     Concurrency,
-    /// Returned when some form of stored data error occurs, likely an indicator
-    /// of some form of data corruption (not being able to correctly read
-    /// previously written data, for example).
-    #[error("Data Error: {0}")]
-    Data(String),
+    /// Returned when some general error occurs which does not have a specific
+    /// root error, or which does not have a comaptible error type.
+    #[error("General/{0}")]
+    General(String),
     /// Wraps errors from the underlying database implementation.
     #[error("Database Error: {0}")]
     Database(#[from] fjall::Error),
+    /// Internal
+    #[error(transparent)]
+    Internal(#[from] Box<dyn error::Error + Send + Sync>),
     /// Returned when some validation constraint has not been met, generally on
     /// construction of some instance which has structural or data validation
     /// properties. This will be detailed in the documentation of any relevant
@@ -36,11 +40,11 @@ pub enum Error {
 impl Error {
     /// A convenience function to create a new instance of the [`Error::Data`]
     /// case with a value which can be converted into a message string.
-    pub fn data<M>(message: M) -> Self
+    pub fn general<M>(message: M) -> Self
     where
         M: Into<String>,
     {
-        Self::Data(message.into())
+        Self::General(message.into())
     }
 }
 
@@ -48,7 +52,7 @@ impl PartialEq for Error {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Concurrency, Self::Concurrency) => true,
-            (Self::Data(lhs), Self::Data(rhs)) if lhs == rhs => true,
+            (Self::General(lhs), Self::General(rhs)) if lhs == rhs => true,
             (Self::Validation(lhs), Self::Validation(rhs)) if lhs == rhs => true,
             _ => false,
         }
@@ -92,7 +96,7 @@ mod tests {
     #[test]
     fn concurrency_variant_not_equal_to_data() {
         let concurrency = Error::Concurrency;
-        let data = Error::data("test message");
+        let data = Error::general("test message");
 
         assert_ne!(concurrency, data);
     }
@@ -102,48 +106,48 @@ mod tests {
     #[test]
     fn data_variant_creation_from_string() {
         let message = String::from("corruption detected");
-        let error = Error::data(message);
+        let error = Error::general(message);
 
-        assert!(matches!(error, Error::Data(_)));
+        assert!(matches!(error, Error::General(_)));
     }
 
     #[test]
     fn data_variant_creation_from_str() {
-        let error = Error::data("corruption detected");
+        let error = Error::general("corruption detected");
 
-        assert!(matches!(error, Error::Data(_)));
+        assert!(matches!(error, Error::General(_)));
     }
 
     #[test]
     fn data_variant_display() {
-        let error = Error::data("corruption detected");
+        let error = Error::general("corruption detected");
 
-        assert_eq!(error.to_string(), "Data Error: corruption detected");
+        assert_eq!(error.to_string(), "General/corruption detected");
     }
 
     #[test]
     fn data_variant_preserves_message() {
         let message = "unable to deserialize event";
-        let error = Error::data(message);
+        let error = Error::general(message);
 
         match error {
-            Error::Data(msg) => assert_eq!(msg, message),
+            Error::General(msg) => assert_eq!(msg, message),
             _ => panic!("Expected Data variant"),
         }
     }
 
     #[test]
     fn data_variant_equality_same_message() {
-        let error1 = Error::data("same message");
-        let error2 = Error::data("same message");
+        let error1 = Error::general("same message");
+        let error2 = Error::general("same message");
 
         assert_eq!(error1, error2);
     }
 
     #[test]
     fn data_variant_inequality_different_messages() {
-        let error1 = Error::data("message one");
-        let error2 = Error::data("message two");
+        let error1 = Error::general("message one");
+        let error2 = Error::general("message two");
 
         assert_ne!(error1, error2);
     }
@@ -191,7 +195,7 @@ mod tests {
     #[test]
     fn different_variants_not_equal() {
         let concurrency = Error::Concurrency;
-        let data = Error::data("test");
+        let data = Error::general("test");
         let validation = Error::Validation(validation::Error::invalid("test"));
 
         assert_ne!(concurrency, data);
@@ -201,7 +205,7 @@ mod tests {
 
     #[test]
     fn data_and_validation_with_same_content_not_equal() {
-        let data = Error::data("same message");
+        let data = Error::general("same message");
         let validation = Error::Validation(validation::Error::invalid("same message"));
 
         assert_ne!(data, validation);

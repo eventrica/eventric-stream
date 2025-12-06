@@ -6,7 +6,6 @@ use smallvec::SmallVec;
 use crate::stream::select::{
     Selection,
     SelectionHash,
-    SelectionHashAndValue,
     Selections,
     filter::Filter,
     lookup::Lookup,
@@ -36,7 +35,7 @@ impl From<Selection> for Prepared {
     fn from(selection: Selection) -> Self {
         let mut lookup = Lookup::default();
 
-        let selection_hash_and_value: SelectionHashAndValue = selection.into();
+        let selection_hash_and_value = selection.into();
 
         lookup.populate(&selection_hash_and_value);
 
@@ -76,6 +75,8 @@ impl From<Selections> for PreparedMultiple {
             .map(Into::into)
             .collect::<Vec<_>>();
 
+        let lookup = Arc::new(lookup);
+
         let filters = selection_hashes.iter().map(Filter::new).collect();
         let filters = Arc::new(filters);
 
@@ -83,7 +84,6 @@ impl From<Selections> for PreparedMultiple {
         // all the selector hashess together, even though that will technically work,
         // it could be horribly inefficient.
 
-        let lookup = Arc::new(lookup);
         let selection_hash = SelectionHash::new(
             selection_hashes
                 .into_iter()

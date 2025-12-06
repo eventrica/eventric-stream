@@ -82,8 +82,8 @@ pub mod stream {
 
         pub use eventric_stream_core::stream::select::{
             EventAndMask,
-            Iter,
-            IterMultiple,
+            IterSelect,
+            IterSelectMultiple,
             Mask,
             Prepared,
             PreparedMultiple,

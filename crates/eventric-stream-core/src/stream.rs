@@ -111,6 +111,7 @@ impl Append for Stream {
     fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
+        E::IntoIter: Send + 'static,
     {
         append::append(&self.database, &self.data, &mut self.next, events, after)
     }
@@ -127,6 +128,7 @@ impl AppendSelect for Stream {
     ) -> Result<(Position, Prepared), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
+        E::IntoIter: Send + 'static,
         S: Into<Prepared>,
     {
         append::append_select(
@@ -147,6 +149,7 @@ impl AppendSelect for Stream {
     ) -> Result<(Position, PreparedMultiple), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
+        E::IntoIter: Send + 'static,
         S: Into<PreparedMultiple>,
     {
         append::append_select_multiple(
@@ -171,7 +174,7 @@ impl Iterate for Stream {
 // Select
 
 impl Select for Stream {
-    fn select<S>(&self, selection: S, from: Option<Position>) -> (select::Iter, Prepared)
+    fn select<S>(&self, selection: S, from: Option<Position>) -> (select::IterSelect, Prepared)
     where
         S: Into<Prepared>,
     {
@@ -182,7 +185,7 @@ impl Select for Stream {
         &self,
         selections: S,
         from: Option<Position>,
-    ) -> (select::IterMultiple, PreparedMultiple)
+    ) -> (select::IterSelectMultiple, PreparedMultiple)
     where
         S: Into<PreparedMultiple>,
     {
@@ -210,7 +213,7 @@ impl Iterate for Reader {
 }
 
 impl Select for Reader {
-    fn select<S>(&self, selection: S, from: Option<Position>) -> (select::Iter, Prepared)
+    fn select<S>(&self, selection: S, from: Option<Position>) -> (select::IterSelect, Prepared)
     where
         S: Into<Prepared>,
     {
@@ -221,7 +224,7 @@ impl Select for Reader {
         &self,
         multi_selection: S,
         from: Option<Position>,
-    ) -> (select::IterMultiple, PreparedMultiple)
+    ) -> (select::IterSelectMultiple, PreparedMultiple)
     where
         S: Into<PreparedMultiple>,
     {
@@ -249,6 +252,7 @@ impl Append for Writer {
     fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
+        E::IntoIter: Send + 'static,
     {
         append::append(&self.database, &self.data, &mut self.next, events, after)
     }
@@ -265,6 +269,7 @@ impl AppendSelect for Writer {
     ) -> Result<(Position, Prepared), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
+        E::IntoIter: Send + 'static,
         S: Into<Prepared>,
     {
         append::append_select(
@@ -285,6 +290,7 @@ impl AppendSelect for Writer {
     ) -> Result<(Position, PreparedMultiple), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
+        E::IntoIter: Send + 'static,
         S: Into<PreparedMultiple>,
     {
         append::append_select_multiple(
