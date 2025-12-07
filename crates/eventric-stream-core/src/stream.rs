@@ -117,6 +117,12 @@ impl Append for Stream {
     }
 }
 
+impl From<Writer> for Stream {
+    fn from(writer: Writer) -> Self {
+        Self::new(writer.database, writer.data, writer.next)
+    }
+}
+
 // Append Select
 
 impl AppendSelect for Stream {

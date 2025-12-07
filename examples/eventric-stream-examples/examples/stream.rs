@@ -21,13 +21,17 @@ use eventric_stream::{
         },
     },
 };
+use eventric_stream_server::server::Server;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
-    let mut stream = Stream::builder(eventric_stream::temp_path())
+    let stream = Stream::builder(eventric_stream::temp_path())
         .temporary(true)
         .open()?;
 
-    stream.append(
+    let server = Server::new(stream);
+    let mut client = server.client();
+
+    client.append(
         [
             CandidateEvent::new(
                 Data::new("hello world!")?,
@@ -59,7 +63,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         Tags::new([Tag::new("course:523")?])?,
     )])?;
 
-    let (events, prepared) = stream.select(selection, None);
+    let (events, prepared) = client.select(selection, None);
 
     for event in events {
         println!("event: {event:#?}");

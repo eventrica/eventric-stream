@@ -1,10 +1,9 @@
 [dependencies]
-crossbeam                   = { version = "0.8" }
+crossbeam.workspace         = true
 derive_more.workspace       = true
 eventric-stream.workspace   = true
 fancy_constructor.workspace = true
-oneshot                     = { version = "0.1" }
-replace_with                = { version = "0.1", features = ["nightly"] }
+oneshot.workspace           = true
 
 [lints]
 workspace = true

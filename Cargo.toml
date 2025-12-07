@@ -12,6 +12,7 @@ resolver = "2"
 assertables            = { version = "9" }
 bytes                  = { version = "1" }
 criterion              = { version = "0.8" }
+crossbeam              = { version = "0.8" }
 darling                = { version = "0.21" }
 dashmap                = { version = "6", features = ["inline"] }
 derive_more            = { version = "2", features = ["full"] }
@@ -24,6 +25,7 @@ eventric-utils         = { git = "https://github.com/eventrica/eventric-utils.gi
 fancy_constructor      = { version = "2" }
 fjall                  = { version = "=3.0.0-rc.5" }
 include-utils          = { version = "0.2" }
+oneshot                = { version = "0.1" }
 proc-macro2            = { version = "1" }
 quote                  = { version = "1" }
 rand                   = { version = "0.9" }
