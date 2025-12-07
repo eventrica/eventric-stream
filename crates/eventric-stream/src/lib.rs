@@ -39,6 +39,7 @@ pub mod event {
     pub use eventric_stream_macros::tag;
 }
 
+#[rustfmt::skip]
 pub mod stream {
     //! The [`stream`][self] module contains the core stream abstraction,
     //! along with support for configuring and opening stream instances.
@@ -50,6 +51,11 @@ pub mod stream {
         Reader,
         Stream,
         Writer,
+    };
+    
+    pub use eventric_stream_multi_thread::{
+        owner::Owner,
+        proxy::Proxy,
     };
 
     pub mod append {

@@ -4,7 +4,7 @@ use std::thread::{
 };
 
 use crossbeam::channel;
-use eventric_stream::{
+use eventric_stream_core::{
     error::Error,
     stream::{
         Reader,
@@ -15,26 +15,26 @@ use eventric_stream::{
 use fancy_constructor::new;
 
 use crate::{
-    client::Client,
     processor::{
         Operation,
         Processor,
     },
+    proxy::Proxy,
 };
 
 // =================================================================================================
-// Server
+// Owner
 // =================================================================================================
 
 #[derive(new, Debug)]
 #[new(const_fn, name(new_inner), vis())]
-pub struct Server {
+pub struct Owner {
     handle: JoinHandle<Result<Writer, Error>>,
     reader: Reader,
     sender: channel::Sender<Operation>,
 }
 
-impl Server {
+impl Owner {
     #[must_use]
     pub fn new(stream: Stream) -> Self {
         let stream = stream.split();
@@ -48,14 +48,14 @@ impl Server {
     }
 }
 
-impl Server {
+impl Owner {
     #[must_use]
-    pub fn client(&self) -> Client {
-        Client::new(self.reader.clone(), self.sender.clone())
+    pub fn proxy(&self) -> Proxy {
+        Proxy::new(self.reader.clone(), self.sender.clone())
     }
 }
 
-impl Server {
+impl Owner {
     /// .
     ///
     /// # Errors
@@ -64,11 +64,11 @@ impl Server {
     pub fn into_inner(self) -> Result<Stream, Error> {
         self.sender
             .send(Operation::Exit)
-            .map_err(|_| Error::general("Server/Into Inner/Send"))?;
+            .map_err(|_| Error::general("owner/into_inner/send"))?;
 
         self.handle
             .join()
-            .map_err(|_| Error::general("Server/Into Inner/Join"))
+            .map_err(|_| Error::general("owner/into_inner/join"))
             .flatten()
             .map(Into::into)
     }

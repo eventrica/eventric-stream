@@ -389,6 +389,7 @@ dependencies = [
  "assertables",
  "eventric-stream-core",
  "eventric-stream-macros",
+ "eventric-stream-multi-thread",
  "include-utils",
 ]
 
@@ -423,7 +424,6 @@ name = "eventric-stream-examples"
 version = "0.1.0"
 dependencies = [
  "eventric-stream",
- "eventric-stream-server",
 ]
 
 [[package]]
@@ -437,21 +437,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "eventric-stream-profiling-examples"
-version = "0.1.0"
-dependencies = [
- "eventric-stream",
-]
-
-[[package]]
-name = "eventric-stream-server"
+name = "eventric-stream-multi-thread"
 version = "0.1.0"
 dependencies = [
  "crossbeam",
  "derive_more",
- "eventric-stream",
+ "eventric-stream-core",
  "fancy_constructor",
  "oneshot",
+]
+
+[[package]]
+name = "eventric-stream-profiling-examples"
+version = "0.1.0"
+dependencies = [
+ "eventric-stream",
 ]
 
 [[package]]

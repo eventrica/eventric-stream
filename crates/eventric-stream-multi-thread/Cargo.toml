@@ -1,0 +1,21 @@
+[dependencies]
+crossbeam.workspace            = true
+derive_more.workspace          = true
+eventric-stream-core.workspace = true
+fancy_constructor.workspace    = true
+oneshot.workspace              = true
+
+[lints]
+workspace = true
+
+[package]
+authors.workspace    = true
+categories.workspace = true
+description          = "Eventric Stream Multi-Thread"
+edition.workspace    = true
+keywords.workspace   = true
+license.workspace    = true
+name                 = "eventric-stream-multi-thread"
+readme.workspace     = true
+repository.workspace = true
+version.workspace    = true

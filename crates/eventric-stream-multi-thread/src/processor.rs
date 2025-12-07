@@ -3,7 +3,7 @@ use derive_more::{
     Debug,
     From,
 };
-use eventric_stream::{
+use eventric_stream_core::{
     error::Error,
     event::{
         CandidateEvent,
@@ -43,7 +43,7 @@ impl Processor {
                 Ok(Operation::AppendSelect(append)) => self.append_select(append)?,
                 Ok(Operation::AppendSelectMultiple(append)) => self.append_select_multiple(append)?,
                 Ok(Operation::Exit) => return Ok(self.writer),
-                Err(_) => return Err(Error::general("Processor/Process/Receive")),
+                Err(_) => return Err(Error::general("processor/process/receive")),
             }
         }
     }
@@ -60,7 +60,7 @@ impl Processor {
     {
         sender
             .send(operation(&mut self.writer))
-            .map_err(|_| Error::general("Processor/Writer/Send"))
+            .map_err(|_| Error::general("processor/writer/send"))
     }
 }
 

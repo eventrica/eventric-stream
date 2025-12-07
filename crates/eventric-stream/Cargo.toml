@@ -1,7 +1,8 @@
 [dependencies]
-eventric-stream-core.workspace   = true
-eventric-stream-macros.workspace = true
-include-utils.workspace          = true
+eventric-stream-core.workspace         = true
+eventric-stream-macros.workspace       = true
+eventric-stream-multi-thread.workspace = true
+include-utils.workspace                = true
 
 [dev-dependencies]
 assertables.workspace = true

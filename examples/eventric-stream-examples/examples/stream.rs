@@ -10,6 +10,7 @@ use eventric_stream::{
         Version,
     },
     stream::{
+        Owner,
         Stream,
         append::Append as _,
         select::{
@@ -21,17 +22,16 @@ use eventric_stream::{
         },
     },
 };
-use eventric_stream_server::server::Server;
 
 pub fn main() -> Result<(), Box<dyn Error>> {
-    let stream = Stream::builder(eventric_stream::temp_path())
+    let owner = Stream::builder(eventric_stream::temp_path())
         .temporary(true)
-        .open()?;
+        .open()
+        .map(Owner::new)?;
 
-    let server = Server::new(stream);
-    let mut client = server.client();
+    let mut stream = owner.proxy();
 
-    client.append(
+    stream.append(
         [
             CandidateEvent::new(
                 Data::new("hello world!")?,
@@ -63,7 +63,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         Tags::new([Tag::new("course:523")?])?,
     )])?;
 
-    let (events, prepared) = client.select(selection, None);
+    let (events, prepared) = stream.select(selection, None);
 
     for event in events {
         println!("event: {event:#?}");

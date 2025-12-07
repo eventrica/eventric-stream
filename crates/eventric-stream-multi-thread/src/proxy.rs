@@ -1,5 +1,5 @@
 use crossbeam::channel;
-use eventric_stream::{
+use eventric_stream_core::{
     error::Error,
     event::{
         CandidateEvent,
@@ -34,37 +34,37 @@ use crate::processor::{
 };
 
 // =================================================================================================
-// Client
+// Proxy
 // =================================================================================================
 
 #[derive(new, Clone, Debug)]
 #[new(const_fn, vis(pub(crate)))]
-pub struct Client {
+pub struct Proxy {
     reader: Reader,
-    writer: channel::Sender<Operation>,
+    sender: channel::Sender<Operation>,
 }
 
-impl Client {
+impl Proxy {
     #[rustfmt::skip]
-    fn writer<F, O, R>(&self, operation: F) -> Result<R, Error>
+    fn sender<F, O, R>(&self, operation: F) -> Result<R, Error>
     where
         F: FnOnce(oneshot::Sender<Result<R, Error>>) -> O,
         O: Into<Operation>,
     {
         let channel = oneshot::channel();
 
-        self.writer
+        self.sender
             .send(operation(channel.0).into())
-            .map_err(|_| Error::general("Client/Writer/Send"))?;
+            .map_err(|_| Error::general("proxy/sender/send"))?;
 
         channel.1
             .recv()
-            .map_err(|_| Error::general("Client/Writer/Receive"))
+            .map_err(|_| Error::general("proxy/sender/receive"))
             .flatten()
     }
 }
 
-impl Append for Client {
+impl Append for Proxy {
     fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
@@ -73,11 +73,11 @@ impl Append for Client {
         let events = IntoIterator::into_iter(events);
         let events = Box::new(events);
 
-        self.writer(|sender| AppendOperation::new(events, after, sender))
+        self.sender(|sender| AppendOperation::new(events, after, sender))
     }
 }
 
-impl AppendSelect for Client {
+impl AppendSelect for Proxy {
     fn append_select<E, S>(
         &mut self,
         events: E,
@@ -93,7 +93,7 @@ impl AppendSelect for Client {
         let events = Box::new(events);
         let selection = selection.into();
 
-        self.writer(|sender| AppendSelectOperation::new(events, selection, after, sender))
+        self.sender(|sender| AppendSelectOperation::new(events, selection, after, sender))
     }
 
     fn append_select_multiple<E, S>(
@@ -111,17 +111,17 @@ impl AppendSelect for Client {
         let events = Box::new(events);
         let selections = selections.into();
 
-        self.writer(|sender| AppendSelectMultipleOperation::new(events, selections, after, sender))
+        self.sender(|sender| AppendSelectMultipleOperation::new(events, selections, after, sender))
     }
 }
 
-impl Iterate for Client {
+impl Iterate for Proxy {
     fn iter(&self, from: Option<Position>) -> Iter {
         self.reader.iter(from)
     }
 }
 
-impl Select for Client {
+impl Select for Proxy {
     fn select<S>(&self, selection: S, from: Option<Position>) -> (IterSelect, Prepared)
     where
         S: Into<Prepared>,
