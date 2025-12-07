@@ -69,7 +69,7 @@ impl Processor {
     fn append(&mut self, append: AppendOperation) -> Result<(), Error> {
         self.writer(
             |writer| writer.append(
-                append.events, 
+                append.events,
                 append.after
             ),
             append.sender,
