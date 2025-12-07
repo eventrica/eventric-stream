@@ -212,19 +212,19 @@ mod tests {
             Ok(0),
             Err(Error::Concurrency),
             Ok(2),
-            Err(Error::data("test")),
+            Err(Error::general("test")),
         ]);
 
         assert_eq!(Some(Ok(0)), iter.next());
         assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
         assert_eq!(Some(Ok(2)), iter.next());
-        assert!(matches!(iter.next(), Some(Err(Error::Data(_)))));
+        assert!(matches!(iter.next(), Some(Err(Error::General(_)))));
 
         // Only errors
-        let mut iter = TestIterator::from([Err(Error::Concurrency), Err(Error::data("test"))]);
+        let mut iter = TestIterator::from([Err(Error::Concurrency), Err(Error::general("test"))]);
 
         assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
-        assert!(matches!(iter.next(), Some(Err(Error::Data(_)))));
+        assert!(matches!(iter.next(), Some(Err(Error::General(_)))));
         assert_eq!(None, iter.next());
     }
 
@@ -252,12 +252,12 @@ mod tests {
         let mut iter = TestIterator::from([
             Err(Error::Concurrency),
             Ok(1),
-            Err(Error::data("test")),
+            Err(Error::general("test")),
             Ok(3),
         ]);
 
         assert_eq!(Some(Ok(3)), iter.next_back());
-        assert!(matches!(iter.next_back(), Some(Err(Error::Data(_)))));
+        assert!(matches!(iter.next_back(), Some(Err(Error::General(_)))));
         assert_eq!(Some(Ok(1)), iter.next_back());
         assert!(matches!(iter.next_back(), Some(Err(Error::Concurrency))));
     }
@@ -287,11 +287,11 @@ mod tests {
             Err(Error::Concurrency),
             Ok(1),
             Ok(2),
-            Err(Error::data("test")),
+            Err(Error::general("test")),
         ]);
 
         assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
-        assert!(matches!(iter.next_back(), Some(Err(Error::Data(_)))));
+        assert!(matches!(iter.next_back(), Some(Err(Error::General(_)))));
         assert_eq!(Some(Ok(1)), iter.next());
         assert_eq!(Some(Ok(2)), iter.next_back());
         assert_eq!(None, iter.next());
@@ -301,11 +301,11 @@ mod tests {
             Ok(0),
             Err(Error::Concurrency),
             Ok(2),
-            Err(Error::data("test")),
+            Err(Error::general("test")),
         ]);
 
         assert_eq!(Some(Ok(0)), iter.next());
-        assert!(matches!(iter.next_back(), Some(Err(Error::Data(_)))));
+        assert!(matches!(iter.next_back(), Some(Err(Error::General(_)))));
         assert_eq!(Some(Ok(2)), iter.next_back());
         assert!(matches!(iter.next(), Some(Err(Error::Concurrency))));
         assert_eq!(None, iter.next());

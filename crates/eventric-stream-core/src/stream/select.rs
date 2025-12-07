@@ -3,12 +3,15 @@
 
 pub(crate) mod event;
 pub(crate) mod filter;
+pub(crate) mod iter;
+pub(crate) mod lookup;
 pub(crate) mod mask;
 pub(crate) mod prepared;
 pub(crate) mod selector;
-pub(crate) mod source;
 
 // use std::borrow::Cow;
+
+use std::sync::Exclusive;
 
 use derive_more::{
     AsRef,
@@ -23,8 +26,15 @@ use fancy_constructor::new;
 
 use crate::{
     error::Error,
+    event::Position,
     stream::{
-        iterate::iter::Iter,
+        data::{
+            Data,
+            events::{
+                EventHashIter,
+                MappedEventHashIter,
+            },
+        },
         select::selector::{
             SelectorHash,
             SelectorHashAndValue,
@@ -35,6 +45,79 @@ use crate::{
 // =================================================================================================
 // Select
 // =================================================================================================
+
+// Select
+
+/// .
+pub trait Select {
+    /// Iterates over the stream or stream-like instance using the given
+    /// [`Query`] to determine which matching events should be returned. Will
+    /// begin iteration at given `from` [`Position`] if one is supplied.
+    ///
+    /// TODO: [Full query documentation + examples][issue]
+    ///
+    /// # Errors
+    ///
+    /// Returns an error in the case of an underlying IO/database error.
+    ///
+    /// [identifier]: crate::event::identifier::Identifier
+    /// [tag]: crate::event::tag::Tag
+    /// [issue]: https://github.com/eventrica/eventric-stream/issues/21
+    fn select<S>(&self, selection: S, from: Option<Position>) -> (IterSelect, Prepared)
+    where
+        S: Into<Prepared>;
+
+    /// .
+    fn select_multiple<S>(
+        &self,
+        selections: S,
+        from: Option<Position>,
+    ) -> (IterSelectMultiple, PreparedMultiple)
+    where
+        S: Into<PreparedMultiple>;
+}
+
+pub(crate) fn select<S>(data: &Data, selection: S, from: Option<Position>) -> (IterSelect, Prepared)
+where
+    S: Into<Prepared>,
+{
+    let prepared = selection.into();
+
+    let iter = select_iter(data, prepared.as_ref(), from);
+    let iter = IterSelect::new(&prepared, iter);
+
+    (iter, prepared)
+}
+
+pub(crate) fn select_multiple<S>(
+    data: &Data,
+    selections: S,
+    from: Option<Position>,
+) -> (IterSelectMultiple, PreparedMultiple)
+where
+    S: Into<PreparedMultiple>,
+{
+    let prepared_multiple = selections.into();
+
+    let iter = select_iter(data, prepared_multiple.as_ref(), from);
+    let iter = IterSelectMultiple::new(&prepared_multiple, iter);
+
+    (iter, prepared_multiple)
+}
+
+fn select_iter(
+    data: &Data,
+    selection: &SelectionHash,
+    from: Option<Position>,
+) -> Exclusive<EventHashIter> {
+    let events = data.events.clone();
+
+    let iter = data.indices.iterate(selection, from);
+    let iter = MappedEventHashIter::new(events, iter);
+    let iter = EventHashIter::Mapped(iter);
+
+    Exclusive::new(iter)
+}
 
 /// The [`Selection`] type a key type when interacting with a [`Stream`],
 /// being used both directly in query [`Condition`] to determine the events to
@@ -81,15 +164,6 @@ impl Selection {
 impl From<Selection> for Vec<Selector> {
     fn from(selection: Selection) -> Self {
         selection.selectors
-    }
-}
-
-impl Source for Selection {
-    type Iterator = Iter<Selection>;
-    type Prepared = Prepared<Selection>;
-
-    fn prepare(self) -> Self::Prepared {
-        self.into()
     }
 }
 
@@ -174,7 +248,7 @@ impl From<Selection> for SelectionHashAndValue {
 
 // Selections
 
-/// The [`Selections`] type is a validating collection of [`Query`]
+/// The [`Selections`] type is a validating collection of [`Selection`]
 /// instances, used to ensure that invariants are met when constructing queries.
 #[derive(new, Clone, Debug)]
 #[new(const_fn, name(new_inner), vis())]
@@ -203,15 +277,6 @@ impl Selections {
     }
 }
 
-impl Source for Selections {
-    type Iterator = Iter<Selections>;
-    type Prepared = Prepared<Selections>;
-
-    fn prepare(self) -> Self::Prepared {
-        self.into()
-    }
-}
-
 impl Validate for Selections {
     type Err = Error;
 
@@ -228,14 +293,20 @@ impl Validate for Selections {
 
 pub use self::{
     event::EventAndMask,
+    iter::{
+        IterSelect,
+        IterSelectMultiple,
+    },
     mask::Mask,
-    prepared::Prepared,
+    prepared::{
+        Prepared,
+        PreparedMultiple,
+    },
     selector::{
         Selector,
         specifiers::Specifiers,
         tags::Tags,
     },
-    source::Source,
 };
 
 // -------------------------------------------------------------------------------------------------

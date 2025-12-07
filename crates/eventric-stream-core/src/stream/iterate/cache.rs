@@ -1,24 +1,14 @@
-use std::collections::BTreeSet;
-
 use dashmap::DashMap;
 use derive_more::Debug;
 
-use crate::{
-    event::{
-        identifier::{
-            Identifier,
-            IdentifierHash,
-        },
-        specifier::SpecifierHashAndValue,
-        tag::{
-            Tag,
-            TagHash,
-            TagHashAndValue,
-        },
+use crate::event::{
+    identifier::{
+        Identifier,
+        IdentifierHash,
     },
-    stream::select::{
-        SelectionHashAndValue,
-        selector::SelectorHashAndValue,
+    tag::{
+        Tag,
+        TagHash,
     },
 };
 
@@ -40,41 +30,9 @@ use crate::{
 /// maintained indefinitely as memory is only ever recovered when the cache is
 /// dropped.
 #[derive(Debug, Default)]
-pub struct Cache {
+pub(crate) struct Cache {
     pub(crate) identifiers: DashMap<IdentifierHash, Identifier>,
     pub(crate) tags: DashMap<TagHash, Tag>,
-}
-
-impl Cache {
-    pub(crate) fn populate(&self, selection: &SelectionHashAndValue) {
-        for selector in &selection.0 {
-            match selector {
-                SelectorHashAndValue::Specifiers(specifiers) => {
-                    self.populate_identifiers(specifiers);
-                }
-                SelectorHashAndValue::SpecifiersAndTags(specifiers, tags) => {
-                    self.populate_identifiers(specifiers);
-                    self.populate_tags(tags);
-                }
-            }
-        }
-    }
-
-    fn populate_identifiers(&self, specifiers: &BTreeSet<SpecifierHashAndValue>) {
-        for specifier in specifiers {
-            self.identifiers
-                .entry(specifier.identifier_hash_and_value.identifier_hash)
-                .or_insert_with(|| specifier.identifier_hash_and_value.identifier.clone());
-        }
-    }
-
-    fn populate_tags(&self, tags: &BTreeSet<TagHashAndValue>) {
-        for tag in tags {
-            self.tags
-                .entry(tag.tag_hash)
-                .or_insert_with(|| tag.tag.clone());
-        }
-    }
 }
 
 // -------------------------------------------------------------------------------------------------

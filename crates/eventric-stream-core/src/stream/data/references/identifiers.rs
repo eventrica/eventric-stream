@@ -48,7 +48,7 @@ impl Identifiers {
 
         match self.keyspace.get(key)? {
             Some(value) => String::from_utf8(value.to_vec())
-                .map_err(|err| Error::data(format!("identifier utf8: {err}")))
+                .map_err(|err| Error::general(format!("Identifier/Get/UTF-8: {err}")))
                 .map(Identifier::new_unvalidated)
                 .map(Some),
             None => Ok(None),

@@ -13,9 +13,9 @@ use std::{
 use crate::{
     event::{
         EventHash,
-        Version,
         identifier::IdentifierHash,
         tag::TagHash,
+        version::Version,
     },
     stream::select::{
         SelectionHash,

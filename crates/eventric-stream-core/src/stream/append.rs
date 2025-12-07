@@ -14,7 +14,10 @@ use crate::{
         data::Data,
         select::{
             SelectionHash,
-            source::Source,
+            prepared::{
+                Prepared,
+                PreparedMultiple,
+            },
         },
     },
 };
@@ -48,8 +51,11 @@ pub trait Append {
     //#[rustfmt::skip]
     fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
     where
-        E: IntoIterator<Item = CandidateEvent>;
+        E: IntoIterator<Item = CandidateEvent>,
+        E::IntoIter: Send + 'static;
 }
+
+// Implementations
 
 pub(crate) fn append<E>(
     database: &Database,
@@ -75,11 +81,32 @@ pub trait AppendSelect {
     /// # Errors
     ///
     /// This function will return an error if .
-    #[rustfmt::skip]
-    fn append_select<E, S>(&mut self, events: E, source: S, after: Option<Position>) -> Result<(Position, S::Prepared), Error>
+    fn append_select<E, S>(
+        &mut self,
+        events: E,
+        selection: S,
+        after: Option<Position>,
+    ) -> Result<(Position, Prepared), Error>
     where
         E: IntoIterator<Item = CandidateEvent>,
-        S: Source;
+        E::IntoIter: Send + 'static,
+        S: Into<Prepared>;
+
+    /// .
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if .
+    fn append_select_multiple<E, S>(
+        &mut self,
+        events: E,
+        selections: S,
+        after: Option<Position>,
+    ) -> Result<(Position, PreparedMultiple), Error>
+    where
+        E: IntoIterator<Item = CandidateEvent>,
+        E::IntoIter: Send + 'static,
+        S: Into<PreparedMultiple>;
 }
 
 pub(crate) fn append_select<E, S>(
@@ -87,18 +114,37 @@ pub(crate) fn append_select<E, S>(
     data: &Data,
     next: &mut Position,
     events: E,
-    source: S,
+    selection: S,
     after: Option<Position>,
-) -> Result<(Position, S::Prepared), Error>
+) -> Result<(Position, Prepared), Error>
 where
     E: IntoIterator<Item = CandidateEvent>,
-    S: Source,
+    S: Into<Prepared>,
 {
-    let prepared = source.prepare();
+    let prepared = selection.into();
 
     check(data, *next, Some(prepared.as_ref()), after)
         .and_then(|()| put(database, data, next, events))
         .map(|position| (position, prepared))
+}
+
+pub(crate) fn append_select_multiple<E, S>(
+    database: &Database,
+    data: &Data,
+    next: &mut Position,
+    events: E,
+    selection: S,
+    after: Option<Position>,
+) -> Result<(Position, PreparedMultiple), Error>
+where
+    E: IntoIterator<Item = CandidateEvent>,
+    S: Into<PreparedMultiple>,
+{
+    let prepared_multiple = selection.into();
+
+    check(data, *next, Some(prepared_multiple.as_ref()), after)
+        .and_then(|()| put(database, data, next, events))
+        .map(|position| (position, prepared_multiple))
 }
 
 // -------------------------------------------------------------------------------------------------

@@ -2,7 +2,7 @@ use fancy_constructor::new;
 
 use crate::{
     event::Event,
-    stream::select::Mask,
+    stream::select::mask::Mask,
 };
 
 // =================================================================================================

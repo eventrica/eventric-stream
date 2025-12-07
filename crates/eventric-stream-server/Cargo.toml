@@ -1,6 +1,9 @@
 [dependencies]
-eventric-stream.workspace        = true
-eventric-stream-server.workspace = true
+crossbeam.workspace         = true
+derive_more.workspace       = true
+eventric-stream.workspace   = true
+fancy_constructor.workspace = true
+oneshot.workspace           = true
 
 [lints]
 workspace = true
@@ -8,11 +11,11 @@ workspace = true
 [package]
 authors.workspace    = true
 categories.workspace = true
-description          = "Eventric Stream Examples"
+description          = "Eventric Stream Server"
 edition.workspace    = true
 keywords.workspace   = true
 license.workspace    = true
-name                 = "eventric-stream-examples"
+name                 = "eventric-stream-server"
 readme.workspace     = true
 repository.workspace = true
 version.workspace    = true
