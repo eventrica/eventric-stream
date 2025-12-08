@@ -1,9 +1,9 @@
 use std::collections::BTreeSet;
 
 use eventric_utils::validation::{
+    self,
+    NotEmpty,
     Validate,
-    b_tree_set,
-    validate,
 };
 use fancy_constructor::new;
 
@@ -76,7 +76,7 @@ impl Validate for Specifiers {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.0, "specifiers", &[&b_tree_set::IsEmpty])?;
+        validation::validate(&self.0, "specifiers", &[&NotEmpty])?;
 
         Ok(self)
     }

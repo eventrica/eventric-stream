@@ -1,8 +1,8 @@
 use derive_more::AsRef;
 use eventric_utils::validation::{
+    self,
+    NotEmpty,
     Validate,
-    validate,
-    vec,
 };
 use fancy_constructor::new;
 
@@ -46,7 +46,7 @@ impl Validate for Data {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.value, "data", &[&vec::IsEmpty])?;
+        validation::validate(&self.value, "data", &[&NotEmpty])?;
 
         Ok(self)
     }

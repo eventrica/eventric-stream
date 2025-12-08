@@ -8,9 +8,12 @@ use std::{
 
 use derive_more::AsRef;
 use eventric_utils::validation::{
+    self,
+    NoControlCharacters,
+    NoPrecedingWhiteSpace,
+    NoTrailingWhiteSpace,
+    NotEmpty,
     Validate,
-    string,
-    validate,
 };
 use fancy_constructor::new;
 
@@ -65,11 +68,11 @@ impl Validate for Tag {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.value, "identifier", &[
-            &string::IsEmpty,
-            &string::PrecedingWhitespace,
-            &string::TrailingWhitespace,
-            &string::ControlCharacters,
+        validation::validate(&self.value, "tag", &[
+            &NotEmpty,
+            &NoControlCharacters,
+            &NoPrecedingWhiteSpace,
+            &NoTrailingWhiteSpace,
         ])?;
 
         Ok(self)

@@ -18,9 +18,9 @@ use derive_more::{
     Debug,
 };
 use eventric_utils::validation::{
+    self,
+    NotEmpty,
     Validate,
-    validate,
-    vec,
 };
 use fancy_constructor::new;
 
@@ -171,7 +171,7 @@ impl Validate for Selection {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.selectors, "selectors", &[&vec::IsEmpty])?;
+        validation::validate(&self.selectors, "selectors", &[&NotEmpty])?;
 
         Ok(self)
     }
@@ -281,7 +281,7 @@ impl Validate for Selections {
     type Err = Error;
 
     fn validate(self) -> Result<Self, Self::Err> {
-        validate(&self.0, "queries", &[&vec::IsEmpty])?;
+        validation::validate(&self.0, "queries", &[&NotEmpty])?;
 
         Ok(self)
     }
