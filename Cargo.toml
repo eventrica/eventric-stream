@@ -13,7 +13,7 @@ assertables                  = { version = "9" }
 bytes                        = { version = "1" }
 criterion                    = { version = "0.8" }
 crossbeam                    = { version = "0.8" }
-darling                      = { version = "0.21" }
+darling                      = { version = "0.23" }
 dashmap                      = { version = "6", features = ["inline"] }
 derive_more                  = { version = "2", features = ["full"] }
 double-ended-peekable        = { version = "0.1.0" }
