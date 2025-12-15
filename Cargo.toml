@@ -23,7 +23,7 @@ eventric-stream-macros       = { path = "crates/eventric-stream-macros" }
 eventric-stream-multi-thread = { path = "crates/eventric-stream-multi-thread" }
 eventric-utils               = { git = "https://github.com/eventrica/eventric-utils.git" }
 fancy_constructor            = { version = "2" }
-fjall                        = { version = "=3.0.0-rc.5" }
+fjall                        = { version = "=3.0.0-rc.6" }
 include-utils                = { version = "0.2" }
 oneshot                      = { version = "0.1" }
 proc-macro2                  = { version = "1" }
