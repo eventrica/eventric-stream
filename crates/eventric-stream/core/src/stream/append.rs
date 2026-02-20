@@ -205,18 +205,18 @@ where
     // successfully, this ensures that we don't create a gap in the sequence should
     // the batch commit fail.
 
-    let mut local_next = *next;
     let mut batch = database.batch();
+    let mut batch_next = *next;
 
     for event in events {
         let event = event.into();
         let timestamp = Timestamp::now()?;
 
-        data.events.put(&mut batch, local_next, &event, timestamp);
-        data.indices.put(&mut batch, local_next, &event, timestamp);
+        data.events.put(&mut batch, batch_next, &event, timestamp);
+        data.indices.put(&mut batch, batch_next, &event, timestamp);
         data.references.put(&mut batch, &event);
 
-        local_next += 1;
+        batch_next += 1;
     }
 
     // Commit the batch...
@@ -225,7 +225,7 @@ where
 
     // ...and only update the stream next position if successful.
 
-    *next = local_next;
+    *next = batch_next;
 
     // TODO: Deal with edge case of appending zero events to an empty stream!
 
