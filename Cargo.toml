@@ -7,10 +7,10 @@ debug = true
 [workspace]
 members = [
     "benches/*",
-    "crates/eventric-stream",
     "crates/eventric-stream-multi-thread",
-    "crates/eventric-stream/core",
-    "crates/eventric-stream/macros",
+    "crates/stream",
+    "crates/stream/core",
+    "crates/stream/macros",
     "examples/*",
 ]
 resolver = "2"
@@ -20,22 +20,22 @@ assertables                  = { version = "9" }
 bytes                        = { version = "1" }
 criterion                    = { version = "0.8" }
 crossbeam                    = { version = "0.8" }
-darling                      = { version = "0.21" }
+darling                      = { version = "0.23" }
 dashmap                      = { version = "6", features = ["inline"] }
 derive_more                  = { version = "2", features = ["full"] }
 double-ended-peekable        = { version = "0.1.0" }
-eventric-stream              = { path = "crates/eventric-stream" }
-eventric-stream-core         = { path = "crates/eventric-stream/core" }
-eventric-stream-macros       = { path = "crates/eventric-stream/macros" }
+eventric-stream              = { path = "crates/stream" }
+eventric-stream-core         = { path = "crates/stream/core" }
+eventric-stream-macros       = { path = "crates/stream/macros" }
 eventric-stream-multi-thread = { path = "crates/eventric-stream-multi-thread" }
 eventric-utils               = { git = "https://github.com/eventrica/eventric-utils.git" }
 fancy_constructor            = { version = "2" }
-fjall                        = { version = "=3.0.0-rc.5" }
+fjall                        = { version = "3" }
 include-utils                = { version = "0.2" }
 oneshot                      = { version = "0.1" }
 proc-macro2                  = { version = "1" }
 quote                        = { version = "1" }
-rand                         = { version = "0.9" }
+rand                         = { version = "0.10" }
 rapidhash                    = { version = "4" }
 smallvec                     = { version = "1", features = ["const_generics", "const_new", "union"] }
 syn                          = { version = "2" }
