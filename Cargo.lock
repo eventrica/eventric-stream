@@ -412,6 +412,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "eventric-model"
+version = "0.1.0"
+dependencies = [
+ "eventric-model-core",
+ "eventric-model-macros",
+]
+
+[[package]]
+name = "eventric-model-core"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "eventric-stream",
+ "fancy_constructor",
+ "revision",
+ "thiserror",
+]
+
+[[package]]
+name = "eventric-model-macros"
+version = "0.1.0"
+dependencies = [
+ "darling",
+ "eventric-stream",
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "eventric-stream"
 version = "0.1.0"
 dependencies = [
@@ -486,8 +517,8 @@ dependencies = [
 [[package]]
 name = "eventric-utils"
 version = "0.1.0"
-source = "git+https://github.com/eventrica/eventric-utils.git#1d4d0077f93132aa8f06eb8fa9d1c7fc113d3b2e"
 dependencies = [
+ "assertables",
  "thiserror",
 ]
 
@@ -1036,6 +1067,26 @@ name = "regex-syntax"
 version = "0.8.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a96887878f22d7bad8a3b6dc5b7440e0ada9a245242924394987b21cf2210a4c"
+
+[[package]]
+name = "revision"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11c3c8ec8b2be254beb5f8acdd80cdd57b7b5d40988c2ec3d0b7cdb6f7c2829b"
+dependencies = [
+ "revision-derive",
+]
+
+[[package]]
+name = "revision-derive"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76be63634a8b1809e663bc0b975d78f6883c0fadbcce9c52e19b9e421f423357"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "rustc-hash"

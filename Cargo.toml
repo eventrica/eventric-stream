@@ -8,9 +8,13 @@ debug = true
 members = [
     "benches/*",
     "crates/eventric-stream-multi-thread",
+    "crates/model",
+    "crates/model/core",
+    "crates/model/macros",
     "crates/stream",
     "crates/stream/core",
     "crates/stream/macros",
+    "crates/utils",
     "examples/*",
 ]
 resolver = "2"
@@ -24,19 +28,24 @@ darling                      = { version = "0.23" }
 dashmap                      = { version = "6", features = ["inline"] }
 derive_more                  = { version = "2", features = ["full"] }
 double-ended-peekable        = { version = "0.1.0" }
+eventric-model               = { path = "crates/model" }
+eventric-model-core          = { path = "crates/model/core" }
+eventric-model-macros        = { path = "crates/model/macros" }
 eventric-stream              = { path = "crates/stream" }
 eventric-stream-core         = { path = "crates/stream/core" }
 eventric-stream-macros       = { path = "crates/stream/macros" }
 eventric-stream-multi-thread = { path = "crates/eventric-stream-multi-thread" }
-eventric-utils               = { git = "https://github.com/eventrica/eventric-utils.git" }
+eventric-utils               = { path = "crates/utils" }
 fancy_constructor            = { version = "2" }
 fjall                        = { version = "3" }
+heck                         = { version = "0.5" }
 include-utils                = { version = "0.2" }
 oneshot                      = { version = "0.1" }
 proc-macro2                  = { version = "1" }
 quote                        = { version = "1" }
 rand                         = { version = "0.10" }
 rapidhash                    = { version = "4" }
+revision                     = { version = "0.17" }
 smallvec                     = { version = "1", features = ["const_generics", "const_new", "union"] }
 syn                          = { version = "2" }
 thiserror                    = { version = "2" }
