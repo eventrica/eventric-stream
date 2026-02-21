@@ -17,14 +17,19 @@ use crate::{
     error::Error,
     event::{
         CandidateEvent,
+        NewCandidateEvent,
         position::Position,
     },
     stream::{
         append::{
             Append,
             AppendSelect,
+            NewAppend,
         },
-        data::Data,
+        data::{
+            Data,
+            NewData,
+        },
         iterate::{
             Iterate,
             iter,
@@ -42,6 +47,15 @@ use crate::{
 // =================================================================================================
 // Stream
 // =================================================================================================
+
+#[derive(new, Debug)]
+#[new(const_fn, vis())]
+pub struct NewStream {
+    #[debug("Database")]
+    database: Database,
+    data: NewData,
+    next: Position,
+}
 
 /// The [`Stream`] type is the central element of Eventric Stream. All
 /// interactions happen relative to a [`Stream`] instance, whether appending new
@@ -114,6 +128,16 @@ impl Append for Stream {
         E::IntoIter: Send + 'static,
     {
         append::append(&self.database, &self.data, &mut self.next, events, after)
+    }
+}
+
+impl NewAppend for NewStream {
+    fn new_append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
+    where
+        E: IntoIterator<Item = NewCandidateEvent>,
+        E::IntoIter: Send + 'static,
+    {
+        append::new_append(&self.database, &self.data, &mut self.next, events, after)
     }
 }
 

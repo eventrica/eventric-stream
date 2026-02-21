@@ -7,11 +7,15 @@ use crate::{
     error::Error,
     event::{
         CandidateEvent,
+        NewCandidateEvent,
         position::Position,
         timestamp::Timestamp,
     },
     stream::{
-        data::Data,
+        data::{
+            Data,
+            NewData,
+        },
         select::{
             SelectionHash,
             prepared::{
@@ -68,6 +72,34 @@ where
     E: IntoIterator<Item = CandidateEvent>,
 {
     check(data, *next, None, after).and_then(|()| put(database, data, next, events))
+}
+
+pub trait NewAppend {
+    fn new_append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
+    where
+        E: IntoIterator<Item = NewCandidateEvent>,
+        E::IntoIter: Send + 'static;
+}
+
+pub(crate) fn new_append<E>(
+    database: &Database,
+    data: &NewData,
+    next: &mut Position,
+    events: E,
+    after: Option<Position>,
+) -> Result<Position, Error>
+where
+    E: IntoIterator<Item = NewCandidateEvent>,
+{
+    let from = after.map(|after| after + 1);
+
+    if let Some(from) = from
+        && from < *next
+    {
+        return Err(Error::Concurrency);
+    }
+
+    new_put(database, data, next, events)
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -215,6 +247,46 @@ where
         data.events.put(&mut batch, batch_next, &event, timestamp);
         data.indices.put(&mut batch, batch_next, &event, timestamp);
         data.references.put(&mut batch, &event);
+
+        batch_next += 1;
+    }
+
+    // Commit the batch...
+
+    batch.commit()?;
+
+    // ...and only update the stream next position if successful.
+
+    *next = batch_next;
+
+    // TODO: Deal with edge case of appending zero events to an empty stream!
+
+    Ok(*next - 1)
+}
+
+fn new_put<E>(
+    database: &Database,
+    data: &NewData,
+    next: &mut Position,
+    events: E,
+) -> Result<Position, Error>
+where
+    E: IntoIterator<Item = NewCandidateEvent>,
+{
+    // Create a local copy of the "next" position here, so that it can be
+    // incremented independently of the stream instance. As we only set the stream
+    // next position to the incremented position after the batch has committed
+    // successfully, this ensures that we don't create a gap in the sequence should
+    // the batch commit fail.
+
+    let mut batch = database.batch();
+    let mut batch_next = *next;
+
+    for event in events {
+        let timestamp = Timestamp::now()?;
+
+        data.events.put(&mut batch, batch_next, &event, timestamp);
+        data.indices.put(&mut batch, batch_next, &event, timestamp);
 
         batch_next += 1;
     }

@@ -24,6 +24,13 @@ use crate::event::{
 // Specifier
 // =================================================================================================
 
+#[derive(new, Debug, Eq, PartialEq)]
+#[new(const_fn)]
+pub struct NewSpecifier {
+    pub(crate) identifier: Identifier,
+    pub(crate) version: Version,
+}
+
 /// The [`Specifier`] type represents a specification of a logical *type* (or
 /// set of logical *types*), given the [`Identifier`] and [`Version`] properties
 /// of events. The [`Specifier`] determines the required [`Identifier`] and an

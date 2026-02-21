@@ -1,5 +1,7 @@
 pub(crate) mod events;
 pub(crate) mod indices;
+pub(crate) mod new_events;
+pub(crate) mod new_indices;
 pub(crate) mod references;
 
 use derive_more::Debug;
@@ -11,6 +13,8 @@ use crate::{
     stream::data::{
         events::Events,
         indices::Indices,
+        new_events::NewEvents,
+        new_indices::NewIndices,
         references::References,
     },
 };
@@ -26,6 +30,22 @@ static ID_LEN: usize = size_of::<u8>();
 static POSITION_LEN: usize = size_of::<u64>();
 
 // -------------------------------------------------------------------------------------------------
+
+#[derive(new, Clone, Debug)]
+#[new(const_fn)]
+pub struct NewData {
+    pub events: NewEvents,
+    pub indices: NewIndices,
+}
+
+impl NewData {
+    pub fn open(database: &Database) -> Result<Self, Error> {
+        let events = NewEvents::open(database)?;
+        let indices = NewIndices::open(database)?;
+
+        Ok(Self::new(events, indices))
+    }
+}
 
 // Data
 

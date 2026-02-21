@@ -18,6 +18,7 @@ use crate::event::{
         IdentifierHash,
         IdentifierHashAndValue,
     },
+    specifier::NewSpecifier,
     tag::{
         TagHash,
         TagHashAndValue,
@@ -27,6 +28,23 @@ use crate::event::{
 // =================================================================================================
 // Event
 // =================================================================================================
+
+#[derive(new, Debug, Eq, PartialEq)]
+#[new(const_fn, name(new_inner), vis())]
+pub struct NewCandidateEvent {
+    pub(crate) data: Data,
+    pub(crate) specifier: NewSpecifier,
+    pub(crate) tags: BTreeSet<Tag>,
+}
+
+impl NewCandidateEvent {
+    pub fn new<T>(data: Data, specifier: NewSpecifier, tags: T) -> Self
+    where
+        T: IntoIterator<Item = Tag>,
+    {
+        Self::new_inner(data, specifier, tags.into_iter().collect())
+    }
+}
 
 // Candidate
 
@@ -111,6 +129,16 @@ impl From<CandidateEvent> for CandidateEventHashAndValue {
 }
 
 // -------------------------------------------------------------------------------------------------
+
+#[derive(new, Debug, Eq, PartialEq)]
+#[new(const_fn, vis(pub(crate)))]
+pub struct NewPersistentEvent {
+    pub(crate) data: Data,
+    pub(crate) position: Position,
+    pub(crate) specifier: NewSpecifier,
+    pub(crate) tags: BTreeSet<Tag>,
+    pub(crate) timestamp: Timestamp,
+}
 
 // Event
 
