@@ -431,6 +431,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "eventric-model-examples"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "eventric-model",
+ "eventric-stream",
+ "fancy_constructor",
+ "revision",
+]
+
+[[package]]
 name = "eventric-model-macros"
 version = "0.1.0"
 dependencies = [
