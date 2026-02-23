@@ -58,7 +58,7 @@ impl Proxy {
             .map_err(|_| Error::general("proxy/sender/send"))?;
 
         channel.1
-            .recv()
+            .try_recv()
             .map_err(|_| Error::general("proxy/sender/receive"))
             .flatten()
     }
