@@ -3,7 +3,9 @@ derive_more.workspace       = true
 eventric-model.workspace    = true
 eventric-stream.workspace   = true
 fancy_constructor.workspace = true
+kameo.workspace             = true
 revision.workspace          = true
+tokio.workspace             = true
 
 [lints]
 workspace = true

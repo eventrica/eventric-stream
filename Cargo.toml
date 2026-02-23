@@ -40,6 +40,7 @@ fancy_constructor            = { version = "2" }
 fjall                        = { version = "3" }
 heck                         = { version = "0.5" }
 include-utils                = { version = "0.2" }
+kameo                        = { version = "0.19", features = ["metrics"] }
 oneshot                      = { version = "0.1" }
 proc-macro2                  = { version = "1" }
 quote                        = { version = "1" }
@@ -49,6 +50,7 @@ revision                     = { version = "0.17" }
 smallvec                     = { version = "1", features = ["const_generics", "const_new", "union"] }
 syn                          = { version = "2" }
 thiserror                    = { version = "2" }
+tokio                        = { version = "1", features = ["full"] }
 
 [workspace.lints.clippy]
 cargo       = "warn"
