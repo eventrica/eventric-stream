@@ -1,0 +1,258 @@
+use std::{
+    cmp::Ordering,
+    collections::BTreeSet,
+    ops::Range,
+};
+
+use derive_more::{
+    AsRef,
+    with_trait::{
+        Add,
+        AddAssign,
+        Sub,
+        SubAssign,
+    },
+};
+use eventric_utils::validation::{
+    self,
+    Error,
+    NoControlCharacters,
+    NoPrecedingWhiteSpace,
+    NoTrailingWhiteSpace,
+    NotEmpty,
+    Validate,
+};
+use fancy_constructor::new;
+use paste::paste;
+
+use crate::utils::hashing;
+
+// =================================================================================================
+// Event
+// =================================================================================================
+
+// Data
+
+#[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
+#[as_ref([u8])]
+#[new(const_fn, name(new_unvalidated))]
+pub struct Data(#[new(name(data))] pub(crate) Vec<u8>);
+
+impl Data {
+    pub fn new<D>(data: D) -> Result<Self, Error>
+    where
+        D: Into<Vec<u8>>,
+    {
+        Self::new_unvalidated(data.into()).validate()
+    }
+}
+
+impl Validate for Data {
+    type Err = Error;
+
+    fn validate(self) -> Result<Self, Self::Err> {
+        validation::validate(&self.0, "data", &[&NotEmpty])?;
+
+        Ok(self)
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Event
+
+#[derive(new, Debug)]
+pub struct Event<M, T>(
+    #[new(name(data))] pub(crate) Data,
+    #[new(name(facets))] pub(crate) Facets<T>,
+    #[new(name(meta))] pub(crate) M,
+);
+
+macro_rules! event_from {
+    ($from:ty, $to:ty) => {
+        impl<M> From<Event<M, $from>> for Event<M, $to> {
+            fn from(event: Event<M, $from>) -> Self {
+                Self(event.0, event.1.into(), event.2)
+            }
+        }
+    };
+}
+
+event_from!(String, (u64, String));
+event_from!(String, u64);
+event_from!((u64, String), u64);
+
+// -------------------------------------------------------------------------------------------------
+
+// Facets
+
+#[derive(new, Debug)]
+pub struct Facets<T>(
+    #[new(name(ty))] pub(crate) Type<T>,
+    #[new(name(tags))] pub(crate) BTreeSet<Tag<T>>,
+);
+
+macro_rules! facets_from {
+    ($from:ty, $to:ty) => {
+        impl From<Facets<$from>> for Facets<$to> {
+            fn from(facets: Facets<$from>) -> Self {
+                Self(
+                    facets.0.into(),
+                    facets.1.into_iter().map(Into::into).collect(),
+                )
+            }
+        }
+    };
+}
+
+facets_from!(String, (u64, String));
+facets_from!(String, u64);
+facets_from!((u64, String), u64);
+
+// -------------------------------------------------------------------------------------------------
+
+// Name & Tag
+
+macro_rules! string_type {
+    ($name:ident) => {
+        paste! {
+            #[derive(new, Debug, Eq, Ord, PartialEq, PartialOrd)]
+            #[new(const_fn, name(new_unvalidated), vis())]
+            pub struct $name<T>(pub(crate) T);
+
+            impl $name<String> {
+                pub fn new<T>([< $name:lower >]: T) -> Result<Self, Error>
+                where
+                    T: Into<String>,
+                {
+                    Self::new_unvalidated([< $name:lower >].into()).validate()
+                }
+            }
+
+            impl From<$name<String>> for $name<(u64, String)> {
+                fn from([< $name:lower >]: $name<String>) -> Self {
+                    Self((hashing::get(&[< $name:lower >].0), [< $name:lower >].0))
+                }
+            }
+
+            impl From<$name<String>> for $name<u64> {
+                fn from([< $name:lower >]: $name<String>) -> Self {
+                    Self(hashing::get(&[< $name:lower >].0))
+                }
+            }
+
+            impl From<$name<(u64, String)>> for $name<u64> {
+                fn from([< $name:lower >]: $name<(u64, String)>) -> Self {
+                    Self([< $name:lower >].0.0)
+                }
+            }
+
+            impl Validate for $name<String> {
+                type Err = Error;
+
+                fn validate(self) -> Result<Self, Self::Err> {
+                    validation::validate(&self.0, stringify!([< $name:snake >]), &[
+                        &NotEmpty,
+                        &NoControlCharacters,
+                        &NoPrecedingWhiteSpace,
+                        &NoTrailingWhiteSpace,
+                    ])?;
+
+                    Ok(self)
+                }
+            }
+        }
+    };
+}
+
+string_type!(Name);
+string_type!(Tag);
+
+// -------------------------------------------------------------------------------------------------
+
+// Type
+
+#[derive(new, Debug)]
+pub struct Type<T>(
+    #[new(name(name))] pub(crate) Name<T>,
+    #[new(name(version))] pub(crate) Version,
+);
+
+macro_rules! type_from {
+    ($from:ty, $to:ty) => {
+        impl From<Type<$from>> for Type<$to> {
+            fn from(ty: Type<$from>) -> Self {
+                Self(ty.0.into(), ty.1)
+            }
+        }
+    };
+}
+
+type_from!(String, (u64, String));
+type_from!(String, u64);
+type_from!((u64, String), u64);
+
+// -------------------------------------------------------------------------------------------------
+
+// Version
+
+#[rustfmt::skip]
+#[derive(new, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Add, AddAssign, Sub, SubAssign)]
+#[new(const_fn)]
+pub struct Version(#[new(name(version))] pub(crate) u8);
+
+impl Version {
+    pub const MAX: Self = Self::new(u8::MAX);
+    pub const MIN: Self = Self::new(u8::MIN);
+}
+
+impl Add<u8> for Version {
+    type Output = Self;
+
+    fn add(self, rhs: u8) -> Self::Output {
+        Self::new(self.0 + rhs)
+    }
+}
+
+impl AddAssign<u8> for Version {
+    fn add_assign(&mut self, rhs: u8) {
+        self.0 += rhs;
+    }
+}
+
+impl Default for Version {
+    fn default() -> Self {
+        Self::MIN
+    }
+}
+
+impl PartialEq<Range<Self>> for Version {
+    fn eq(&self, other: &Range<Self>) -> bool {
+        self >= &other.start && self < &other.end
+    }
+}
+
+impl PartialOrd<Range<Self>> for Version {
+    fn partial_cmp(&self, other: &Range<Self>) -> Option<Ordering> {
+        match self {
+            _ if self < &other.start => Some(Ordering::Less),
+            _ if self >= &other.end => Some(Ordering::Greater),
+            _ => Some(Ordering::Equal),
+        }
+    }
+}
+
+impl Sub<u8> for Version {
+    type Output = Self;
+
+    fn sub(self, rhs: u8) -> Self::Output {
+        Self::new(self.0 - rhs)
+    }
+}
+
+impl SubAssign<u8> for Version {
+    fn sub_assign(&mut self, rhs: u8) {
+        self.0 -= rhs;
+    }
+}

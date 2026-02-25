@@ -41,6 +41,7 @@ fjall                        = { version = "3" }
 heck                         = { version = "0.5" }
 include-utils                = { version = "0.2" }
 oneshot                      = { version = "0.2" }
+paste                        = { version = "1" }
 proc-macro2                  = { version = "1" }
 quote                        = { version = "1" }
 rand                         = { version = "0.10" }

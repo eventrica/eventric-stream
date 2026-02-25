@@ -6,6 +6,7 @@ double-ended-peekable.workspace = true
 eventric-utils.workspace        = true
 fancy_constructor.workspace     = true
 fjall.workspace                 = true
+paste.workspace                 = true
 rand.workspace                  = true
 rapidhash.workspace             = true
 smallvec.workspace              = true
