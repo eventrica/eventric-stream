@@ -412,6 +412,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "error-stack"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b878b3fac9613c3c7f22eb70bc8a3c6ebdc03cc11479ee60fde1692d747fd45f"
+dependencies = [
+ "anyhow",
+ "rustc_version",
+]
+
+[[package]]
 name = "eventric-model"
 version = "0.1.0"
 dependencies = [
@@ -481,6 +491,7 @@ dependencies = [
  "dashmap",
  "derive_more",
  "double-ended-peekable",
+ "error-stack",
  "eventric-utils",
  "fancy_constructor",
  "fjall",

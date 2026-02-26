@@ -1,12 +1,19 @@
+mod operations;
 mod storage;
 
-use std::time::{
-    SystemTime,
-    UNIX_EPOCH,
+use std::{
+    path::Path,
+    result,
+    time::{
+        SystemTime,
+        UNIX_EPOCH,
+    },
 };
 
 use derive_more::{
     Debug,
+    Display,
+    Error,
     with_trait::{
         Add,
         AddAssign,
@@ -14,17 +21,73 @@ use derive_more::{
         SubAssign,
     },
 };
+use error_stack::{
+    Report,
+    ResultExt,
+};
 use fancy_constructor::new;
 use fjall::Database;
 
 use crate::{
-    error::Error,
+    event_new::Event,
     stream_new::storage::Storage,
 };
 
 // =================================================================================================
 // Stream
 // =================================================================================================
+
+// Builder
+
+#[derive(new, Debug)]
+#[new(vis())]
+pub struct Builder<P>
+where
+    P: AsRef<Path>,
+{
+    path: P,
+    #[new(default)]
+    temporary: Option<bool>,
+}
+
+impl<P> Builder<P>
+where
+    P: AsRef<Path>,
+{
+    pub fn open(self) -> Result<Stream> {
+        let database = Database::builder(self.path)
+            .temporary(self.temporary.unwrap_or_default())
+            .open()
+            .change_context(Error)
+            .attach("failed to open database")?;
+
+        let storage = Storage::open(&database)?;
+        let next = storage.len().map(Position::new)?;
+
+        Ok(Stream::new(database, next, storage))
+    }
+}
+
+impl<P> Builder<P>
+where
+    P: AsRef<Path>,
+{
+    #[must_use]
+    pub fn temporary(mut self, temporary: bool) -> Self {
+        self.temporary = Some(temporary);
+        self
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Error
+
+#[derive(Debug, Display, Error)]
+#[display("stream error")]
+pub struct Error;
+
+// -------------------------------------------------------------------------------------------------
 
 // Facets
 
@@ -44,7 +107,30 @@ pub struct Facets(
 pub struct Stream {
     #[debug("Database")]
     database: Database,
+    next: Position,
     storage: Storage,
+}
+
+impl Stream {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    #[must_use]
+    pub fn len(&self) -> u64 {
+        self.next.0
+    }
+}
+
+impl Append for Stream {
+    fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
+    where
+        E: IntoIterator<Item = Event<(), String>>,
+        E::IntoIter: Send + 'static,
+    {
+        (&mut || self.database.batch(), &mut self.next, &self.storage).append(events, after)
+    }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -98,20 +184,37 @@ impl SubAssign<u64> for Position {
 
 // -------------------------------------------------------------------------------------------------
 
+// Result
+
+pub type Result<T, E = Error> = result::Result<T, Report<E>>;
+
+// -------------------------------------------------------------------------------------------------
+
 // Timestamp
 
 #[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Timestamp(#[new(name(nanos))] pub(crate) u64);
 
 impl Timestamp {
-    pub fn now() -> Result<Self, Error> {
+    pub fn now() -> Result<Self> {
         let duration = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|err| Error::general(format!("Timestamp/Now/Duration: {err}")))?;
+            .change_context(Error)
+            .attach("failed to get epoch duration")?;
 
         let nanos = u64::try_from(duration.as_nanos())
-            .map_err(|err| Error::general(format!("Timestamp/Now/Duration Size: {err}")))?;
+            .change_context(Error)
+            .attach("failed to get epoch duration as nanos")?;
 
         Ok(Self::new(nanos))
     }
 }
+
+// -------------------------------------------------------------------------------------------------
+
+// Re-Exports
+
+pub use self::operations::{
+    Append,
+    Select,
+};

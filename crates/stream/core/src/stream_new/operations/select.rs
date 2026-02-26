@@ -1,0 +1,176 @@
+use std::{
+    cmp::Ordering,
+    collections::{
+        BTreeSet,
+        HashMap,
+    },
+    ops::{
+        Range,
+        RangeFrom,
+        RangeTo,
+    },
+};
+
+use derive_more::From;
+use fancy_constructor::new;
+
+use crate::{
+    event_new::{
+        Name,
+        Tag,
+        Version,
+    },
+    stream_new::{
+        Position,
+        storage::Storage,
+    },
+};
+
+// =================================================================================================
+// Select
+// =================================================================================================
+
+// Reference
+
+#[derive(new, Debug)]
+#[new(name(new_inner), vis())]
+pub struct Reference(#[new(default)] pub(crate) HashMap<u64, String>);
+
+impl Reference {
+    pub(crate) fn new(selection: &Vec<Selector<(u64, String)>>) -> Self {
+        let mut reference = Self::new_inner();
+
+        for selector in selection {
+            for ty in &selector.0 {
+                reference.0.insert(ty.0.0.0, ty.0.0.1.clone()); // Type Name
+            }
+
+            if let Some(tags) = &selector.1 {
+                for tag in tags {
+                    reference.0.insert(tag.0.0, tag.0.1.clone()); // Tag
+                }
+            }
+        }
+
+        reference
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+pub trait Select {
+    fn select(&self, selection: Vec<Selector<String>>, from: Option<Position>);
+    fn select_multiple(&self, selections: Vec<Vec<Selector<String>>>, from: Option<Position>);
+}
+
+impl Select for Storage {
+    fn select(&self, selection: Vec<Selector<String>>, from: Option<Position>) {
+        let selection = selection.into_iter().map(Into::into).collect();
+        let reference = Reference::new(&selection);
+
+        let selection = selection.into_iter().map(Into::into).collect::<Vec<_>>();
+        let iter = self.iterate(&selection, from);
+    }
+
+    fn select_multiple(&self, selections: Vec<Vec<Selector<String>>>, from: Option<Position>) {}
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Selector
+
+#[derive(new, Debug)]
+pub struct Selector<T>(
+    #[new(name(types))] pub(crate) BTreeSet<TypeSelector<T>>,
+    #[new(name(tags))] pub(crate) Option<BTreeSet<Tag<T>>>,
+);
+
+#[rustfmt::skip]
+macro_rules! selector_from {
+    ($from:ty, $to:ty) => {
+        impl From<Selector<$from>> for Selector<$to> {
+            fn from(selector: Selector<$from>) -> Self {
+                Self(
+                    selector.0.into_iter().map(Into::into).collect(),
+                    selector.1.map(|tags| tags.into_iter().map(Into::into).collect()),
+                )
+            }
+        }
+    };
+}
+
+selector_from!(String, u64);
+selector_from!(String, (u64, String));
+selector_from!((u64, String), u64);
+
+// -------------------------------------------------------------------------------------------------
+
+// Type Selector
+
+#[derive(new, Debug, Eq, PartialEq)]
+pub struct TypeSelector<T>(
+    #[new(name(name))] pub(crate) Name<T>,
+    #[new(name(version))] pub(crate) Range<Version>,
+);
+
+macro_rules! type_selector_from {
+    ($from:ty, $to:ty) => {
+        impl From<TypeSelector<$from>> for TypeSelector<$to> {
+            fn from(selector: TypeSelector<$from>) -> Self {
+                Self(selector.0.into(), selector.1)
+            }
+        }
+    };
+}
+
+type_selector_from!(String, u64);
+type_selector_from!(String, (u64, String));
+type_selector_from!((u64, String), u64);
+
+impl<T> Ord for TypeSelector<T>
+where
+    T: Ord,
+{
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.0.cmp(&other.0) {
+            Ordering::Equal => match self.1.start.cmp(&other.1.start) {
+                Ordering::Equal => self.1.end.cmp(&other.1.end),
+                ordering => ordering,
+            },
+            ordering => ordering,
+        }
+    }
+}
+
+impl<T> PartialOrd for TypeSelector<T>
+where
+    T: Ord,
+{
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Version Selector
+
+#[allow(clippy::enum_variant_names)]
+#[derive(Debug, From)]
+pub enum VersionSelector {
+    Range(Range<Version>),
+    RangeFrom(RangeFrom<Version>),
+    RangeFull,
+    RangeTo(RangeTo<Version>),
+}
+
+impl From<VersionSelector> for Range<Version> {
+    fn from(versions: VersionSelector) -> Self {
+        match versions {
+            VersionSelector::Range(range) => range,
+            VersionSelector::RangeFrom(range) => range.start..Version::MAX,
+            VersionSelector::RangeFull => Version::MIN..Version::MAX,
+            VersionSelector::RangeTo(range) => Version::MIN..range.end,
+        }
+    }
+}

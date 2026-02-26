@@ -28,6 +28,7 @@ darling                      = { version = "0.23" }
 dashmap                      = { version = "6", features = ["inline"] }
 derive_more                  = { version = "2", features = ["full"] }
 double-ended-peekable        = { version = "0.1.0" }
+error-stack                  = { version = "0.6" }
 eventric-model               = { path = "crates/model" }
 eventric-model-core          = { path = "crates/model/core" }
 eventric-model-macros        = { path = "crates/model/macros" }

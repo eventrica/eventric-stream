@@ -1,5 +1,6 @@
 use bytes::BufMut as _;
 use derive_more::Debug;
+use error_stack::ResultExt;
 use fancy_constructor::new;
 use fjall::{
     Database,
@@ -9,17 +10,17 @@ use fjall::{
 };
 
 use crate::{
-    error::Error,
     event_new::{
         Event,
+        Name,
         Tag,
     },
     stream_new::{
-        Facets,
+        Error,
+        Result,
         storage::{
             HASH_LEN,
             ID_LEN,
-            POSITION_LEN,
         },
     },
 };
@@ -36,8 +37,11 @@ pub struct References {
 }
 
 impl References {
-    pub fn open(database: &Database) -> Result<Self, Error> {
-        let keyspace = database.keyspace("references", KeyspaceCreateOptions::default)?;
+    pub fn open(database: &Database) -> Result<Self> {
+        let keyspace = database
+            .keyspace("references", KeyspaceCreateOptions::default)
+            .change_context(Error)
+            .attach("failed to open references keyspace")?;
 
         let tags = Tags::new(keyspace.clone());
         let types = Types::new(keyspace);
@@ -78,7 +82,7 @@ impl Tags {
 
 // Tags Constants
 
-static TAGS_REFERENCE_ID: u8 = 1;
+static TAGS_REFERENCE_ID: u8 = 0;
 static TAGS_KEY_LEN: usize = ID_LEN + HASH_LEN;
 
 // -------------------------------------------------------------------------------------------------
@@ -119,5 +123,44 @@ struct Types {
 }
 
 impl Types {
-    fn insert(&self, batch: &mut Batch, event: &Event<(), (u64, String)>) {}
+    fn insert(&self, batch: &mut Batch, event: &Event<(), (u64, String)>) {
+        let key: TypesKey = TypesKeyConverter(&event.1.0.0).into(); // Name
+        let value = event.1.0.0.0.1.as_bytes(); // Name
+
+        batch.insert(&self.keyspace, key, value);
+    }
 }
+
+// -------------------------------------------------------------------------------------------------
+
+// Types Constants
+
+static TYPES_REFERENCE_ID: u8 = 1;
+static TYPES_KEY_LEN: usize = ID_LEN + HASH_LEN;
+
+// -------------------------------------------------------------------------------------------------
+
+// Types Converters
+
+struct TypesKeyConverter<'a>(&'a Name<(u64, String)>);
+
+impl From<TypesKeyConverter<'_>> for TypesKey {
+    fn from(TypesKeyConverter(name): TypesKeyConverter<'_>) -> Self {
+        let mut key = TypesKey::default();
+
+        {
+            let mut key = &mut key[..];
+
+            key.put_u8(TYPES_REFERENCE_ID);
+            key.put_u64(name.0.0); // Name (Hashed)
+        }
+
+        key
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Types Types
+
+type TypesKey = [u8; TYPES_KEY_LEN];
