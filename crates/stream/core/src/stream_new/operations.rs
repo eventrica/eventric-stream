@@ -1,5 +1,6 @@
-pub mod append;
-pub mod select;
+mod append;
+mod iterate;
+mod select;
 
 // =================================================================================================
 // Operations
@@ -9,5 +10,13 @@ pub mod select;
 
 pub use self::{
     append::Append,
-    select::Select,
+    iterate::{
+        AndIter,
+        OrIter,
+    },
+    select::{
+        Select,
+        Selector,
+        TypeSelector,
+    },
 };

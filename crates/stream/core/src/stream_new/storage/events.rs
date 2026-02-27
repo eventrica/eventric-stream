@@ -154,7 +154,7 @@ impl From<ValueConverter<'_>> for Vec<u8> {
 // Iterators
 
 #[derive(Debug, From)]
-pub(crate) enum EventsIter {
+pub enum EventsIter {
     Direct(EventsIterDirect),
     Mapped(EventsIterMapped),
 }
@@ -169,7 +169,7 @@ impl DoubleEndedIterator for EventsIter {
 }
 
 impl Iterator for EventsIter {
-    type Item = result::Result<Event<stream_new::Facets, u64>, crate::error::Error>;
+    type Item = Result<Event<stream_new::Facets, u64>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -183,7 +183,7 @@ impl Iterator for EventsIter {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub(crate) struct EventsIterDirect {
+pub struct EventsIterDirect {
     #[debug("Iter")]
     iter: fjall::Iter,
 }
@@ -192,7 +192,9 @@ impl EventsIterDirect {
     fn next_map(guard: Guard) -> <Self as Iterator>::Item {
         match guard.into_inner() {
             Ok((key, value)) => Ok(EventConverter(PositionConverter(&key).into(), &value).into()),
-            Err(err) => Err(crate::error::Error::from(err)),
+            Err(err) => Err(err)
+                .change_context(Error)
+                .attach("failed to map next event"),
         }
     }
 }
@@ -204,7 +206,7 @@ impl DoubleEndedIterator for EventsIterDirect {
 }
 
 impl Iterator for EventsIterDirect {
-    type Item = result::Result<Event<stream_new::Facets, u64>, crate::error::Error>;
+    type Item = Result<Event<stream_new::Facets, u64>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(Self::next_map)
@@ -215,23 +217,28 @@ impl Iterator for EventsIterDirect {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub(crate) struct EventsIterMapped {
+pub struct EventsIterMapped {
     events: Events,
     iter: IndicesIter,
 }
 
 impl EventsIterMapped {
-    fn map(
-        &mut self,
-        position: result::Result<Position, crate::error::Error>,
-    ) -> Option<<Self as Iterator>::Item> {
+    fn map(&mut self, position: Result<Position>) -> Option<<Self as Iterator>::Item> {
         match position {
             Ok(position) => match self.events.get(position) {
                 Ok(Some(event)) => Some(Ok(event)),
                 Ok(None) => None,
-                Err(err) => Some(Err(err)),
+                Err(err) => Some(
+                    Err(err)
+                        .change_context(Error)
+                        .attach("failed to get next event"),
+                ),
             },
-            Err(err) => Some(Err(err)),
+            Err(err) => Some(
+                Err(err)
+                    .change_context(Error)
+                    .attach("failed to map next event"),
+            ),
         }
     }
 }
@@ -245,7 +252,7 @@ impl DoubleEndedIterator for EventsIterMapped {
 }
 
 impl Iterator for EventsIterMapped {
-    type Item = result::Result<Event<stream_new::Facets, u64>, crate::error::Error>;
+    type Item = Result<Event<stream_new::Facets, u64>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().and_then(|position| self.map(position))

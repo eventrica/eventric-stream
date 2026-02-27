@@ -19,11 +19,8 @@ use crate::{
         Position,
         Result,
         Timestamp,
-        operations::select::Selector,
-        storage::events::{
-            EventsIter,
-            EventsIterMapped,
-        },
+        operations::Selector,
+        storage::events::EventsIterMapped,
     },
 };
 
@@ -120,7 +117,10 @@ impl Storage {
 // Re-Exports
 
 pub use self::{
-    events::Events,
+    events::{
+        Events,
+        EventsIter,
+    },
     indices::Indices,
     references::References,
 };

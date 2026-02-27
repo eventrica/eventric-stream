@@ -1,9 +1,6 @@
-use std::{
-    ops::{
-        ControlFlow,
-        Range,
-    },
-    result,
+use std::ops::{
+    ControlFlow,
+    Range,
 };
 
 use bytes::{
@@ -38,7 +35,9 @@ use crate::{
         Position,
         Result,
         Timestamp,
-        operations::select::{
+        operations::{
+            AndIter,
+            OrIter,
             Selector,
             TypeSelector,
         },
@@ -47,10 +46,6 @@ use crate::{
             ID_LEN,
             POSITION_LEN,
         },
-    },
-    utils::iteration::{
-        and::AndIter,
-        or::OrIter,
     },
 };
 
@@ -91,9 +86,9 @@ impl Indices {
 
 impl Indices {
     pub fn iterate(&self, selection: &[Selector<u64>], from: Option<Position>) -> IndicesIter {
-        OrIter::combine(selection.iter().map(|selector| match selector {
+        OrIter::iter(selection.iter().map(|selector| match selector {
             Selector(types, None) => self.types.iterate(types.iter(), from),
-            Selector(types, Some(tags)) => AndIter::combine([
+            Selector(types, Some(tags)) => AndIter::iter([
                 self.types.iterate(types.iter(), from),
                 self.tags.iterate(tags.iter(), from),
             ]),
@@ -125,7 +120,7 @@ impl DoubleEndedIterator for IndicesIter {
 }
 
 impl Iterator for IndicesIter {
-    type Item = result::Result<Position, crate::error::Error>;
+    type Item = Result<Position>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -163,7 +158,7 @@ impl Tags {
     where
         T: Iterator<Item = &'a Tag<u64>>,
     {
-        AndIter::combine(tags.map(|tag| {
+        AndIter::iter(tags.map(|tag| {
             let iter = if let Some(from) = from {
                 let from: TagsKey = TagsKeyConverter(tag, &from).into();
                 let to: TagsKey = TagsKeyConverter(tag, &Position::MAX).into();
@@ -246,7 +241,7 @@ impl From<TagsPrefixConverter<'_>> for TagsPrefix {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub(crate) struct TagsIter {
+pub struct TagsIter {
     #[debug("Iter")]
     iter: fjall::Iter,
 }
@@ -256,7 +251,7 @@ impl TagsIter {
     fn next_map(guard: Guard) -> <Self as Iterator>::Item {
         match guard.key() {
             Ok(key) => Ok(TagsPositionConverter(&key).into()),
-            Err(err) => Err(crate::error::Error::from(err)),
+            Err(err) => Err(err).change_context(Error).attach("failed to map next tag"),
         }
     }
 }
@@ -268,7 +263,7 @@ impl DoubleEndedIterator for TagsIter {
 }
 
 impl Iterator for TagsIter {
-    type Item = result::Result<Position, crate::error::Error>;
+    type Item = Result<Position>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(Self::next_map)
@@ -360,7 +355,7 @@ impl Types {
     where
         T: Iterator<Item = &'a TypeSelector<u64>>,
     {
-        OrIter::combine(types.map(|ty| {
+        OrIter::iter(types.map(|ty| {
             let iter = if let Some(from) = from {
                 let from: TypesKey = TypesKeyConverter(&ty.0, &from).into();
                 let to: TypesKey = TypesKeyConverter(&ty.0, &Position::MAX).into();
@@ -453,7 +448,7 @@ impl From<TypesVersionConverter<'_>> for Version {
 
 #[derive(new, Debug)]
 #[new(const_fn)]
-pub(crate) struct TypesIter {
+pub struct TypesIter {
     #[debug("Iter")]
     iter: fjall::Iter,
     range: Range<Version>,
@@ -473,7 +468,11 @@ impl TypesIter {
             Ok((key, value)) => range
                 .contains::<Version>(&TypesVersionConverter(&value).into())
                 .then(|| Ok(TypesPositionConverter(&key).into())),
-            Err(err) => Some(Err(crate::error::Error::from(err))),
+            Err(err) => Some(
+                Err(err)
+                    .change_context(Error)
+                    .attach("failed to map next type"),
+            ),
         }
     }
 }
@@ -487,7 +486,7 @@ impl DoubleEndedIterator for TypesIter {
 }
 
 impl Iterator for TypesIter {
-    type Item = result::Result<Position, crate::error::Error>;
+    type Item = Result<Position>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter
