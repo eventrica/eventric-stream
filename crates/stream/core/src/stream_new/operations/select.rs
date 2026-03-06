@@ -1,14 +1,12 @@
 use std::{
     cmp::Ordering,
-    collections::{
-        BTreeSet,
-        HashMap,
-    },
+    collections::BTreeSet,
     ops::{
         Range,
         RangeFrom,
         RangeTo,
     },
+    sync::Exclusive,
 };
 
 use derive_more::From;
@@ -16,13 +14,19 @@ use fancy_constructor::new;
 
 use crate::{
     event_new::{
+        Event,
         Name,
         Tag,
         Version,
     },
     stream_new::{
+        Facets,
         Position,
-        storage::Storage,
+        Result,
+        storage::{
+            EventsIter,
+            Storage,
+        },
     },
 };
 
@@ -30,49 +34,47 @@ use crate::{
 // Select
 // =================================================================================================
 
-// Reference
+// Iterator
 
 #[derive(new, Debug)]
-#[new(name(new_inner), vis())]
-pub struct Reference(#[new(default)] pub(crate) HashMap<u64, String>);
+#[new(args(iter: EventsIter), vis())]
+pub struct Iter {
+    #[new(val(Exclusive::new(iter)))]
+    iter: Exclusive<EventsIter>,
+}
 
-impl Reference {
-    pub(crate) fn new(selection: &Vec<Selector<(u64, String)>>) -> Self {
-        let mut reference = Self::new_inner();
+impl DoubleEndedIterator for Iter {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.get_mut().next_back()
+    }
+}
 
-        for selector in selection {
-            for ty in &selector.0 {
-                reference.0.insert(ty.0.0.0, ty.0.0.1.clone()); // Type Name
-            }
+impl Iterator for Iter {
+    type Item = Result<Event<Facets, u64>>;
 
-            if let Some(tags) = &selector.1 {
-                for tag in tags {
-                    reference.0.insert(tag.0.0, tag.0.1.clone()); // Tag
-                }
-            }
-        }
-
-        reference
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.get_mut().next()
     }
 }
 
 // -------------------------------------------------------------------------------------------------
 
+// Select
+
 pub trait Select {
-    fn select(&self, selection: Vec<Selector<String>>, from: Option<Position>);
-    fn select_multiple(&self, selections: Vec<Vec<Selector<String>>>, from: Option<Position>);
+    fn select(&self, selection: Selection, from: Option<Position>) -> Iter;
+    fn select_multiple(&self, selections: Selections, from: Option<Position>);
 }
 
 impl Select for Storage {
-    fn select(&self, selection: Vec<Selector<String>>, from: Option<Position>) {
-        let selection = selection.into_iter().map(Into::into).collect();
-        let reference = Reference::new(&selection);
-
+    fn select(&self, selection: Selection, from: Option<Position>) -> Iter {
         let selection = selection.into_iter().map(Into::into).collect::<Vec<_>>();
         let iter = self.iterate(&selection, from);
+
+        Iter::new(iter)
     }
 
-    fn select_multiple(&self, selections: Vec<Vec<Selector<String>>>, from: Option<Position>) {}
+    fn select_multiple(&self, selections: Selections, from: Option<Position>) {}
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -102,6 +104,13 @@ macro_rules! selector_from {
 selector_from!(String, u64);
 selector_from!(String, (u64, String));
 selector_from!((u64, String), u64);
+
+// -------------------------------------------------------------------------------------------------
+
+// Types
+
+pub type Selection = Vec<Selector<String>>;
+pub type Selections = Vec<Selection>;
 
 // -------------------------------------------------------------------------------------------------
 

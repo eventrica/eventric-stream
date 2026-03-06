@@ -2,8 +2,6 @@ mod events;
 mod indices;
 mod references;
 
-use std::sync::Exclusive;
-
 use error_stack::ResultExt as _;
 use fancy_constructor::new;
 use fjall::{
@@ -100,15 +98,8 @@ impl Storage {
 }
 
 impl Storage {
-    pub fn iterate(
-        &self,
-        selection: &[Selector<u64>],
-        from: Option<Position>,
-    ) -> Exclusive<EventsIter> {
-        Exclusive::new(
-            EventsIterMapped::new(self.events.clone(), self.indices.iterate(selection, from))
-                .into(),
-        )
+    pub fn iterate(&self, selection: &[Selector<u64>], from: Option<Position>) -> EventsIter {
+        EventsIterMapped::new(self.events.clone(), self.indices.iterate(selection, from)).into()
     }
 }
 
