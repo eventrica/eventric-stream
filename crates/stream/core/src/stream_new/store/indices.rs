@@ -55,7 +55,7 @@ use crate::{
 // Indices
 // =================================================================================================
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 #[new(const_fn, vis())]
 pub struct Indices {
     tags: Tags,
@@ -212,7 +212,7 @@ impl From<TagPositionReader<'_>> for Position {
 
 // Tags
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 struct Tags {
     #[debug("Keyspace")]
     keyspace: Keyspace,
@@ -322,7 +322,7 @@ impl From<TimestampKeyWriter<'_>> for TimestampKey {
 
 // Timestamps
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 struct Timestamps {
     #[debug("Keyspace")]
     keyspace: Keyspace,
@@ -424,7 +424,7 @@ impl From<TypeVersionReader<'_>> for Version {
 
 // Types
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 struct Types {
     #[debug("Keyspace")]
     keyspace: Keyspace,

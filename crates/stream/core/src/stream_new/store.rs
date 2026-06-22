@@ -38,7 +38,7 @@ static POSITION_LEN: usize = size_of::<u64>();
 
 // Store
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 #[new(const_fn, vis())]
 pub struct Store {
     pub(crate) events: Events,

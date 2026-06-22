@@ -45,6 +45,37 @@ current state:
   **Note:** the old tree's no-selection *positional* concurrency check ("fail if
   the stream grew at all") was intentionally dropped — DCB conditions are
   selection-scoped; empty selections now mean unconditional.
+- **Phase 4 — ✅ done (2026-06-22).** Public surface. `Stream::builder(path)`
+  landed in Phase 2; this phase added the **Reader/Writer split** the multi-thread
+  wrapper is built on: `Stream::split() -> (Reader, Writer)`, `Reader` (cloneable
+  read-only handle, impls `Select`), `Writer` (unique write handle, impls
+  `Append`), and `From<Writer> for Stream` to recombine. `Store` + its sub-stores
+  are now `Clone` (cheap fjall keyspace handles). The read surface is just
+  `Select` (full scan = `select(Condition::new())`, so no separate iterate trait);
+  the write surface is `Append`. Thread bounds (`Reader: Send + Sync + Clone`,
+  `Writer: Send`) are pinned by a compile-time test. Verified that the split
+  provides everything the old multi-thread crate needs, so the Phase 6 cutover is
+  a mechanical re-point.
+
+### Deferred extension — stream-level "fail if grown" concurrency
+
+A coarse "fail if the stream has grown since position P" guard is **not currently
+expressible** and is **deliberately deferred** until there's evidence it's needed
+(it does not block the cutover — it's cleanly addable later).
+
+Why it isn't expressible today: every `Selector` is anchored on specific
+type-name(s) (`TypeSelector` carries a concrete `Name`; the index is scanned
+per-name), there is no match-all/wildcard selector, and an empty selector set
+matches *nothing* (not everything). Tags are always an AND-refinement of a type
+selection, never standalone. So you cannot write an "any event" condition.
+
+If it turns out to be needed, the clean way is **a positional guard on append**
+(option a): an optional "expected head" position on `Condition` (or a separate
+arg) that rejects when `next` exceeds it — one cursor comparison, no index scan.
+This is the honest representation ("fail if grown" is a *positional* question, not
+a content query) and is exactly what the old tree did (`after + 1 < next`). A
+true match-all selector (option b) was considered the wrong tool — heavier and a
+poor fit for a positional question.
 
 ## TL;DR
 
@@ -321,7 +352,7 @@ Three directions are now locked:
 - **Done when:** conditional append rejects conflicts and passes when clear;
   parity with `append_select{,_multiple}` behaviour the model relies on.
 
-### Phase 4 — Public `Stream` API & the Reader/Writer split
+### Phase 4 — Public `Stream` API & the Reader/Writer split ✅ done (2026-06-22)
 - Add a public `Stream::builder(path)` (currently `Builder::new` is private).
 - **Re-add the Reader/Writer split** (or an equivalent cloneable read handle +
   unique write handle). *The multi-thread crate is built entirely on

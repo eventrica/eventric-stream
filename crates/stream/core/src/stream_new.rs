@@ -147,6 +147,17 @@ impl Stream {
     pub fn len(&self) -> u64 {
         self.next.0
     }
+
+    /// Split into a cloneable, read-only [`Reader`] and the unique [`Writer`].
+    /// Reads scale across `Reader` clones; writes serialize through the single
+    /// `Writer`. Recombine into a `Stream` with `Stream::from`.
+    #[must_use]
+    pub fn split(self) -> (Reader, Writer) {
+        let reader = Reader::new(self.store.clone());
+        let writer = Writer::new(self.database, self.next, self.store);
+
+        (reader, writer)
+    }
 }
 
 impl Append for Stream {
@@ -162,6 +173,56 @@ impl Append for Stream {
 impl Select for Stream {
     fn select(&self, condition: Condition) -> SelectIter {
         self.store.select(condition)
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Reader
+
+/// A cloneable, read-only handle to a stream, obtained from [`Stream::split`].
+/// Reads run concurrently across clones; a `Reader` cannot append.
+#[derive(new, Clone, Debug)]
+#[new(const_fn, vis())]
+pub struct Reader {
+    store: Store,
+}
+
+impl Select for Reader {
+    fn select(&self, condition: Condition) -> SelectIter {
+        self.store.select(condition)
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Writer
+
+/// The unique write handle to a stream, obtained from [`Stream::split`]. It
+/// owns the write side (database + position cursor); fold it back into a
+/// [`Stream`] with `Stream::from`.
+#[derive(new, Debug)]
+#[new(const_fn, vis())]
+pub struct Writer {
+    #[debug("Database")]
+    database: Database,
+    next: Position,
+    store: Store,
+}
+
+impl Append for Writer {
+    fn append<E>(&mut self, events: E, condition: Condition) -> Result<Position, Error>
+    where
+        E: IntoIterator<Item = Event<(), String>>,
+        E::IntoIter: Send + 'static,
+    {
+        (&mut || self.database.batch(), &mut self.next, &self.store).append(events, condition)
+    }
+}
+
+impl From<Writer> for Stream {
+    fn from(writer: Writer) -> Self {
+        Self::new(writer.database, writer.next, writer.store)
     }
 }
 
@@ -272,11 +333,13 @@ mod tests {
         Condition,
         Conflict,
         Position,
+        Reader,
         Select,
         Selection,
         Selector,
         Stream,
         TypeSelector,
+        Writer,
     };
     use crate::{
         event_new::{
@@ -726,5 +789,49 @@ mod tests {
         ]);
 
         assert!(stream.append(vec![event("C", 0, &[])], condition).is_err());
+    }
+
+    // Phase 4: split into a cloneable Reader (reads) and the unique Writer
+    // (writes). The Reader (and clones of it) sees the Writer's committed
+    // appends, and the Writer folds back into a Stream.
+    #[test]
+    fn split_reader_reads_writer_writes_then_recombines() {
+        let (reader, mut writer) = stream().split();
+
+        writer
+            .append(vec![event("Enrolled", 0, &["student:1"])], Condition::new())
+            .unwrap();
+
+        let condition = || {
+            Condition::new().selections([Selection::new([Selector::types([TypeSelector::new(
+                "Enrolled",
+            )
+            .unwrap()])])])
+        };
+
+        for handle in [reader.clone(), reader] {
+            let results = handle
+                .select(condition())
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+
+            assert_eq!(results.len(), 1);
+            assert_eq!(results[0].mask.as_ref(), [true].as_slice());
+        }
+
+        let stream = Stream::from(writer);
+        assert_eq!(stream.len(), 1);
+    }
+
+    // The concurrency contract the multi-thread wrapper relies on: a `Reader` is
+    // shareable across threads and cloneable, and a `Writer` can be moved to the
+    // dedicated writer thread. Compile-time assertion only.
+    #[test]
+    fn handles_satisfy_thread_bounds() {
+        const fn assert_send_sync_clone<T: Send + Sync + Clone>() {}
+        const fn assert_send<T: Send>() {}
+
+        assert_send_sync_clone::<Reader>();
+        assert_send::<Writer>();
     }
 }
