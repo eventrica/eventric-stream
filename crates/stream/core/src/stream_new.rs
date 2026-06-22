@@ -834,4 +834,70 @@ mod tests {
         assert_send_sync_clone::<Reader>();
         assert_send::<Writer>();
     }
+
+    // Phase 5: data written before a (non-temporary) stream is dropped is
+    // recovered on re-open, including the `next` position cursor.
+    #[test]
+    fn data_persists_across_reopen() {
+        let path = temp_path();
+
+        {
+            let mut stream = Stream::builder(&path).open().unwrap();
+            stream
+                .append(
+                    vec![
+                        event("Enrolled", 0, &["student:1"]),
+                        event("Dropped", 0, &[]),
+                    ],
+                    Condition::new(),
+                )
+                .unwrap();
+            assert_eq!(stream.len(), 2);
+        }
+
+        // Re-open the same path; `temporary(true)` cleans it up on drop.
+        let stream = Stream::builder(&path).temporary(true).open().unwrap();
+
+        assert_eq!(stream.len(), 2); // cursor recovered from the events keyspace
+        let results = stream
+            .select(Condition::new())
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        assert_eq!(results.len(), 2);
+    }
+
+    // A full scan (no selections) honors the `from` lower bound.
+    #[test]
+    fn full_scan_respects_from_position() {
+        let mut stream = stream();
+
+        stream
+            .append(
+                vec![event("A", 0, &[]), event("B", 0, &[]), event("C", 0, &[])],
+                Condition::new(),
+            )
+            .unwrap();
+
+        let results = stream
+            .select(Condition::new().from(Position::new(1)))
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(results.len(), 2); // positions 1 and 2
+        assert_eq!(results[0].event.2.0, Position::new(1));
+        assert_eq!(results[1].event.2.0, Position::new(2));
+    }
+
+    // Appending zero events is a usage error, not a panic/underflow.
+    #[test]
+    fn append_with_no_events_is_an_error() {
+        let mut stream = stream();
+
+        assert!(
+            stream
+                .append(Vec::<Event<(), String>>::new(), Condition::new())
+                .is_err()
+        );
+        assert_eq!(stream.len(), 0);
+    }
 }

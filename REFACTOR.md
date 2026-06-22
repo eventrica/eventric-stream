@@ -56,6 +56,17 @@ current state:
   `Writer: Send`) are pinned by a compile-time test. Verified that the split
   provides everything the old multi-thread crate needs, so the Phase 6 cutover is
   a mechanical re-point.
+- **Phase 5 — ✅ done (2026-06-22).** Tests & docs. The new tree's behavioral
+  coverage was built incrementally across Phases 1–4 (combinators, insert/iterate,
+  masked query, conditional append, split — each adversarially verified), so
+  Phase 5 closed the remaining gaps: a **persistence/re-open** test (data + the
+  `next` cursor recovered after drop), a **full-scan with `from`** test, and it
+  caught & fixed a latent **empty-append underflow** (`append([])` on an empty
+  stream underflowed `*next - 1`; now a clean error — the old tree carried this as
+  an open TODO). 367 tests pass. **Comprehensive rustdoc + restoring
+  `#![deny(missing_docs)]` is folded into Phase 6**, where the modules take their
+  final names: writing docs now would partly churn at the rename, and `core`
+  currently relaxes that lint, so it isn't gating.
 
 ### Deferred extension — stream-level "fail if grown" concurrency
 
@@ -362,7 +373,7 @@ Three directions are now locked:
 - **Done when:** `Stream` opens via a public builder and splits into read/write
   handles; the trait surface the model + multi-thread need is present.
 
-### Phase 5 — Tests & docs for the new tree
+### Phase 5 — Tests & docs for the new tree ✅ done (2026-06-22) — docs deferred to Phase 6
 - Port the suites (`append`, `append_query`, `iterate`, `properties`) to the new API.
   **Note:** existing tests assert string identifier/tag *values*; with hash-only
   results they must assert on hashes (or positions/masks). Update fixtures.
@@ -371,21 +382,66 @@ Three directions are now locked:
 - **Done when:** `cargo test -p eventric-stream-core` covers append/query/iterate/
   concurrency on the new API; docs build clean.
 
-### Phase 6 — Cutover
-- **Model** (`eventric-model`): re-point `select_multiple` → new multi-selection
-  select, `append_select_multiple` → new conditional append, `EventAndMask`/`Mask` →
-  the new mask. **Key change:** `Recognize` matches events by comparing identifier
-  *strings* today — switch to hash comparison or pure mask-based dispatch, since
-  results are now hash-only. Repoint `Selector`/`Specifier` → `Selector`/`TypeSelector`.
-- **Multi-thread**: re-point to the new `Stream` + Reader/Writer (Phase 4); update the
-  `Operation` enum's `Prepared`/`PreparedMultiple` payloads to the new condition type.
-- **Facade** (`crates/stream/src/lib.rs`): re-export the new modules; fix the `tag!`
-  macro's expansion path if it changes.
-- **Rename & delete:** `stream_new` → `stream`, `event_new` → `event` (delete originals
-  first, then rename); update `lib.rs`. Consolidate the `stream_new/iterate.rs` fork
-  back into `utils/iteration` (one copy) and delete the duplicate.
-- **Done when:** no `_new` suffixes remain; old `stream/`, `event/` deleted; all
-  consumers compile against the single implementation.
+### Phase 6 — Cutover (detailed plan, decided 2026-06-22)
+
+**Strategy: phased, migrate-then-rename.** This is the only safe path — the old
+`crate::error::Error`, the old `stream::{append,iterate,select}` traits,
+`CandidateEvent`, and `Prepared*` are load-bearing for the model, multi-thread,
+*and* the integration tests, so they can't be deleted atomically. Keep the old
+tree alive; port each consumer onto `stream_new`/`event_new` (still under those
+names) and verify it; do the destructive rename + delete **last**.
+
+**Locked decisions:**
+- **Errors → error_stack end-to-end.** The model adopts the stream's
+  `Report<Error>` throughout: model trait + macro signatures return
+  `Result<_, Report<Error>>`; `validation::Error` (Name/Tag/Data ctors) and
+  `revision` (de)serialization failures are attached via `.change_context(Error)`;
+  a concurrency conflict is detected by `report.downcast_ref::<Conflict>()`. The
+  old crate-level `Error` enum is deleted once nothing references it. (`eventric-model`
+  + `eventric-model-macros` gain a direct `error-stack` dep.)
+- **`Recognize` matches by hash, not string.** Cache each event type's
+  `Name<u64>`/`u64` in a `OnceLock` (mirroring today's `OnceLock<Identifier>`),
+  hashed with the **stable `utils::hashing::hash` (rapidhash, seed 0x28112017)** —
+  *not* `hashing::get` (DefaultHasher), which would compile but never match.
+- **Selections → a single `Condition`.** `Action::Select` yields `Vec<Selection>`;
+  `Enactor` builds `Condition::new().from(after).selections(...)` and calls
+  `select(condition)` then `append(events, condition)`. No `Selections` type,
+  no `Prepared` reuse.
+- **Facade: hybrid layout** — flat `stream` + an `event` module (+ `tag!`); drop
+  the `append`/`iterate`/`select` submodules. **Rename `stream_new::Facets` →
+  `Metadata`** to break the clash with `event_new::Facets`.
+
+**Sub-phases (each independently verifiable):**
+- **6a — Public read surface (prerequisite).** The queried `Event<Facets,u64>` has
+  no public accessors; add them (data, position, timestamp, tags, **type-name
+  hash**) and expose a **stable string→hash entry point**. Without this the model
+  cannot compile or match events. Required new public API.
+- **6b — Port `eventric-stream-multi-thread`** to `split`/`Reader`/`Writer`/
+  `Append(Condition)`/`Select(Condition)`. Mechanical except the error rewrite
+  (`Error::general(..)` → `Report::new(Error).attach(..)`; channel payloads become
+  `Result<R, Report<Error>>`; add `error-stack` dep; pass `Report` verbatim +
+  re-export `Conflict`; drop `Iterate`). Verify build + the `stream` example.
+- **6c — Port `eventric-model`** (the big one): error_stack end-to-end; `Recognize`
+  hash matching; selector codegen (`specifiers`→`types`, `Specifier`→`TypeSelector`,
+  drop the `?` on the now-infallible `Selection::new`); `Events` buffer builds
+  `Event<(),String>` not `CandidateEvent`; `DispatchEvent.identifier` String→hash;
+  rewrite `Enactor::enact` (one `Condition`, `select` then `append`). Verify the
+  `course_subscriptions` example end-to-end.
+- **6d — Re-point the facade** (`crates/stream/src/lib.rs`): hybrid layout; expose
+  the new surface; rename `stream_new::Facets` → `Metadata` in core first.
+- **6e — Rename + delete:** `stream_new`→`stream`, `event_new`→`event`; delete old
+  `stream.rs`+`stream/`, `event.rs`+`event/`, the now-dead `utils/iteration`, and
+  `error.rs`; delete the old integration tests (behavior covered by the in-module
+  tests from Phases 2–5). Update `lib.rs` mod decls.
+- **6f — Restore docs + `#![deny(missing_docs)]`** against the final names.
+
+**Carried-forward narrowings (not blockers):** `Prepared`-reuse is gone (the append
+re-builds its `Condition`); empty selections no longer validate-as-error; the
+`Version::MAX` half-open edge.
+
+- **Done when:** no `_new` suffixes remain; old `stream/`, `event/`, `error.rs`,
+  `utils/iteration` deleted; model + multi-thread + facade compile against the
+  single implementation; the examples run.
 
 ### Phase 7 — Verify & land
 - `cargo build --workspace`, `cargo test --workspace`, `cargo clippy --workspace -- -D

@@ -1,7 +1,10 @@
 mod events;
 mod indices;
 
-use error_stack::ResultExt as _;
+use error_stack::{
+    Report,
+    ResultExt as _,
+};
 use fancy_constructor::new;
 use fjall::{
     Database,
@@ -81,6 +84,13 @@ impl Store {
             self.indices.insert(&mut batch, &event, &facets);
 
             position += 1;
+        }
+
+        // Appending zero events has no "last position" to return (and would
+        // underflow `*next - 1` on an empty stream), so treat it as a usage
+        // error rather than committing an empty batch.
+        if position == *next {
+            return Err(Report::new(Error).attach("cannot append zero events"));
         }
 
         batch
