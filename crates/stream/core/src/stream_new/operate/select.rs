@@ -6,7 +6,7 @@ use std::{
         RangeFrom,
         RangeTo,
     },
-    sync::Exclusive,
+    sync::SyncView,
 };
 
 use derive_more::From;
@@ -21,11 +21,11 @@ use crate::{
     },
     stream_new::{
         Facets,
-        Position,
         Result,
-        storage::{
-            EventsIter,
-            Storage,
+        operate::Condition,
+        store::{
+            Store,
+            StoreIter,
         },
     },
 };
@@ -34,47 +34,39 @@ use crate::{
 // Select
 // =================================================================================================
 
-// Iterator
-
-#[derive(new, Debug)]
-#[new(args(iter: EventsIter), vis())]
-pub struct Iter {
-    #[new(val(Exclusive::new(iter)))]
-    iter: Exclusive<EventsIter>,
+pub trait Select {
+    fn select(&self, condition: Condition) -> SelectIter;
 }
 
-impl DoubleEndedIterator for Iter {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next_back()
-    }
-}
-
-impl Iterator for Iter {
-    type Item = Result<Event<Facets, u64>>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next()
+impl Select for Store {
+    fn select(&self, condition: Condition) -> SelectIter {
+        SelectIter::new(self.iterate(condition.selection, condition.position))
     }
 }
 
 // -------------------------------------------------------------------------------------------------
 
-// Select
+// Select Iterator
 
-pub trait Select {
-    fn select(&self, selection: Selection, from: Option<Position>) -> Iter;
-    fn select_multiple(&self, selections: Selections, from: Option<Position>);
+#[derive(new, Debug)]
+#[new(args(iter: StoreIter), vis())]
+pub struct SelectIter {
+    #[new(val(SyncView::new(iter)))]
+    iter: SyncView<StoreIter>,
 }
 
-impl Select for Storage {
-    fn select(&self, selection: Selection, from: Option<Position>) -> Iter {
-        let selection = selection.into_iter().map(Into::into).collect::<Vec<_>>();
-        let iter = self.iterate(&selection, from);
-
-        Iter::new(iter)
+impl DoubleEndedIterator for SelectIter {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.iter.as_mut().next_back()
     }
+}
 
-    fn select_multiple(&self, selections: Selections, from: Option<Position>) {}
+impl Iterator for SelectIter {
+    type Item = Result<Event<Facets, u64>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.as_mut().next()
+    }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -104,13 +96,6 @@ macro_rules! selector_from {
 selector_from!(String, u64);
 selector_from!(String, (u64, String));
 selector_from!((u64, String), u64);
-
-// -------------------------------------------------------------------------------------------------
-
-// Types
-
-pub type Selection = Vec<Selector<String>>;
-pub type Selections = Vec<Selection>;
 
 // -------------------------------------------------------------------------------------------------
 

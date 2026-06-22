@@ -124,18 +124,6 @@ where
 
     #[rustfmt::skip]
     and_next!(peek, next, Ordering::Greater, Ordering::Less);
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        if self.0.is_empty() {
-            return (0, Some(0));
-        }
-
-        // Lower bound is 0 (might be no intersection)
-        // Upper bound is the minimum of all iterator upper bounds
-        let upper = self.0.iter().filter_map(|iter| iter.size_hint().1).min();
-
-        (0, upper)
-    }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -243,25 +231,4 @@ where
     type Item = Result<T>;
 
     or_next!(peek, next, Ordering::Less);
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        if self.0.is_empty() {
-            return (0, Some(0));
-        }
-
-        // Lower bound is the maximum of all iterator lower bounds
-        let lower = self
-            .0
-            .iter()
-            .map(|iter| iter.size_hint().0)
-            .max()
-            .unwrap_or(0);
-
-        // Upper bound is the sum of all iterator upper bounds
-        let upper = self.0.iter().try_fold(0usize, |acc, iter| {
-            iter.size_hint().1.and_then(|n| acc.checked_add(n))
-        });
-
-        (lower, upper)
-    }
 }

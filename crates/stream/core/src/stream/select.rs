@@ -9,9 +9,7 @@ pub(crate) mod mask;
 pub(crate) mod prepared;
 pub(crate) mod selector;
 
-// use std::borrow::Cow;
-
-use std::sync::Exclusive;
+use std::sync::SyncView;
 
 use derive_more::{
     AsRef,
@@ -109,14 +107,14 @@ fn select_iter(
     data: &Data,
     selection: &SelectionHash,
     from: Option<Position>,
-) -> Exclusive<EventHashIter> {
+) -> SyncView<EventHashIter> {
     let events = data.events.clone();
 
     let iter = data.indices.iterate(selection, from);
     let iter = MappedEventHashIter::new(events, iter);
     let iter = EventHashIter::Mapped(iter);
 
-    Exclusive::new(iter)
+    SyncView::new(iter)
 }
 
 /// The [`Selection`] type a key type when interacting with a [`Stream`],

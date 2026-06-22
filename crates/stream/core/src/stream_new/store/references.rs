@@ -18,7 +18,7 @@ use crate::{
     stream_new::{
         Error,
         Result,
-        storage::{
+        store::{
             HASH_LEN,
             ID_LEN,
         },

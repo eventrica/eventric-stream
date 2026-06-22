@@ -2,7 +2,7 @@ use std::{
     collections::BTreeSet,
     sync::{
         Arc,
-        Exclusive,
+        SyncView,
     },
 };
 
@@ -45,7 +45,7 @@ use crate::{
 #[derive(new, Debug)]
 #[new(args(prepared: &Prepared), vis(pub(crate)))]
 pub struct IterSelect {
-    iter: Exclusive<EventHashIter>,
+    iter: SyncView<EventHashIter>,
     #[new(val(Retrieve::new(prepared.lookup.clone())))]
     retrieve: Retrieve,
 }
@@ -58,7 +58,7 @@ impl IterSelect {
 
 impl DoubleEndedIterator for IterSelect {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next_back().map(|event| self.map(event))
+        self.iter.as_mut().next_back().map(|event| self.map(event))
     }
 }
 
@@ -66,7 +66,7 @@ impl Iterator for IterSelect {
     type Item = Result<Event, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next().map(|event| self.map(event))
+        self.iter.as_mut().next().map(|event| self.map(event))
     }
 }
 
@@ -74,7 +74,7 @@ impl Iterator for IterSelect {
 #[derive(new, Debug)]
 #[new(args(prepared: &PreparedMultiple),  vis(pub(crate)))]
 pub struct IterSelectMultiple {
-    iter: Exclusive<EventHashIter>,
+    iter: SyncView<EventHashIter>,
     #[new(val(prepared.filters.clone()))]
     filters: Arc<SmallVec<[Filter; 8]>>,
     #[new(val(Retrieve::new(prepared.lookup.clone())))]
@@ -100,7 +100,7 @@ impl IterSelectMultiple {
 
 impl DoubleEndedIterator for IterSelectMultiple {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next_back().map(|event| self.map(event))
+        self.iter.as_mut().next_back().map(|event| self.map(event))
     }
 }
 
@@ -108,7 +108,7 @@ impl Iterator for IterSelectMultiple {
     type Item = Result<EventAndMask, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next().map(|event| self.map(event))
+        self.iter.as_mut().next().map(|event| self.map(event))
     }
 }
 

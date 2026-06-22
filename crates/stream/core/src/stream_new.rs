@@ -1,5 +1,6 @@
-mod operations;
-mod storage;
+mod iterate;
+mod operate;
+mod store;
 
 use std::{
     path::Path,
@@ -30,7 +31,13 @@ use fjall::Database;
 
 use crate::{
     event_new::Event,
-    stream_new::storage::Storage,
+    stream_new::{
+        operate::{
+            Condition,
+            SelectIter,
+        },
+        store::Store,
+    },
 };
 
 // =================================================================================================
@@ -61,7 +68,7 @@ where
             .change_context(Error)
             .attach("failed to open database")?;
 
-        let storage = Storage::open(&database)?;
+        let storage = Store::open(&database)?;
         let next = storage.len().map(Position::new)?;
 
         Ok(Stream::new(database, next, storage))
@@ -108,7 +115,7 @@ pub struct Stream {
     #[debug("Database")]
     database: Database,
     next: Position,
-    storage: Storage,
+    store: Store,
 }
 
 impl Stream {
@@ -129,7 +136,13 @@ impl Append for Stream {
         E: IntoIterator<Item = Event<(), String>>,
         E::IntoIter: Send + 'static,
     {
-        (&mut || self.database.batch(), &mut self.next, &self.storage).append(events, after)
+        (&mut || self.database.batch(), &mut self.next, &self.store).append(events, after)
+    }
+}
+
+impl Select for Stream {
+    fn select(&self, condition: Condition) -> SelectIter {
+        self.store.select(condition)
     }
 }
 
@@ -214,7 +227,7 @@ impl Timestamp {
 
 // Re-Exports
 
-pub use self::operations::{
+pub use self::operate::{
     Append,
     Select,
 };

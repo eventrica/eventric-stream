@@ -17,13 +17,16 @@ use crate::{
         Position,
         Result,
         Timestamp,
-        operations::Selector,
-        storage::events::EventsIterMapped,
+        operate::Selection,
+        store::{
+            events::EventsIter,
+            indices::IndicesIter,
+        },
     },
 };
 
 // =================================================================================================
-// Storage
+// Store
 // =================================================================================================
 
 // Constants
@@ -34,17 +37,17 @@ static POSITION_LEN: usize = size_of::<u64>();
 
 // -------------------------------------------------------------------------------------------------
 
-// Storage
+// Store
 
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
-pub struct Storage {
+pub struct Store {
     pub(crate) events: Events,
     pub(crate) indices: Indices,
     pub(crate) references: References,
 }
 
-impl Storage {
+impl Store {
     pub fn open(database: &Database) -> Result<Self> {
         let events = Events::open(database)?;
         let indices = Indices::open(database)?;
@@ -54,13 +57,13 @@ impl Storage {
     }
 }
 
-impl Storage {
+impl Store {
     pub fn len(&self) -> Result<u64> {
         self.events.len()
     }
 }
 
-impl Storage {
+impl Store {
     pub fn insert<B, E>(&self, batch: &mut B, events: E, next: &mut Position) -> Result<Position>
     where
         B: FnMut() -> Batch,
@@ -97,9 +100,65 @@ impl Storage {
     }
 }
 
-impl Storage {
-    pub fn iterate(&self, selection: &[Selector<u64>], from: Option<Position>) -> EventsIter {
-        EventsIterMapped::new(self.events.clone(), self.indices.iterate(selection, from)).into()
+impl Store {
+    pub fn iterate(&self, selection: Option<Selection>, from: Option<Position>) -> StoreIter {
+        if let Some(selection) = selection {
+            let events = self.events.clone();
+            let iter = self.indices.iterate(&selection.selectors, from);
+
+            StoreIter::Indices(events, iter)
+        } else {
+            let iter = self.events.iterate(from);
+
+            StoreIter::Events(iter)
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Iterators
+
+#[derive(Debug)]
+pub enum StoreIter {
+    Events(EventsIter),
+    Indices(Events, IndicesIter),
+}
+
+impl StoreIter {
+    fn next_map(events: &Events, position: Result<Position>) -> Option<<Self as Iterator>::Item> {
+        match position {
+            Ok(position) => match events.get(position) {
+                Ok(Some(event)) => Some(Ok(event)),
+                Ok(None) => None,
+                Err(err) => Some(Err(err)),
+            },
+            Err(err) => Some(Err(err)),
+        }
+    }
+}
+
+impl DoubleEndedIterator for StoreIter {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Events(iter) => iter.next_back(),
+            Self::Indices(events, iter) => iter
+                .next_back()
+                .and_then(|position| Self::next_map(events, position)),
+        }
+    }
+}
+
+impl Iterator for StoreIter {
+    type Item = Result<Event<Facets, u64>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Events(iter) => iter.next(),
+            Self::Indices(events, iter) => iter
+                .next()
+                .and_then(|position| Self::next_map(events, position)),
+        }
     }
 }
 
@@ -108,10 +167,7 @@ impl Storage {
 // Re-Exports
 
 pub use self::{
-    events::{
-        Events,
-        EventsIter,
-    },
+    events::Events,
     indices::Indices,
     references::References,
 };

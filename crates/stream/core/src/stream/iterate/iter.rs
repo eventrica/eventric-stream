@@ -2,7 +2,7 @@ use std::{
     collections::BTreeSet,
     sync::{
         Arc,
-        Exclusive,
+        SyncView,
     },
 };
 
@@ -43,7 +43,7 @@ use crate::{
 #[new(args(cache: Arc<Cache>, references: References), vis(pub(crate)))]
 pub struct Iter {
     #[allow(clippy::struct_field_names)]
-    iter: Exclusive<EventHashIter>,
+    iter: SyncView<EventHashIter>,
     #[new(val(Retrieve::new(cache, references)))]
     retrieve: Retrieve,
 }
@@ -56,7 +56,7 @@ impl Iter {
 
 impl DoubleEndedIterator for Iter {
     fn next_back(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next_back().map(|event| self.map(event))
+        self.iter.as_mut().next_back().map(|event| self.map(event))
     }
 }
 
@@ -64,7 +64,7 @@ impl Iterator for Iter {
     type Item = Result<Event, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iter.get_mut().next().map(|event| self.map(event))
+        self.iter.as_mut().next().map(|event| self.map(event))
     }
 }
 

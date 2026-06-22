@@ -7,7 +7,7 @@ use crate::{
         Error,
         Position,
         Result,
-        storage::Storage,
+        store::Store,
     },
 };
 
@@ -22,7 +22,7 @@ pub trait Append {
         E::IntoIter: Send + 'static;
 }
 
-impl<B> Append for (&mut B, &mut Position, &Storage)
+impl<B> Append for (&mut B, &mut Position, &Store)
 where
     B: FnMut() -> Batch,
 {

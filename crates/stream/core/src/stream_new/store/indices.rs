@@ -35,13 +35,15 @@ use crate::{
         Position,
         Result,
         Timestamp,
-        operations::{
+        iterate::{
             AndIter,
             OrIter,
+        },
+        operate::{
             Selector,
             TypeSelector,
         },
-        storage::{
+        store::{
             HASH_LEN,
             ID_LEN,
             POSITION_LEN,
@@ -134,6 +136,77 @@ impl Iterator for IndicesIter {
 
 // -------------------------------------------------------------------------------------------------
 
+// Tag Constants
+
+static TAG_INDEX_ID: u8 = 0;
+static TAG_KEY_LEN: usize = ID_LEN + HASH_LEN + POSITION_LEN;
+static TAG_PREFIX_LEN: usize = ID_LEN + HASH_LEN;
+
+// -------------------------------------------------------------------------------------------------
+
+// Tag Key Writer
+
+type TagKey = [u8; TAG_KEY_LEN];
+
+struct TagKeyWriter<'a>(&'a Tag<u64>, &'a Position);
+
+impl From<TagKeyWriter<'_>> for TagKey {
+    fn from(TagKeyWriter(tag, position): TagKeyWriter<'_>) -> Self {
+        let mut key = TagKey::default();
+
+        {
+            let mut key = &mut key[..];
+
+            key.put_u8(TAG_INDEX_ID);
+            key.put_u64(tag.0); // Tag
+            key.put_u64(position.0); // Position
+        }
+
+        key
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Tag Prefix Writer
+
+type TagPrefix = [u8; TAG_PREFIX_LEN];
+
+struct TagPrefixWriter<'a>(&'a Tag<u64>);
+
+impl From<TagPrefixWriter<'_>> for TagPrefix {
+    fn from(TagPrefixWriter(tag): TagPrefixWriter<'_>) -> Self {
+        let mut prefix = TagPrefix::default();
+
+        {
+            let mut prefix = &mut prefix[..];
+
+            prefix.put_u8(TAG_INDEX_ID);
+            prefix.put_u64(tag.0);
+        }
+
+        prefix
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Tag Position Reader
+
+struct TagPositionReader<'a>(&'a Slice);
+
+impl From<TagPositionReader<'_>> for Position {
+    fn from(TagPositionReader(slice): TagPositionReader<'_>) -> Self {
+        let mut slice = &slice[..];
+
+        slice.advance(TAG_PREFIX_LEN);
+
+        Position::new(slice.get_u64())
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
 // Tags
 
 #[derive(new, Debug)]
@@ -145,7 +218,7 @@ struct Tags {
 impl Tags {
     fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, facets: &Facets) {
         for tag in &event.1.1 {
-            let key: TagsKey = TagsKeyConverter(tag, &facets.0).into(); // Tag & Position
+            let key: TagKey = TagKeyWriter(tag, &facets.0).into(); // Tag & Position
             let value = []; // Empty
 
             batch.insert(&self.keyspace, key, value);
@@ -160,78 +233,19 @@ impl Tags {
     {
         AndIter::iter(tags.map(|tag| {
             let iter = if let Some(from) = from {
-                let from: TagsKey = TagsKeyConverter(tag, &from).into();
-                let to: TagsKey = TagsKeyConverter(tag, &Position::MAX).into();
+                let from: TagKey = TagKeyWriter(tag, &from).into();
+                let to: TagKey = TagKeyWriter(tag, &Position::MAX).into();
                 let range = from..to;
 
                 self.keyspace.range(range)
             } else {
-                let prefix: TagsPrefix = TagsPrefixConverter(tag).into();
+                let prefix: TagPrefix = TagPrefixWriter(tag).into();
 
                 self.keyspace.prefix(prefix)
             };
 
             TagsIter::new(iter).into()
         }))
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Tags Constants
-
-static TAGS_INDEX_ID: u8 = 0;
-static TAGS_KEY_LEN: usize = ID_LEN + HASH_LEN + POSITION_LEN;
-static TAGS_PREFIX_LEN: usize = ID_LEN + HASH_LEN;
-
-// -------------------------------------------------------------------------------------------------
-
-// Tags Converters
-
-struct TagsKeyConverter<'a>(&'a Tag<u64>, &'a Position);
-
-impl From<TagsKeyConverter<'_>> for TagsKey {
-    fn from(TagsKeyConverter(tag, position): TagsKeyConverter<'_>) -> Self {
-        let mut key = TagsKey::default();
-
-        {
-            let mut key = &mut key[..];
-
-            key.put_u8(TAGS_INDEX_ID);
-            key.put_u64(tag.0); // Tag
-            key.put_u64(position.0); // Position
-        }
-
-        key
-    }
-}
-
-struct TagsPositionConverter<'a>(&'a Slice);
-
-impl From<TagsPositionConverter<'_>> for Position {
-    fn from(TagsPositionConverter(slice): TagsPositionConverter<'_>) -> Self {
-        let mut slice = &slice[..];
-
-        slice.advance(TAGS_PREFIX_LEN);
-
-        Position::new(slice.get_u64())
-    }
-}
-
-struct TagsPrefixConverter<'a>(&'a Tag<u64>);
-
-impl From<TagsPrefixConverter<'_>> for TagsPrefix {
-    fn from(TagsPrefixConverter(tag): TagsPrefixConverter<'_>) -> Self {
-        let mut prefix = TagsPrefix::default();
-
-        {
-            let mut prefix = &mut prefix[..];
-
-            prefix.put_u8(TAGS_INDEX_ID);
-            prefix.put_u64(tag.0);
-        }
-
-        prefix
     }
 }
 
@@ -250,7 +264,7 @@ impl TagsIter {
     #[rustfmt::skip]
     fn next_map(guard: Guard) -> <Self as Iterator>::Item {
         match guard.key() {
-            Ok(key) => Ok(TagsPositionConverter(&key).into()),
+            Ok(key) => Ok(TagPositionReader(&key).into()),
             Err(err) => Err(err).change_context(Error).attach("failed to map next tag"),
         }
     }
@@ -272,10 +286,34 @@ impl Iterator for TagsIter {
 
 // -------------------------------------------------------------------------------------------------
 
-// Tags Types
+// Timestamp Constants
 
-type TagsKey = [u8; TAGS_KEY_LEN];
-type TagsPrefix = [u8; TAGS_PREFIX_LEN];
+static TIMESTAMP_INDEX_ID: u8 = 1;
+static TIMESTAMP_KEY_LEN: usize = ID_LEN + TIMESTAMP_LEN;
+static TIMESTAMP_LEN: usize = size_of::<u64>();
+
+// -------------------------------------------------------------------------------------------------
+
+// Timestamp Key Writer
+
+type TimestampKey = [u8; TIMESTAMP_KEY_LEN];
+
+struct TimestampKeyWriter<'a>(&'a Timestamp);
+
+impl From<TimestampKeyWriter<'_>> for TimestampKey {
+    fn from(TimestampKeyWriter(timestamp): TimestampKeyWriter<'_>) -> Self {
+        let mut key = TimestampKey::default();
+
+        {
+            let mut key = &mut key[..];
+
+            key.put_u8(TIMESTAMP_INDEX_ID);
+            key.put_u64(timestamp.0);
+        }
+
+        key
+    }
+}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -289,7 +327,7 @@ struct Timestamps {
 
 impl Timestamps {
     fn insert(&self, batch: &mut Batch, facets: &Facets) {
-        let key: TimestampsKey = TimestampsKeyConverter(&facets.1).into(); // Timestamp
+        let key: TimestampKey = TimestampKeyWriter(&facets.1).into(); // Timestamp
         let value = facets.0.0.to_be_bytes(); // Position
 
         batch.insert(&self.keyspace, key, value);
@@ -298,27 +336,30 @@ impl Timestamps {
 
 // -------------------------------------------------------------------------------------------------
 
-// Timestamps Constants
+// Type Constants
 
-static TIMESTAMPS_INDEX_ID: u8 = 1;
-static TIMESTAMPS_KEY_LEN: usize = ID_LEN + TIMESTAMPS_LEN;
-static TIMESTAMPS_LEN: usize = size_of::<u64>();
+static TYPE_INDEX_ID: u8 = 2;
+static TYPE_KEY_LEN: usize = ID_LEN + HASH_LEN + POSITION_LEN;
+static TYPE_PREFIX_LEN: usize = ID_LEN + HASH_LEN;
 
 // -------------------------------------------------------------------------------------------------
 
-// Timestamps Converters
+// Type Key Writer
 
-struct TimestampsKeyConverter<'a>(&'a Timestamp);
+type TypeKey = [u8; TYPE_KEY_LEN];
 
-impl From<TimestampsKeyConverter<'_>> for TimestampsKey {
-    fn from(TimestampsKeyConverter(timestamp): TimestampsKeyConverter<'_>) -> Self {
-        let mut key = TimestampsKey::default();
+struct TypeKeyWriter<'a>(&'a Name<u64>, &'a Position);
+
+impl From<TypeKeyWriter<'_>> for TypeKey {
+    fn from(TypeKeyWriter(name, position): TypeKeyWriter<'_>) -> Self {
+        let mut key = TypeKey::default();
 
         {
             let mut key = &mut key[..];
 
-            key.put_u8(TIMESTAMPS_INDEX_ID);
-            key.put_u64(timestamp.0);
+            key.put_u8(TYPE_INDEX_ID);
+            key.put_u64(name.0); // Type Name
+            key.put_u64(position.0); // Position
         }
 
         key
@@ -327,9 +368,54 @@ impl From<TimestampsKeyConverter<'_>> for TimestampsKey {
 
 // -------------------------------------------------------------------------------------------------
 
-// Timestamps Types
+// Type Position Reader
 
-type TimestampsKey = [u8; TIMESTAMPS_KEY_LEN];
+struct TypePositionReader<'a>(&'a Slice);
+
+impl From<TypePositionReader<'_>> for Position {
+    fn from(TypePositionReader(slice): TypePositionReader<'_>) -> Self {
+        let mut slice = &slice[..];
+
+        slice.advance(TYPE_PREFIX_LEN);
+
+        Position::new(slice.get_u64())
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Type Prefix Writer
+
+type TypePrefix = [u8; TYPE_PREFIX_LEN];
+
+struct TypePrefixWriter<'a>(&'a Name<u64>);
+
+impl From<TypePrefixWriter<'_>> for TypePrefix {
+    fn from(TypePrefixWriter(name): TypePrefixWriter<'_>) -> Self {
+        let mut prefix = TypePrefix::default();
+
+        {
+            let mut prefix = &mut prefix[..];
+
+            prefix.put_u8(TYPE_INDEX_ID);
+            prefix.put_u64(name.0); // Type Name
+        }
+
+        prefix
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Type Version Reader
+
+struct TypeVersionReader<'a>(&'a Slice);
+
+impl From<TypeVersionReader<'_>> for Version {
+    fn from(TypeVersionReader(slice): TypeVersionReader<'_>) -> Self {
+        Version::new(slice.as_ref().get_u8())
+    }
+}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -343,7 +429,7 @@ struct Types {
 
 impl Types {
     fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, facets: &Facets) {
-        let key: TypesKey = TypesKeyConverter(&event.1.0.0, &facets.0).into(); // Type Name & Position
+        let key: TypeKey = TypeKeyWriter(&event.1.0.0, &facets.0).into(); // Type Name & Position
         let value = event.1.0.1.0.to_be_bytes(); // Version
 
         batch.insert(&self.keyspace, key, value);
@@ -357,13 +443,13 @@ impl Types {
     {
         OrIter::iter(types.map(|ty| {
             let iter = if let Some(from) = from {
-                let from: TypesKey = TypesKeyConverter(&ty.0, &from).into();
-                let to: TypesKey = TypesKeyConverter(&ty.0, &Position::MAX).into();
+                let from: TypeKey = TypeKeyWriter(&ty.0, &from).into();
+                let to: TypeKey = TypeKeyWriter(&ty.0, &Position::MAX).into();
                 let range = from..to;
 
                 self.keyspace.range(range)
             } else {
-                let prefix: TypesPrefix = TypesPrefixConverter(&ty.0).into();
+                let prefix: TypePrefix = TypePrefixWriter(&ty.0).into();
 
                 self.keyspace.prefix(prefix)
             };
@@ -372,73 +458,6 @@ impl Types {
 
             TypesIter::new(iter, range).into()
         }))
-    }
-}
-
-// -------------------------------------------------------------------------------------------------
-
-// Types Constants
-
-static TYPES_INDEX_ID: u8 = 2;
-static TYPES_KEY_LEN: usize = ID_LEN + HASH_LEN + POSITION_LEN;
-static TYPES_PREFIX_LEN: usize = ID_LEN + HASH_LEN;
-
-// -------------------------------------------------------------------------------------------------
-
-// Types Converters
-
-struct TypesKeyConverter<'a>(&'a Name<u64>, &'a Position);
-
-impl From<TypesKeyConverter<'_>> for TypesKey {
-    fn from(TypesKeyConverter(name, position): TypesKeyConverter<'_>) -> Self {
-        let mut key = TypesKey::default();
-
-        {
-            let mut key = &mut key[..];
-
-            key.put_u8(TYPES_INDEX_ID);
-            key.put_u64(name.0); // Type Name
-            key.put_u64(position.0); // Position
-        }
-
-        key
-    }
-}
-
-struct TypesPositionConverter<'a>(&'a Slice);
-
-impl From<TypesPositionConverter<'_>> for Position {
-    fn from(TypesPositionConverter(slice): TypesPositionConverter<'_>) -> Self {
-        let mut slice = &slice[..];
-
-        slice.advance(TYPES_PREFIX_LEN);
-
-        Position::new(slice.get_u64())
-    }
-}
-
-struct TypesPrefixConverter<'a>(&'a Name<u64>);
-
-impl From<TypesPrefixConverter<'_>> for TypesPrefix {
-    fn from(TypesPrefixConverter(name): TypesPrefixConverter<'_>) -> Self {
-        let mut prefix = TypesPrefix::default();
-
-        {
-            let mut prefix = &mut prefix[..];
-
-            prefix.put_u8(TYPES_INDEX_ID);
-            prefix.put_u64(name.0); // Type Name
-        }
-
-        prefix
-    }
-}
-
-struct TypesVersionConverter<'a>(&'a Slice);
-
-impl From<TypesVersionConverter<'_>> for Version {
-    fn from(TypesVersionConverter(slice): TypesVersionConverter<'_>) -> Self {
-        Version::new(slice.as_ref().get_u8())
     }
 }
 
@@ -466,8 +485,8 @@ impl TypesIter {
     fn next_map(guard: Guard, range: &Range<Version>) -> Option<<Self as Iterator>::Item> {
         match guard.into_inner() {
             Ok((key, value)) => range
-                .contains::<Version>(&TypesVersionConverter(&value).into())
-                .then(|| Ok(TypesPositionConverter(&key).into())),
+                .contains::<Version>(&TypeVersionReader(&value).into())
+                .then(|| Ok(TypePositionReader(&key).into())),
             Err(err) => Some(
                 Err(err)
                     .change_context(Error)
@@ -494,10 +513,3 @@ impl Iterator for TypesIter {
             .break_value()
     }
 }
-
-// -------------------------------------------------------------------------------------------------
-
-// Types Types
-
-type TypesKey = [u8; TYPES_KEY_LEN];
-type TypesPrefix = [u8; TYPES_PREFIX_LEN];
