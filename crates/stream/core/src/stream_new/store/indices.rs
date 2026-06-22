@@ -87,8 +87,11 @@ impl Indices {
 }
 
 impl Indices {
-    pub fn iterate(&self, selection: &[Selector<u64>], from: Option<Position>) -> IndicesIter {
-        OrIter::iter(selection.iter().map(|selector| match selector {
+    pub fn iterate<'a, S>(&self, selectors: S, from: Option<Position>) -> IndicesIter
+    where
+        S: IntoIterator<Item = &'a Selector<u64>>,
+    {
+        OrIter::iter(selectors.into_iter().map(|selector| match selector {
             Selector(types, None) => self.types.iterate(types.iter(), from),
             Selector(types, Some(tags)) => AndIter::iter([
                 self.types.iterate(types.iter(), from),

@@ -95,16 +95,19 @@ impl Store {
 }
 
 impl Store {
-    pub fn iterate(&self, selection: Option<Selection>, from: Option<Position>) -> StoreIter {
-        if let Some(selection) = selection {
+    pub fn iterate(&self, selections: &[Selection], from: Option<Position>) -> StoreIter {
+        if selections.is_empty() {
+            StoreIter::Events(self.events.iterate(from))
+        } else {
             let events = self.events.clone();
-            let iter = self.indices.iterate(&selection.selectors, from);
+            let iter = self.indices.iterate(
+                selections
+                    .iter()
+                    .flat_map(|selection| selection.selectors.iter()),
+                from,
+            );
 
             StoreIter::Indices(events, iter)
-        } else {
-            let iter = self.events.iterate(from);
-
-            StoreIter::Events(iter)
         }
     }
 }
@@ -232,7 +235,7 @@ mod tests {
         assert_eq!(next, Position::new(3));
 
         let read = store
-            .iterate(None, None)
+            .iterate(&[], None)
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 

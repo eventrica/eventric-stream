@@ -21,6 +21,19 @@ current state:
   A `pub(crate)` smoke test in `store.rs` now exercises the new insert→iterate
   round-trip. **So `references` no longer exists anywhere in the new tree** —
   wherever the map below calls it "write-only/retained", read "removed".
+- **Phase 2 — ✅ done (2026-06-22).** The query surface. Unified masked
+  `select(Condition)` (chosen over a separate `select_multiple`): a `Condition`
+  holds an optional `from` position plus a list of `Selection`s (empty = full
+  scan), and results are `EventAndMask { event, mask }` where `mask[i]` records
+  whether selection `i` matched. The index does the coarse union of all
+  selectors; the per-selection mask is re-checked in memory on the `u64` hashes.
+  Public builders added (`Condition`/`Selection`/`Selector::types`/
+  `types_and_tags`/`TypeSelector::new`/`with_versions`, wiring in the previously
+  dead `VersionSelector`), `Stream::builder(path)` is now public, and `size_hint`
+  was restored on `AndIter`/`OrIter`. **Known limitation (flagged, not changed):**
+  version ranges are half-open `Range<Version>`, so `Version::MAX` (255) is not
+  selectable — a pre-existing design point shared with the old tree; revisit if
+  255 must be a usable version (would need inclusive ranges).
 
 ## TL;DR
 
@@ -272,7 +285,7 @@ Three directions are now locked:
 - **Done when:** only `events` + `indices` keyspaces exist; `cargo build -p
   eventric-stream-core` is green; no `(u64,String)` representation remains.
 
-### Phase 2 — Complete the query surface *(the frontier — where work stopped)*
+### Phase 2 — Complete the query surface ✅ done (2026-06-22) *(was the frontier — where work stopped)*
 - **Mask + multi-selection.** Resolve the `// ALSO NEED A MASK HERE` marker: a query
   is a set of selections; results report which selection(s) matched. Port the old
   `select/mask.rs` + in-memory `Filter` re-check (version-range + tag-subset),

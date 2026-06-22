@@ -66,6 +66,14 @@ where
     type Item = Result<T>;
 
     #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        // Intersection: no guaranteed lower bound, at most the smallest child.
+        let upper = self.0.iter().filter_map(|iter| iter.size_hint().1).min();
+
+        (0, upper)
+    }
+
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.0.is_empty() {
             return None;
@@ -236,6 +244,22 @@ where
     T: Copy + Debug + Ord + PartialOrd,
 {
     type Item = Result<T>;
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        // Union: at least the largest child, at most the sum of all children.
+        let lower = self
+            .0
+            .iter()
+            .map(|iter| iter.size_hint().0)
+            .max()
+            .unwrap_or(0);
+        let upper = self.0.iter().try_fold(0usize, |sum, iter| {
+            iter.size_hint().1.and_then(|upper| sum.checked_add(upper))
+        });
+
+        (lower, upper)
+    }
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
