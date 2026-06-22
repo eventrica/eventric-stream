@@ -1,3 +1,6 @@
+//! Appending events to the stream under an optimistic-concurrency (DCB)
+//! `Condition`.
+
 use error_stack::Report;
 use fjall::OwnedWriteBatch as Batch;
 
@@ -17,7 +20,11 @@ use crate::{
 // Append
 // =================================================================================================
 
+/// Appends candidate events to the stream, subject to a `Condition`.
 pub trait Append {
+    /// Appends `events`, rejecting with a `Conflict` if `condition`'s DCB
+    /// concurrency check fails, and returns the `Position` of the last appended
+    /// event.
     fn append<E>(&mut self, events: E, condition: Condition) -> Result<Position>
     where
         E: IntoIterator<Item = Event<(), String>>,

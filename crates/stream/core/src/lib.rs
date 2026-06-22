@@ -5,7 +5,7 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::missing_safety_doc)]
-#![allow(missing_docs)]
+#![deny(missing_docs)]
 #![deny(unsafe_code)]
 #![feature(exclusive_wrapper)]
 

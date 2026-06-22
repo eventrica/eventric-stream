@@ -1,3 +1,7 @@
+//! The top-level [`Stream`], its [`Reader`]/[`Writer`] split, and the shared
+//! value types ([`Position`], [`Timestamp`], [`Metadata`]) and error model
+//! ([`struct@Error`], [`Conflict`], [`Result`]) used across the crate.
+
 mod iterate;
 mod operate;
 mod store;
@@ -40,6 +44,8 @@ use crate::{
 
 // Builder
 
+/// Configures and opens a [`Stream`] at a given path. Obtained from
+/// [`Stream::builder`].
 #[derive(new, Debug)]
 #[new(vis())]
 pub struct Builder<P>
@@ -55,6 +61,8 @@ impl<P> Builder<P>
 where
     P: AsRef<Path>,
 {
+    /// Open the stream, recovering the `next` position cursor from the existing
+    /// `events` keyspace.
     pub fn open(self) -> Result<Stream> {
         let database = Database::builder(self.path)
             .temporary(self.temporary.unwrap_or_default())
@@ -73,6 +81,8 @@ impl<P> Builder<P>
 where
     P: AsRef<Path>,
 {
+    /// Whether the stream is temporary (its on-disk data is cleaned up on
+    /// drop). Defaults to `false`.
     #[must_use]
     pub fn temporary(mut self, temporary: bool) -> Self {
         self.temporary = Some(temporary);
@@ -84,6 +94,9 @@ where
 
 // Error
 
+/// The opaque error type for every fallible stream operation. Detail rides as
+/// `.attach(..)` on the `error-stack` report; a rejected append additionally
+/// attaches the [`Conflict`] marker.
 #[derive(Debug, Display, Error)]
 #[display("stream error")]
 pub struct Error;
@@ -92,13 +105,13 @@ pub struct Error;
 
 // Conflict
 
-/// Marker attached to an [`Error`] report when an append is rejected by its
-/// condition (an optimistic-concurrency / DCB conflict). Distinguish a conflict
-/// from any other failure with `report.downcast_ref::<Conflict>()`.
+/// Marker attached to an [`struct@Error`] report when an append is rejected by
+/// its condition (an optimistic-concurrency / DCB conflict). Distinguish a
+/// conflict from any other failure with `report.downcast_ref::<Conflict>()`.
 ///
 /// An index-read failure while evaluating the condition surfaces as a plain
-/// [`Error`] with no `Conflict` attached, so the absence of this marker does
-/// not imply the append would otherwise have succeeded.
+/// [`struct@Error`] with no `Conflict` attached, so the absence of this marker
+/// does not imply the append would otherwise have succeeded.
 #[derive(Debug, Display)]
 #[display("append condition conflict")]
 pub struct Conflict;
@@ -107,6 +120,8 @@ pub struct Conflict;
 
 // Metadata
 
+/// The metadata a persisted event carries (its `M` in `Event<M, T>`): the
+/// [`Position`] and [`Timestamp`] assigned when it was appended.
 #[derive(new, Debug)]
 #[new(const_fn, vis(pub(crate)))]
 pub struct Metadata(
@@ -132,6 +147,10 @@ impl Metadata {
 
 // Stream
 
+/// An append/query event stream consistent with Dynamic Consistency Boundaries
+/// (DCB). Owns the database, the store, and the `next` position cursor;
+/// [`split`](Stream::split) into a [`Reader`] and [`Writer`] for concurrent
+/// access.
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
 pub struct Stream {
@@ -152,11 +171,13 @@ impl Stream {
         Builder::new(path)
     }
 
+    /// Whether the stream holds no events.
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// The number of events appended to the stream (also the `next` position).
     #[must_use]
     pub fn len(&self) -> u64 {
         self.next.0
@@ -244,6 +265,8 @@ impl From<Writer> for Stream {
 
 // Position
 
+/// A `u64` ordinal identifying an event's place in the stream. Also the unit of
+/// the position-based (DCB) append concurrency check.
 #[rustfmt::skip]
 #[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 #[derive(Add, AddAssign, Sub, SubAssign)]
@@ -251,7 +274,9 @@ impl From<Writer> for Stream {
 pub struct Position(#[new(name(position))] pub(crate) u64);
 
 impl Position {
+    /// The largest possible position.
     pub const MAX: Self = Self::new(u64::MAX);
+    /// The smallest possible position (the head of an empty stream).
     pub const MIN: Self = Self::new(u64::MIN);
 }
 
@@ -293,16 +318,21 @@ impl SubAssign<u64> for Position {
 
 // Result
 
+/// The result type for fallible stream operations: an `error-stack`
+/// [`Report`] over [`struct@Error`].
 pub type Result<T, E = Error> = result::Result<T, Report<E>>;
 
 // -------------------------------------------------------------------------------------------------
 
 // Timestamp
 
+/// The wall-clock time an event was appended, in nanoseconds since the Unix
+/// epoch. **Not monotonic** — its order may not match position order.
 #[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Timestamp(#[new(name(nanos))] pub(crate) u64);
 
 impl Timestamp {
+    /// The current time as a `Timestamp`.
     pub fn now() -> Result<Self> {
         let duration = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -386,7 +416,7 @@ mod tests {
         )
     }
 
-    // Phase 2: the masked, multi-selection query surface end to end via the
+    // The masked, multi-selection query surface end to end via the
     // public Stream API. Each selection is one mask bit, in order.
     #[test]
     fn select_masks_events_by_selection() {
@@ -605,7 +635,7 @@ mod tests {
         assert_eq!(results[1].mask.as_ref(), [true].as_slice());
     }
 
-    // Phase 3: conditional (DCB) append. A condition rejects the append iff a
+    // Conditional (DCB) append. A condition rejects the append iff a
     // matching event already exists at or after the condition's position.
 
     #[test]
@@ -805,7 +835,7 @@ mod tests {
         assert!(stream.append(vec![event("C", 0, &[])], condition).is_err());
     }
 
-    // Phase 4: split into a cloneable Reader (reads) and the unique Writer
+    // Split into a cloneable Reader (reads) and the unique Writer
     // (writes). The Reader (and clones of it) sees the Writer's committed
     // appends, and the Writer folds back into a Stream.
     #[test]
@@ -849,7 +879,7 @@ mod tests {
         assert_send::<Writer>();
     }
 
-    // Phase 5: data written before a (non-temporary) stream is dropped is
+    // Data written before a (non-temporary) stream is dropped is
     // recovered on re-open, including the `next` position cursor.
     #[test]
     fn data_persists_across_reopen() {
@@ -915,7 +945,7 @@ mod tests {
         assert_eq!(stream.len(), 0);
     }
 
-    // Phase 6a: a queried event is fully readable through the public accessors a
+    // A queried event is fully readable through the public accessors a
     // consumer (e.g. the model layer) needs — payload, metadata, and type.
     #[test]
     fn queried_event_exposes_public_accessors() {

@@ -1,4 +1,4 @@
-//! See the `eventric-surface` crate for full documentation, including
+//! See the `eventric-model` crate for full documentation, including
 //! crate-level documentation.
 
 #![allow(clippy::multiple_crate_versions)]
@@ -23,7 +23,7 @@ use crate::{
 };
 
 // =================================================================================================
-// Eventric Surface Macro
+// Eventric Model Macro
 // =================================================================================================
 
 // Helpers

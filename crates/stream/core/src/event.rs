@@ -1,3 +1,8 @@
+//! The event type and its components: the payload `Data`, the queryable
+//! `Facets` (`Type` = `Name` + `Version`, plus tags), and the generic
+//! `Event<M, T>` itself (candidate `Event<(), String>` before append, persisted
+//! `Event<Metadata, u64>` from a query).
+
 use std::{
     cmp::Ordering,
     collections::BTreeSet,
@@ -33,12 +38,14 @@ use crate::utils::hashing;
 
 // Data
 
+/// A validated, non-empty event payload.
 #[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
 #[as_ref([u8])]
 #[new(const_fn, name(new_unvalidated))]
 pub struct Data(#[new(name(data))] pub(crate) Vec<u8>);
 
 impl Data {
+    /// Creates a `Data` payload, validating that it is non-empty.
     pub fn new<D>(data: D) -> Result<Self, Error>
     where
         D: Into<Vec<u8>>,
@@ -61,6 +68,9 @@ impl Validate for Data {
 
 // Event
 
+/// A stream event: a payload, its queryable facets, and metadata. Candidate
+/// events (pre-append) are `Event<(), String>`; persisted events (from a query)
+/// are `Event<Metadata, u64>`.
 #[derive(new, Clone, Debug)]
 pub struct Event<M, T>(
     #[new(name(data))] pub(crate) Data,
@@ -105,6 +115,7 @@ impl<M, T> Event<M, T> {
 
 // Facets
 
+/// An event's queryable facets: its type and its set of tags.
 #[derive(new, Clone, Debug)]
 pub struct Facets<T>(
     #[new(name(ty))] pub(crate) Type<T>,
@@ -147,11 +158,15 @@ impl<T> Facets<T> {
 macro_rules! string_type {
     ($name:ident) => {
         paste! {
+            /// A validated string newtype, generic over `T`: the `String` form
+            /// holds the original value, the `u64` form its stable hash.
             #[derive(new, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
             #[new(const_fn, name(new_unvalidated), vis())]
             pub struct $name<T>(pub(crate) T);
 
             impl $name<String> {
+                /// Creates the value, validating it is non-empty, free of
+                /// control characters, and has no leading/trailing whitespace.
                 pub fn new<T>([< $name:lower >]: T) -> Result<Self, Error>
                 where
                     T: Into<String>,
@@ -191,6 +206,7 @@ string_type!(Tag);
 
 // Type
 
+/// An event's type: a `Name` together with a `Version`.
 #[derive(new, Clone, Debug)]
 pub struct Type<T>(
     #[new(name(name))] pub(crate) Name<T>,
@@ -227,6 +243,7 @@ impl<T> Type<T> {
 
 // Version
 
+/// A `u8` schema version for an event type.
 #[rustfmt::skip]
 #[derive(new, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Add, AddAssign, Sub, SubAssign)]
@@ -234,7 +251,9 @@ impl<T> Type<T> {
 pub struct Version(#[new(name(version))] pub(crate) u8);
 
 impl Version {
+    /// The maximum version.
     pub const MAX: Self = Self::new(u8::MAX);
+    /// The minimum version (also the default).
     pub const MIN: Self = Self::new(u8::MIN);
 }
 

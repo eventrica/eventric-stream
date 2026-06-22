@@ -1,4 +1,4 @@
-//! See the `eventric-surface` crate for full documentation, including
+//! See the `eventric-model` crate for full documentation, including
 //! module-level documentation.
 
 use std::ops::{

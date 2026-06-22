@@ -37,7 +37,7 @@ where
     Self: Sized,
 {
     /// The error type to return from validation, which must be convertible from
-    /// the standard validation [`Error`] type.
+    /// the standard validation [`enum@Error`] type.
     type Err;
 
     /// Validate self, and return self if valid, or an error if not.
@@ -45,7 +45,7 @@ where
     /// # Errors
     ///
     /// Returns an error on validation fails, which should be the
-    /// [`Error::Validation`] variant of the core error type.
+    /// [`Error::Invalid`] variant of the core error type.
     fn validate(self) -> Result<Self, Self::Err>;
 }
 
@@ -53,7 +53,8 @@ where
 
 // Errors
 
-/// The [`Error`] enumeration gives possible error cases when validation fails.
+/// The [`enum@Error`] enumeration gives possible error cases when validation
+/// fails.
 #[derive(Clone, Debug, Error, Eq, PartialEq)]
 pub enum Error {
     /// The validation request failed with the supplied error message.

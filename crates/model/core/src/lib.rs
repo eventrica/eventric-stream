@@ -1,4 +1,4 @@
-//! See the `eventric-surface` crate for full documentation, including
+//! See the `eventric-model` crate for full documentation, including
 //! crate-level documentation.
 
 #![allow(clippy::multiple_crate_versions)]
@@ -14,5 +14,5 @@ pub mod event;
 pub mod projection;
 
 // =================================================================================================
-// Eventric Surface Core
+// Eventric Model Core
 // =================================================================================================

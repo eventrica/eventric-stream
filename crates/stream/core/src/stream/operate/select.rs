@@ -1,3 +1,7 @@
+//! The masked read query: lowering a [`Condition`] to a [`SelectIter`] of
+//! [`EventAndMask`]s, and the selector vocabulary (`Selector`, `TypeSelector`,
+//! `VersionSelector`) used to build queries.
+
 use std::{
     cmp::Ordering,
     collections::BTreeSet,
@@ -44,7 +48,10 @@ use crate::{
 // Select
 // =================================================================================================
 
+/// The read side of a stream: run a [`Condition`] as a masked query.
 pub trait Select {
+    /// Run `condition` as a query, yielding each matching event paired with the
+    /// [`Mask`] of which selections it satisfied.
     fn select(&self, condition: Condition) -> SelectIter;
 }
 
@@ -68,6 +75,8 @@ impl Select for Store {
 
 // Select Iterator
 
+/// A lazy, double-ended iterator over the events matching a query, each paired
+/// with its per-selection [`Mask`].
 #[derive(Debug)]
 pub struct SelectIter {
     iter: SyncView<StoreIter>,
@@ -117,7 +126,9 @@ impl Iterator for SelectIter {
 #[derive(new, Debug)]
 #[new(vis(pub(crate)))]
 pub struct EventAndMask {
+    /// The matched (persisted) event.
     pub event: Event<Metadata, u64>,
+    /// Which of the query's selections this event satisfied.
     pub mask: Mask,
 }
 
@@ -296,12 +307,18 @@ where
 
 // Version Selector
 
+/// The range of versions a [`TypeSelector`] matches, adapted from the standard
+/// range syntaxes (`a..b`, `a..`, `..`, `..b`).
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug, From)]
 pub enum VersionSelector {
+    /// A bounded range, `a..b`.
     Range(Range<Version>),
+    /// An unbounded-above range, `a..` (extends to `Version::MAX`).
     RangeFrom(RangeFrom<Version>),
+    /// The full range, `..` (`Version::MIN..Version::MAX`).
     RangeFull,
+    /// An unbounded-below range, `..b` (starts at `Version::MIN`).
     RangeTo(RangeTo<Version>),
 }
 

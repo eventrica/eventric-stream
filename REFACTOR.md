@@ -1,9 +1,17 @@
 # Stream Core Refactor — status & map
 
-> Reconstructed from a deep pass over the code and git history (analysis date:
-> 2026-06-22). This documents the in-progress rewrite of the stream core: what's
-> original, what's new, *why*, and exactly where the work stopped. For the live
-> API and overall workspace, see [`CLAUDE.md`](./CLAUDE.md).
+> **✅ COMPLETE (2026-06-23) — this is now a historical record.** The rewrite
+> landed: there is one implementation (`stream`/`event`, the former `*_new`), the
+> old tree and the `references` keyspace are gone, and the model/multi-thread/facade
+> all run on it (both examples pass). Only Phase 6f (docs) wraps up here. The
+> **analysis/map sections below describe the pre-refactor STARTING STATE** (two
+> parallel trees, `references` keyspace, old vocabulary) and are kept for context —
+> do **not** read them as the current design. For the current architecture, see
+> [`CLAUDE.md`](./CLAUDE.md); for what changed and why, read the **Progress** section
+> just below.
+>
+> Original reconstruction note: deep pass over the code and git history, analysis
+> date 2026-06-22.
 
 ## Progress
 
@@ -126,6 +134,30 @@ current state:
     `Iterate`, `select_multiple`, the `eventric-surface` crate-name template
     artifact in the model docs, `Phase N:` test-label noise). These are prose-doc
     rewrites, folded into **6f** along with rustdoc + restoring `#![deny(missing_docs)]`.
+
+- **Phase 6f — ✅ done (2026-06-23). Docs.** Rewrote **`CLAUDE.md`** to describe the
+  single shipped implementation (accurate Events/Storage/Query/Append/Reader-Writer/
+  Error/Model/Multi-thread sections; storage facts re-derived from the code: 2
+  keyspaces, the events byte layout, index discriminators tags=0/timestamps=1/types=2,
+  single seeded rapidhash). Marked this file (`REFACTOR.md`) historical. Fixed the
+  `eventric-surface`→`eventric-model` doc artifact and stripped the `Phase N:` test
+  labels. **Restored `#![deny(missing_docs)]` on `eventric-stream-core`** and
+  documented all ~40 public items (authored in parallel via a workflow, against the
+  rewritten CLAUDE.md); added `#![deny(missing_docs)]` + module docs to the
+  `eventric-model` facade. Made `cargo doc -D warnings` clean (disambiguated the
+  `derive_more::Error`-vs-`Error` intra-doc links; fixed a pre-existing
+  `Error::Validation`→`Error::Invalid` broken link in `eventric-utils`).
+  Two adversarial passes ran: one workflow authored the rustdoc, a second
+  independently verified **docs against code** — it confirmed the docs are accurate
+  and caught a handful of imprecisions, all fixed (the `Append::append` return is the
+  *last appended* position not "head"; the Enactor `from` bound is last-replayed **+1**;
+  `TypeSelector` default is half-open `MIN..MAX`; `Specifier` comes from a blanket impl,
+  not the `Event` macro). Gate green: build, clippy `-D warnings`, `cargo doc -D
+  warnings`, 24 test suites, fmt, both examples.
+  - **The refactor is complete.** Only **Phase 7** (final workspace verify & land)
+    remains. Carried-forward follow-up (not blocking): re-create facade-level
+    integration/round-trip tests against the new `Condition`/`Select`/`Append` surface
+    (the old ~1600-line integration suite was deleted in 6c).
 
 ### Deferred extension — stream-level "fail if grown" concurrency
 
@@ -472,7 +504,8 @@ names) and verify it; do the destructive rename + delete **last**.
 
 **Sub-phases (each independently verifiable):**
 
-> **Status (2026-06-23): 6a ✅, 6b ✅, 6c ✅, 6e ✅ (see Progress for outcomes).**
+> **Status (2026-06-23): 6a ✅, 6b ✅, 6c ✅, 6e ✅, 6f ✅ — Phase 6 COMPLETE
+> (see Progress for outcomes). Only Phase 7 (final verify & land) remains.**
 > Deviations from this original plan, all deliberate: (1) **6d is absorbed into
 > 6c** — the facade had to be re-pointed as part of the coordinated cutover
 > (approach A), since the model macros emit `::eventric_stream::…` paths. (2) The
@@ -482,8 +515,8 @@ names) and verify it; do the destructive rename + delete **last**.
 > collision (both `Facets` are constructed side-by-side in `store/events.rs`) is a
 > maintainability footgun a completeness audit flagged. (3) The old integration
 > tests (6e's deletion) were pulled forward into 6c (the facade flip obsoleted them).
-> Remaining: only **6f** (docs — incl. the now-stale `CLAUDE.md` rewrite — and
-> restoring `#![deny(missing_docs)]`).
+> 6f (docs) is done: `CLAUDE.md` rewritten, `#![deny(missing_docs)]` restored on core
+> + the model facade, `cargo doc -D warnings` clean.
 
 - **6a — ✅ Public read surface (prerequisite).** The queried `Event<Facets,u64>` has
   no public accessors; add them (data, position, timestamp, tags, **type-name
