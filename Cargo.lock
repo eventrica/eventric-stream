@@ -489,7 +489,6 @@ version = "0.1.0"
 dependencies = [
  "assertables",
  "bytes",
- "dashmap",
  "derive_more",
  "double-ended-peekable",
  "error-stack",
@@ -500,7 +499,6 @@ dependencies = [
  "rand",
  "rapidhash",
  "smallvec",
- "thiserror",
 ]
 
 [[package]]

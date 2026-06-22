@@ -23,15 +23,15 @@ use fjall::{
 };
 
 use crate::{
-    event_new::{
+    event::{
         Event,
         Name,
         Tag,
         Version,
     },
-    stream_new::{
+    stream::{
         Error,
-        Facets,
+        Metadata,
         Position,
         Result,
         Timestamp,
@@ -79,7 +79,7 @@ impl Indices {
 }
 
 impl Indices {
-    pub fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, facets: &Facets) {
+    pub fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, facets: &Metadata) {
         self.tags.insert(batch, event, facets);
         self.timestamps.insert(batch, facets);
         self.types.insert(batch, event, facets);
@@ -219,7 +219,7 @@ struct Tags {
 }
 
 impl Tags {
-    fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, facets: &Facets) {
+    fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, facets: &Metadata) {
         for tag in &event.1.1 {
             let key: TagKey = TagKeyWriter(tag, &facets.0).into(); // Tag & Position
             let value = []; // Empty
@@ -329,7 +329,7 @@ struct Timestamps {
 }
 
 impl Timestamps {
-    fn insert(&self, batch: &mut Batch, facets: &Facets) {
+    fn insert(&self, batch: &mut Batch, facets: &Metadata) {
         let key: TimestampKey = TimestampKeyWriter(&facets.1).into(); // Timestamp
         let value = facets.0.0.to_be_bytes(); // Position
 
@@ -431,7 +431,7 @@ struct Types {
 }
 
 impl Types {
-    fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, facets: &Facets) {
+    fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, facets: &Metadata) {
         let key: TypeKey = TypeKeyWriter(&event.1.0.0, &facets.0).into(); // Type Name & Position
         let value = event.1.0.1.0.to_be_bytes(); // Version
 

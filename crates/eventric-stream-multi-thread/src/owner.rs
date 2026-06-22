@@ -5,7 +5,7 @@ use std::thread::{
 
 use crossbeam::channel;
 use error_stack::Report;
-use eventric_stream_core::stream_new::{
+use eventric_stream_core::stream::{
     Error,
     Reader,
     Stream,

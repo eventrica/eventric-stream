@@ -10,7 +10,6 @@
 
 pub mod action;
 pub mod core;
-pub mod error;
 pub mod event;
 pub mod projection;
 

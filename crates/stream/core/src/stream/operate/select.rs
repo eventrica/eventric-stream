@@ -20,14 +20,14 @@ use fancy_constructor::new;
 use smallvec::SmallVec;
 
 use crate::{
-    event_new::{
+    event::{
         Event,
         Name,
         Tag,
         Version,
     },
-    stream_new::{
-        Facets,
+    stream::{
+        Metadata,
         Result,
         operate::{
             Condition,
@@ -117,7 +117,7 @@ impl Iterator for SelectIter {
 #[derive(new, Debug)]
 #[new(vis(pub(crate)))]
 pub struct EventAndMask {
-    pub event: Event<Facets, u64>,
+    pub event: Event<Metadata, u64>,
     pub mask: Mask,
 }
 
@@ -147,7 +147,7 @@ impl Index<usize> for Mask {
 // that type's range, AND (if the selector carries tags) all those tags are
 // present on the event. This mirrors the index-side matching, re-checked here
 // on the hashed (`u64`) representation to recover which selection(s) hit.
-fn mask(selections: &[Selection], event: &Event<Facets, u64>) -> Mask {
+fn mask(selections: &[Selection], event: &Event<Metadata, u64>) -> Mask {
     let name = &event.1.0.0;
     let version = event.1.0.1;
     let tags = &event.1.1;

@@ -2,8 +2,8 @@ use error_stack::Report;
 use fjall::OwnedWriteBatch as Batch;
 
 use crate::{
-    event_new::Event,
-    stream_new::{
+    event::Event,
+    stream::{
         Conflict,
         Error,
         Position,

@@ -17,7 +17,7 @@ pub mod error {
     //! [`Conflict`] marker (attached when an append is rejected by its
     //! condition), along with the crate [`Result`] alias.
 
-    pub use eventric_stream_core::stream_new::{
+    pub use eventric_stream_core::stream::{
         Conflict,
         Error,
         Result,
@@ -29,7 +29,7 @@ pub mod event {
     //! events: the payload [`Data`], the [`Type`] (a [`Name`] plus
     //! [`Version`]), and [`Tag`]s, along with the [`tag`] macro.
 
-    pub use eventric_stream_core::event_new::{
+    pub use eventric_stream_core::event::{
         Data,
         Event,
         Facets,
@@ -48,7 +48,7 @@ pub mod stream {
     //! wrapper, the [`Append`] and [`Select`] operations, and the [`Condition`]
     //! query/concurrency model.
 
-    pub use eventric_stream_core::stream_new::{
+    pub use eventric_stream_core::stream::{
         Append,
         Builder,
         Condition,

@@ -2,7 +2,6 @@
 //! module-level documentation.
 
 pub(crate) mod hashing;
-pub(crate) mod iteration;
 
 use std::path::{
     Path,

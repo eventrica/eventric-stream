@@ -12,10 +12,10 @@ use fjall::{
 };
 
 use crate::{
-    event_new::Event,
-    stream_new::{
+    event::Event,
+    stream::{
         Error,
-        Facets,
+        Metadata,
         Position,
         Result,
         Timestamp,
@@ -77,7 +77,7 @@ impl Store {
             let event = event.into();
 
             let facets = Timestamp::now()
-                .map(|timestamp| Facets::new(position, timestamp))
+                .map(|timestamp| Metadata::new(position, timestamp))
                 .attach("failed to create timestamped facets")?;
 
             self.events.insert(&mut batch, &event, &facets);
@@ -177,7 +177,7 @@ impl DoubleEndedIterator for StoreIter {
 }
 
 impl Iterator for StoreIter {
-    type Item = Result<Event<Facets, u64>>;
+    type Item = Result<Event<Metadata, u64>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
@@ -210,7 +210,7 @@ mod tests {
 
     use super::Store;
     use crate::{
-        event_new::{
+        event::{
             Data,
             Event,
             Facets,
@@ -219,7 +219,7 @@ mod tests {
             Type,
             Version,
         },
-        stream_new::Position,
+        stream::Position,
         utils::temp_path,
     };
 
@@ -237,11 +237,10 @@ mod tests {
         )
     }
 
-    // Phase 1 is a data-format change to the new tree, which otherwise has no
-    // tests. This drives the pub `Store` API directly (no dependency on the
-    // not-yet-built public `Stream`/`Condition` surface) to prove the collapsed
-    // single `String -> u64` insert hop and the events/indices round-trip still
-    // work after the `references` keyspace was removed.
+    // A low-level round-trip driven directly against the `Store` API,
+    // independent of the higher-level `Stream`/`Condition` surface: proves the
+    // single `String -> u64` insert hop and the events/indices round-trip (with
+    // no `references` keyspace) preserve positions.
     #[test]
     fn insert_then_iterate_round_trips_with_positions() {
         let database = Database::builder(temp_path())

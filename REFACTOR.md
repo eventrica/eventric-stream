@@ -104,8 +104,28 @@ current state:
     but a business violation riding a stream-error context is a touch muddy (the
     accepted trade-off of error_stack-end-to-end / option B).
   - **6d is effectively absorbed** into 6c (the facade is re-pointed). Remaining:
-    **6e** (rename `stream_new`→`stream`, `event_new`→`event`; delete the now-dead
-    old tree) and **6f** (docs + `#![deny(missing_docs)]`).
+    **6e** (rename + delete old tree) and **6f** (docs + `#![deny(missing_docs)]`).
+
+- **Phase 6e — ✅ done (2026-06-23). Rename + delete.** `stream_new`→`stream`,
+  `event_new`→`event` (files + all path segments); deleted the entire old tree
+  (`stream.rs`+`stream/`, `event.rs`+`event/`, `error.rs`, `utils/iteration` — the
+  dead combinator fork). Removed now-dead `hashing::get` (the non-portable
+  `DefaultHasher` hash — its own doc said to delete it at cutover) and the dead deps
+  it implied: `dashmap` (the old DashMap `Cache`, dropped from core **and** the
+  workspace deps) and `thiserror` from core. Also did the **`stream::Facets` →
+  `Metadata` rename** that the original plan called for — now warranted, since the
+  collision with `event::Facets` (both are constructed side-by-side in
+  `store/events.rs`) is a real maintainability footgun, not just a facade concern.
+  An adversarial 3-way completeness audit (dangling refs / unused deps / doc drift)
+  confirmed the tree is clean and surfaced the cleanups above plus a dead empty
+  `error` module in `eventric-model-core` (deleted). Build, clippy `-D warnings`,
+  24 test suites, fmt, and both examples all green. **No `_new` anywhere.**
+  - **Deferred to 6f (doc-only):** the audit found `CLAUDE.md` is now substantially
+    stale — it still documents the deleted old API across ~8 sections (Events,
+    Storage `references` keyspace, double-hash/`get`, Query vocabulary, `AppendSelect`,
+    `Iterate`, `select_multiple`, the `eventric-surface` crate-name template
+    artifact in the model docs, `Phase N:` test-label noise). These are prose-doc
+    rewrites, folded into **6f** along with rustdoc + restoring `#![deny(missing_docs)]`.
 
 ### Deferred extension — stream-level "fail if grown" concurrency
 
@@ -452,15 +472,18 @@ names) and verify it; do the destructive rename + delete **last**.
 
 **Sub-phases (each independently verifiable):**
 
-> **Status (2026-06-22): 6a ✅, 6b ✅, 6c ✅ (see Progress for outcomes).** Two
-> deviations from this original plan, both deliberate: (1) **6d is absorbed into
+> **Status (2026-06-23): 6a ✅, 6b ✅, 6c ✅, 6e ✅ (see Progress for outcomes).**
+> Deviations from this original plan, all deliberate: (1) **6d is absorbed into
 > 6c** — the facade had to be re-pointed as part of the coordinated cutover
 > (approach A), since the model macros emit `::eventric_stream::…` paths. (2) The
-> **`stream_new::Facets` → `Metadata` rename is NOT needed** — the 6a accessors let
-> consumers reach position/timestamp/type without ever naming `Facets`, so neither
-> `Facets` is exposed and there's no clash. The old integration tests (6e's
-> deletion) were also pulled forward (the facade flip obsoleted them). Remaining:
-> **6e** (rename `*_new` → final names; delete the now-dead old tree) and **6f** (docs).
+> **`stream_new::Facets` → `Metadata` rename was NOT needed for the facade** (the 6a
+> accessors let consumers reach position/timestamp/type without naming `Facets`, so
+> neither is exposed) — but it was done anyway in 6e because the **internal**
+> collision (both `Facets` are constructed side-by-side in `store/events.rs`) is a
+> maintainability footgun a completeness audit flagged. (3) The old integration
+> tests (6e's deletion) were pulled forward into 6c (the facade flip obsoleted them).
+> Remaining: only **6f** (docs — incl. the now-stale `CLAUDE.md` rewrite — and
+> restoring `#![deny(missing_docs)]`).
 
 - **6a — ✅ Public read surface (prerequisite).** The queried `Event<Facets,u64>` has
   no public accessors; add them (data, position, timestamp, tags, **type-name

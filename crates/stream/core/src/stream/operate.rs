@@ -1,7 +1,7 @@
 mod append;
 mod select;
 
-use crate::stream_new::Position;
+use crate::stream::Position;
 
 // =================================================================================================
 // Operations
@@ -13,7 +13,7 @@ use crate::stream_new::Position;
 /// position bound plus zero or more [`Selection`]s to match.
 ///
 /// Each [`Selection`] is one mask unit. A matched event carries a
-/// [`Mask`](crate::stream_new::Mask) recording which selections it satisfied,
+/// [`Mask`](crate::stream::Mask) recording which selections it satisfied,
 /// in the order they were supplied. With no selections the condition matches
 /// the whole stream (a full scan).
 #[derive(Debug, Default)]

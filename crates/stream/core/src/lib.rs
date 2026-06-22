@@ -9,11 +9,8 @@
 #![deny(unsafe_code)]
 #![feature(exclusive_wrapper)]
 
-pub mod error;
 pub mod event;
-pub mod event_new;
 pub mod stream;
-pub mod stream_new;
 pub mod utils;
 
 // =================================================================================================

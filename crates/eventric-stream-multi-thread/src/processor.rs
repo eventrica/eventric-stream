@@ -5,8 +5,8 @@ use derive_more::{
 };
 use error_stack::Report;
 use eventric_stream_core::{
-    event_new::Event,
-    stream_new::{
+    event::Event,
+    stream::{
         Append as _,
         Condition,
         Error,

@@ -1,112 +1,59 @@
-//! See the `eventric-stream` crate for full documentation, including
-//! module-level documentation.
+use std::{
+    cmp::Ordering,
+    collections::BTreeSet,
+    ops::Range,
+};
 
-pub(crate) mod data;
-pub(crate) mod identifier;
-pub(crate) mod position;
-pub(crate) mod specifier;
-pub(crate) mod tag;
-pub(crate) mod timestamp;
-pub(crate) mod version;
-
-use std::collections::BTreeSet;
-
+use derive_more::{
+    AsRef,
+    with_trait::{
+        Add,
+        AddAssign,
+        Sub,
+        SubAssign,
+    },
+};
+use eventric_utils::validation::{
+    self,
+    Error,
+    NoControlCharacters,
+    NoPrecedingWhiteSpace,
+    NoTrailingWhiteSpace,
+    NotEmpty,
+    Validate,
+};
 use fancy_constructor::new;
+use paste::paste;
 
-use crate::event::{
-    identifier::{
-        IdentifierHash,
-        IdentifierHashAndValue,
-    },
-    tag::{
-        TagHash,
-        TagHashAndValue,
-    },
-};
+use crate::utils::hashing;
 
 // =================================================================================================
 // Event
 // =================================================================================================
 
-// Candidate
+// Data
 
-/// The [`CandidateEvent`] type represents an event which has not yet been
-/// persisted (by appending it to an event stream). It is effectively a pending
-/// event from the perspective of an event stream system, and as such doesn't
-/// yet have some of the properties of an event which has been persisted (in
-/// this case an [`Event`]) such as a [`Position`] within the stream or
-/// a [`Timestamp`].
-#[derive(new, Clone, Debug, Eq, PartialEq)]
-#[new(const_fn, name(new_inner), vis())]
-pub struct CandidateEvent {
-    data: Data,
-    identifier: Identifier,
-    tags: BTreeSet<Tag>,
-    version: Version,
-}
+#[derive(new, AsRef, Clone, Debug, Eq, PartialEq)]
+#[as_ref([u8])]
+#[new(const_fn, name(new_unvalidated))]
+pub struct Data(#[new(name(data))] pub(crate) Vec<u8>);
 
-impl CandidateEvent {
-    /// Constructs a new [`CandidateEvent`] instance, given appropriate event
-    /// components. Each of the event components is validated (where relevant)
-    /// on construction, so the constructor function is guaranteed to succeed.
-    ///
-    /// Note that while an event must have an [`Identifier`] and [`Version`],
-    /// the supplied value of `T` which may be converted to an iterator of
-    /// [`Tag`] instances may be empty, which is valid, as events may have
-    /// zero or more logical tags.
-    #[must_use]
-    pub fn new<T>(data: Data, identifier: Identifier, tags: T, version: Version) -> Self
+impl Data {
+    pub fn new<D>(data: D) -> Result<Self, Error>
     where
-        T: IntoIterator<Item = Tag>,
+        D: Into<Vec<u8>>,
     {
-        Self::new_inner(data, identifier, tags.into_iter().collect(), version)
+        Self::new_unvalidated(data.into()).validate()
     }
 }
 
-impl CandidateEvent {
-    /// Returns a reference to the [`Data`] value of the event.
-    #[must_use]
-    pub fn data(&self) -> &Data {
-        &self.data
-    }
+impl Validate for Data {
+    type Err = Error;
 
-    /// Returns a reference to the [`Identifier`] value of the event.
-    #[must_use]
-    pub fn identifier(&self) -> &Identifier {
-        &self.identifier
-    }
+    fn validate(self) -> Result<Self, Self::Err> {
+        validation::validate(&self.0, "data", &[&NotEmpty])?;
 
-    /// Returns a reference to the collection of [`Tag`] values of the event
-    /// (which may be empty).
-    #[must_use]
-    pub fn tags(&self) -> &BTreeSet<Tag> {
-        &self.tags
-    }
-
-    /// Returns a reference to the [`Version`] value of the event.
-    #[must_use]
-    pub fn version(&self) -> &Version {
-        &self.version
-    }
-}
-
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub(crate) struct CandidateEventHashAndValue {
-    pub data: Data,
-    pub identifier_hash_and_value: IdentifierHashAndValue,
-    pub tags: BTreeSet<TagHashAndValue>,
-    pub version: Version,
-}
-
-impl From<CandidateEvent> for CandidateEventHashAndValue {
-    fn from(event: CandidateEvent) -> Self {
-        Self::new(
-            event.data,
-            event.identifier.into(),
-            event.tags.into_iter().map(Into::into).collect(),
-            event.version,
-        )
+        Ok(self)
     }
 }
 
@@ -114,126 +61,229 @@ impl From<CandidateEvent> for CandidateEventHashAndValue {
 
 // Event
 
-/// The [`Event`] type represents an event which has been appended to a
-/// [`Stream`][stream], and has now been returned by a query or similar
-/// operation. An [`Event`] is immutable from the perspective of a logical
-/// stream of events - the stream is an append-only data structure, and once an
-/// event is part of a stream, it will always exist in that form and at
-/// that [`Position`];
-///
-/// Note that the [`Timestamp`] is added during the append operation, and the
-/// [`Position`] is also determined at this stage. The same event will always be
-/// returned from a stream given the same [`Position`].
-///
-/// [stream]: crate::stream::Stream
-#[derive(new, Debug, Eq, PartialEq)]
-#[new(const_fn, vis(pub(crate)))]
-pub struct Event {
-    data: Data,
-    identifier: Identifier,
-    position: Position,
-    tags: BTreeSet<Tag>,
-    timestamp: Timestamp,
-    version: Version,
+#[derive(new, Clone, Debug)]
+pub struct Event<M, T>(
+    #[new(name(data))] pub(crate) Data,
+    #[new(name(facets))] pub(crate) Facets<T>,
+    #[new(name(meta))] pub(crate) M,
+);
+
+macro_rules! event_from {
+    ($from:ty, $to:ty) => {
+        impl<M> From<Event<M, $from>> for Event<M, $to> {
+            fn from(event: Event<M, $from>) -> Self {
+                Self(event.0, event.1.into(), event.2)
+            }
+        }
+    };
 }
 
-impl Event {
-    /// Returns a reference to the [`Data`] value of the event.
+event_from!(String, u64);
+
+impl<M, T> Event<M, T> {
+    /// The event payload.
     #[must_use]
     pub fn data(&self) -> &Data {
-        &self.data
+        &self.0
     }
 
-    /// Returns a reference to the [`Identifier`] value of the event.
+    /// The event's queryable facets (its type and its tags).
     #[must_use]
-    pub fn identifier(&self) -> &Identifier {
-        &self.identifier
+    pub fn facets(&self) -> &Facets<T> {
+        &self.1
     }
 
-    /// Returns a reference to the [`Position`] value of the event, which is
-    /// ordinal position of the event in the relevant [`Stream`][stream].
-    ///
-    /// Note that this is **NOT** the position of the event within an iteration
-    /// over the stream given by a [`Stream::query`][query].
-    ///
-    /// [stream]: crate::stream::Stream
-    /// [query]: crate::stream::Stream::query
+    /// The event's metadata (for a persisted event, its position and
+    /// timestamp).
     #[must_use]
-    pub fn position(&self) -> &Position {
-        &self.position
-    }
-
-    /// Returns a reference to the collection of [`Tag`] values of the event
-    /// (which may be empty).
-    ///
-    /// Note that a retrieved collection of [`Tag`] values may be empty or
-    /// incomplete even if the event had tag values when appended. This is
-    /// dependent on the configured query behaviour when retrieving the
-    /// event. See [`Stream::query`][query] and [`query::Options`][options] for
-    /// more detail.
-    ///
-    /// [query]: crate::stream::Stream::query
-    /// [options]: crate::stream::query::Options
-    #[must_use]
-    pub fn tags(&self) -> &BTreeSet<Tag> {
-        &self.tags
-    }
-
-    /// Returns a reference to the [`Timestamp`] value of the event, which was
-    /// generated when the event was appended to the stream.
-    #[must_use]
-    pub fn timestamp(&self) -> &Timestamp {
-        &self.timestamp
-    }
-
-    /// Returns a reference to the [`Version`] value of the event.
-    #[must_use]
-    pub fn version(&self) -> &Version {
-        &self.version
-    }
-}
-
-// Hash
-
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub(crate) struct EventHash {
-    pub data: Data,
-    pub identifier: IdentifierHash,
-    pub position: Position,
-    pub tags: BTreeSet<TagHash>,
-    pub timestamp: Timestamp,
-    pub version: Version,
-}
-
-impl EventHash {
-    #[must_use]
-    #[rustfmt::skip]
-    pub fn take(self) -> (Data, IdentifierHash, Position, BTreeSet<TagHash>, Timestamp, Version) {
-        (
-            self.data,
-            self.identifier,
-            self.position,
-            self.tags,
-            self.timestamp,
-            self.version,
-        )
+    pub fn meta(&self) -> &M {
+        &self.2
     }
 }
 
 // -------------------------------------------------------------------------------------------------
 
-// Re-Exports
+// Facets
 
-pub use self::{
-    data::Data,
-    identifier::Identifier,
-    position::Position,
-    specifier::{
-        Specifier,
-        range::Range,
-    },
-    tag::Tag,
-    timestamp::Timestamp,
-    version::Version,
-};
+#[derive(new, Clone, Debug)]
+pub struct Facets<T>(
+    #[new(name(ty))] pub(crate) Type<T>,
+    #[new(name(tags))] pub(crate) BTreeSet<Tag<T>>,
+);
+
+macro_rules! facets_from {
+    ($from:ty, $to:ty) => {
+        impl From<Facets<$from>> for Facets<$to> {
+            fn from(facets: Facets<$from>) -> Self {
+                Self(
+                    facets.0.into(),
+                    facets.1.into_iter().map(Into::into).collect(),
+                )
+            }
+        }
+    };
+}
+
+facets_from!(String, u64);
+
+impl<T> Facets<T> {
+    /// The event's type (its name and version).
+    #[must_use]
+    pub fn ty(&self) -> &Type<T> {
+        &self.0
+    }
+
+    /// The event's tags.
+    #[must_use]
+    pub fn tags(&self) -> &BTreeSet<Tag<T>> {
+        &self.1
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Name & Tag
+
+macro_rules! string_type {
+    ($name:ident) => {
+        paste! {
+            #[derive(new, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+            #[new(const_fn, name(new_unvalidated), vis())]
+            pub struct $name<T>(pub(crate) T);
+
+            impl $name<String> {
+                pub fn new<T>([< $name:lower >]: T) -> Result<Self, Error>
+                where
+                    T: Into<String>,
+                {
+                    Self::new_unvalidated([< $name:lower >].into()).validate()
+                }
+            }
+
+            impl From<$name<String>> for $name<u64> {
+                fn from([< $name:lower >]: $name<String>) -> Self {
+                    Self(hashing::hash(&[< $name:lower >].0))
+                }
+            }
+
+            impl Validate for $name<String> {
+                type Err = Error;
+
+                fn validate(self) -> Result<Self, Self::Err> {
+                    validation::validate(&self.0, stringify!([< $name:snake >]), &[
+                        &NotEmpty,
+                        &NoControlCharacters,
+                        &NoPrecedingWhiteSpace,
+                        &NoTrailingWhiteSpace,
+                    ])?;
+
+                    Ok(self)
+                }
+            }
+        }
+    };
+}
+
+string_type!(Name);
+string_type!(Tag);
+
+// -------------------------------------------------------------------------------------------------
+
+// Type
+
+#[derive(new, Clone, Debug)]
+pub struct Type<T>(
+    #[new(name(name))] pub(crate) Name<T>,
+    #[new(name(version))] pub(crate) Version,
+);
+
+macro_rules! type_from {
+    ($from:ty, $to:ty) => {
+        impl From<Type<$from>> for Type<$to> {
+            fn from(ty: Type<$from>) -> Self {
+                Self(ty.0.into(), ty.1)
+            }
+        }
+    };
+}
+
+type_from!(String, u64);
+
+impl<T> Type<T> {
+    /// The type's name.
+    #[must_use]
+    pub fn name(&self) -> &Name<T> {
+        &self.0
+    }
+
+    /// The type's version.
+    #[must_use]
+    pub fn version(&self) -> Version {
+        self.1
+    }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Version
+
+#[rustfmt::skip]
+#[derive(new, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Add, AddAssign, Sub, SubAssign)]
+#[new(const_fn)]
+pub struct Version(#[new(name(version))] pub(crate) u8);
+
+impl Version {
+    pub const MAX: Self = Self::new(u8::MAX);
+    pub const MIN: Self = Self::new(u8::MIN);
+}
+
+impl Add<u8> for Version {
+    type Output = Self;
+
+    fn add(self, rhs: u8) -> Self::Output {
+        Self::new(self.0 + rhs)
+    }
+}
+
+impl AddAssign<u8> for Version {
+    fn add_assign(&mut self, rhs: u8) {
+        self.0 += rhs;
+    }
+}
+
+impl Default for Version {
+    fn default() -> Self {
+        Self::MIN
+    }
+}
+
+impl PartialEq<Range<Self>> for Version {
+    fn eq(&self, other: &Range<Self>) -> bool {
+        self >= &other.start && self < &other.end
+    }
+}
+
+impl PartialOrd<Range<Self>> for Version {
+    fn partial_cmp(&self, other: &Range<Self>) -> Option<Ordering> {
+        match self {
+            _ if self < &other.start => Some(Ordering::Less),
+            _ if self >= &other.end => Some(Ordering::Greater),
+            _ => Some(Ordering::Equal),
+        }
+    }
+}
+
+impl Sub<u8> for Version {
+    type Output = Self;
+
+    fn sub(self, rhs: u8) -> Self::Output {
+        Self::new(self.0 - rhs)
+    }
+}
+
+impl SubAssign<u8> for Version {
+    fn sub_assign(&mut self, rhs: u8) {
+        self.0 -= rhs;
+    }
+}

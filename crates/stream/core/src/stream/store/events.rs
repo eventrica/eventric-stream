@@ -15,7 +15,7 @@ use fjall::{
 };
 
 use crate::{
-    event_new::{
+    event::{
         self,
         Data,
         Event,
@@ -24,9 +24,9 @@ use crate::{
         Type,
         Version,
     },
-    stream_new::{
+    stream::{
         Error,
-        Facets,
+        Metadata,
         Position,
         Result,
         Timestamp,
@@ -41,7 +41,7 @@ use crate::{
 
 struct EventReader<'a>(Position, &'a Slice);
 
-impl From<EventReader<'_>> for Event<Facets, u64> {
+impl From<EventReader<'_>> for Event<Metadata, u64> {
     fn from(EventReader(position, value): EventReader<'_>) -> Self {
         let mut value = &value[..];
 
@@ -49,10 +49,10 @@ impl From<EventReader<'_>> for Event<Facets, u64> {
         let version = Version(value.get_u8());
         let ty = Type::new(name, version);
         let tags = (0..value.get_u8()).map(|_| Tag(value.get_u64())).collect();
-        let facets = event_new::Facets::new(ty, tags);
+        let facets = event::Facets::new(ty, tags);
 
         let timestamp = Timestamp(value.get_u64());
-        let meta = Facets::new(position, timestamp);
+        let meta = Metadata::new(position, timestamp);
 
         let data = Data(value.iter().map(ToOwned::to_owned).collect::<Vec<_>>());
 
@@ -121,7 +121,7 @@ impl Events {
 }
 
 impl Events {
-    pub fn get(&self, position: Position) -> Result<Option<Event<Facets, u64>>> {
+    pub fn get(&self, position: Position) -> Result<Option<Event<Metadata, u64>>> {
         let key = position.0.to_be_bytes(); // Position
         let value = self
             .keyspace
@@ -134,7 +134,7 @@ impl Events {
 }
 
 impl Events {
-    pub fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, facets: &Facets) {
+    pub fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, facets: &Metadata) {
         let key = facets.0.0.to_be_bytes(); // Position
         let value: Vec<u8> = EventWriter(event, &facets.1).into(); // Event & Timestamp
 
@@ -182,7 +182,7 @@ impl DoubleEndedIterator for EventsIter {
 }
 
 impl Iterator for EventsIter {
-    type Item = Result<Event<Facets, u64>>;
+    type Item = Result<Event<Metadata, u64>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter.next().map(Self::next_map)
