@@ -131,13 +131,13 @@ macro_rules! string_type {
 
             impl From<$name<String>> for $name<(u64, String)> {
                 fn from([< $name:lower >]: $name<String>) -> Self {
-                    Self((hashing::get(&[< $name:lower >].0), [< $name:lower >].0))
+                    Self((hashing::hash(&[< $name:lower >].0), [< $name:lower >].0))
                 }
             }
 
             impl From<$name<String>> for $name<u64> {
                 fn from([< $name:lower >]: $name<String>) -> Self {
-                    Self(hashing::get(&[< $name:lower >].0))
+                    Self(hashing::hash(&[< $name:lower >].0))
                 }
             }
 
