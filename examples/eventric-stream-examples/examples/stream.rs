@@ -1,75 +1,75 @@
-use std::error::Error;
+use std::collections::BTreeSet;
 
-use eventric_stream::{
-    event::{
-        CandidateEvent,
+use eventric_stream_core::{
+    event_new::{
         Data,
-        Identifier,
-        Specifier,
+        Event,
+        Facets,
+        Name,
         Tag,
+        Type,
         Version,
     },
-    stream::{
-        Owner,
+    stream_new::{
+        Append as _,
+        Condition,
+        Select as _,
+        Selection,
+        Selector,
         Stream,
-        append::Append as _,
-        select::{
-            Select as _,
-            Selection,
-            Selector,
-            Specifiers,
-            Tags,
-        },
+        TypeSelector,
     },
+    utils::temp_path,
 };
+use eventric_stream_multi_thread::owner::Owner;
 
-pub fn main() -> Result<(), Box<dyn Error>> {
-    let owner = Stream::builder(eventric_stream::temp_path())
-        .temporary(true)
-        .open()
-        .map(Owner::new)?;
+fn event(identifier: &str, data: &str, tags: &[&str], version: u8) -> Event<(), String> {
+    let ty = Type::new(Name::new(identifier).unwrap(), Version::new(version));
+    let tags = tags
+        .iter()
+        .map(|tag| Tag::new(*tag).unwrap())
+        .collect::<BTreeSet<_>>();
+
+    Event::new(Data::new(data).unwrap(), Facets::new(ty, tags), ())
+}
+
+pub fn main() {
+    let owner = Owner::new(Stream::builder(temp_path()).temporary(true).open().unwrap());
 
     let mut stream = owner.proxy();
 
-    stream.append(
+    stream
+        .append(
+            vec![
+                event(
+                    "StudentSubscribedToCourse",
+                    "hello world!",
+                    &["student:3242", "course:523"],
+                    0,
+                ),
+                event("CourseCapacityChanged", "oh, no!", &["course:523"], 0),
+                event(
+                    "StudentSubscribedToCourse",
+                    "goodbye world...",
+                    &["student:7642", "course:63"],
+                    1,
+                ),
+            ],
+            Condition::new(),
+        )
+        .unwrap();
+
+    // Select any "StudentSubscribedToCourse" or "CourseCapacityChanged" event
+    // that also carries the "course:523" tag.
+    let condition = Condition::new().selections([Selection::new([Selector::types_and_tags(
         [
-            CandidateEvent::new(
-                Data::new("hello world!")?,
-                Identifier::new("StudentSubscribedToCourse")?,
-                [Tag::new("student:3242")?, Tag::new("course:523")?],
-                Version::new(0),
-            ),
-            CandidateEvent::new(
-                Data::new("oh, no!")?,
-                Identifier::new("CourseCapacityChanged")?,
-                [Tag::new("course:523")?],
-                Version::new(0),
-            ),
-            CandidateEvent::new(
-                Data::new("goodbye world...")?,
-                Identifier::new("StudentSubscribedToCourse")?,
-                [Tag::new("student:7642")?, Tag::new("course:63")?],
-                Version::new(1),
-            ),
+            TypeSelector::new("StudentSubscribedToCourse").unwrap(),
+            TypeSelector::new("CourseCapacityChanged").unwrap(),
         ],
-        None,
-    )?;
+        [Tag::new("course:523").unwrap()],
+    )])]);
 
-    let selection = Selection::new([Selector::SpecifiersAndTags(
-        Specifiers::new([
-            Specifier::new(Identifier::new("StudentSubscribedToCourse")?),
-            Specifier::new(Identifier::new("CourseCapacityChanged")?),
-        ])?,
-        Tags::new([Tag::new("course:523")?])?,
-    )])?;
-
-    let (events, prepared) = stream.select(selection, None);
-
-    for event in events {
-        println!("event: {event:#?}");
+    for event in stream.select(condition) {
+        println!("event: {:#?}", event.unwrap());
     }
-
-    println!("prepared: {prepared:#?}");
-
-    Ok(())
 }

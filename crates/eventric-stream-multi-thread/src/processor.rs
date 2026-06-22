@@ -3,22 +3,15 @@ use derive_more::{
     Debug,
     From,
 };
+use error_stack::Report;
 use eventric_stream_core::{
-    error::Error,
-    event::{
-        CandidateEvent,
+    event_new::Event,
+    stream_new::{
+        Append as _,
+        Condition,
+        Error,
         Position,
-    },
-    stream::{
         Writer,
-        append::{
-            Append as _,
-            AppendSelect as _,
-        },
-        select::{
-            Prepared,
-            PreparedMultiple,
-        },
     },
 };
 use fancy_constructor::new;
@@ -35,15 +28,12 @@ pub struct Processor {
 }
 
 impl Processor {
-    #[rustfmt::skip]
-    pub fn process(mut self) -> Result<Writer, Error> {
+    pub fn process(mut self) -> Result<Writer, Report<Error>> {
         loop {
             match self.receiver.recv() {
                 Ok(Operation::Append(append)) => self.append(append)?,
-                Ok(Operation::AppendSelect(append)) => self.append_select(append)?,
-                Ok(Operation::AppendSelectMultiple(append)) => self.append_select_multiple(append)?,
                 Ok(Operation::Exit) => return Ok(self.writer),
-                Err(_) => return Err(Error::general("processor/process/receive")),
+                Err(_) => return Err(Report::new(Error).attach("processor/process/receive")),
             }
         }
     }
@@ -53,47 +43,21 @@ impl Processor {
     fn writer<F, R>(
         &mut self,
         operation: F,
-        sender: oneshot::Sender<Result<R, Error>>,
-    ) -> Result<(), Error>
+        sender: oneshot::Sender<Result<R, Report<Error>>>,
+    ) -> Result<(), Report<Error>>
     where
-        F: FnOnce(&mut Writer) -> Result<R, Error>,
+        F: FnOnce(&mut Writer) -> Result<R, Report<Error>>,
     {
         sender
             .send(operation(&mut self.writer))
-            .map_err(|_| Error::general("processor/writer/send"))
+            .map_err(|_| Report::new(Error).attach("processor/writer/send"))
     }
 }
 
 impl Processor {
-    #[rustfmt::skip]
-    fn append(&mut self, append: AppendOperation) -> Result<(), Error> {
+    fn append(&mut self, append: AppendOperation) -> Result<(), Report<Error>> {
         self.writer(
-            |writer| writer.append(
-                append.events,
-                append.after
-            ),
-            append.sender,
-        )
-    }
-
-    #[rustfmt::skip]
-    fn append_select(&mut self, append: AppendSelectOperation) -> Result<(), Error> {
-        self.writer(
-            |writer| writer.append_select(
-                append.events,
-                append.selection,
-                append.after
-            ),
-            append.sender,
-        )
-    }
-
-    fn append_select_multiple(
-        &mut self,
-        append: AppendSelectMultipleOperation,
-    ) -> Result<(), Error> {
-        self.writer(
-            |writer| writer.append_select_multiple(append.events, append.selections, append.after),
+            |writer| writer.append(append.events, append.condition),
             append.sender,
         )
     }
@@ -106,36 +70,14 @@ impl Processor {
 #[derive(Debug, From)]
 pub enum Operation {
     Append(AppendOperation),
-    AppendSelect(AppendSelectOperation),
-    AppendSelectMultiple(AppendSelectMultipleOperation),
     Exit,
 }
 
 #[derive(new, Debug)]
 #[new(const_fn)]
 pub struct AppendOperation {
-    #[debug("Box<dyn Iterator<Item = CandidateEvent> + Send>")]
-    events: Box<dyn Iterator<Item = CandidateEvent> + Send>,
-    after: Option<Position>,
-    sender: oneshot::Sender<Result<Position, Error>>,
-}
-
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub struct AppendSelectOperation {
-    #[debug("Box<dyn Iterator<Item = CandidateEvent> + Send>")]
-    events: Box<dyn Iterator<Item = CandidateEvent> + Send>,
-    selection: Prepared,
-    after: Option<Position>,
-    sender: oneshot::Sender<Result<(Position, Prepared), Error>>,
-}
-
-#[derive(new, Debug)]
-#[new(const_fn)]
-pub struct AppendSelectMultipleOperation {
-    #[debug("Box<dyn Iterator<Item = CandidateEvent> + Send>")]
-    events: Box<dyn Iterator<Item = CandidateEvent> + Send>,
-    selections: PreparedMultiple,
-    after: Option<Position>,
-    sender: oneshot::Sender<Result<(Position, PreparedMultiple), Error>>,
+    #[debug("Box<dyn Iterator<Item = Event<(), String>> + Send>")]
+    events: Box<dyn Iterator<Item = Event<(), String>> + Send>,
+    condition: Condition,
+    sender: oneshot::Sender<Result<Position, Report<Error>>>,
 }

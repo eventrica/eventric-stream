@@ -1,9 +1,10 @@
 [dependencies]
 crossbeam.workspace            = true
 derive_more.workspace          = true
+error-stack.workspace          = true
 eventric-stream-core.workspace = true
 fancy_constructor.workspace    = true
-oneshot.workspace              = true
+oneshot                        = { workspace = true, features = ["std"] }
 
 [lints]
 workspace = true

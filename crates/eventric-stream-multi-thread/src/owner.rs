@@ -4,13 +4,12 @@ use std::thread::{
 };
 
 use crossbeam::channel;
-use eventric_stream_core::{
-    error::Error,
-    stream::{
-        Reader,
-        Stream,
-        Writer,
-    },
+use error_stack::Report;
+use eventric_stream_core::stream_new::{
+    Error,
+    Reader,
+    Stream,
+    Writer,
 };
 use fancy_constructor::new;
 
@@ -29,7 +28,7 @@ use crate::{
 #[derive(new, Debug)]
 #[new(const_fn, name(new_inner), vis())]
 pub struct Owner {
-    handle: JoinHandle<Result<Writer, Error>>,
+    handle: JoinHandle<Result<Writer, Report<Error>>>,
     reader: Reader,
     sender: channel::Sender<Operation>,
 }
@@ -56,19 +55,19 @@ impl Owner {
 }
 
 impl Owner {
-    /// .
+    /// Shut the writer thread down and reclaim the underlying [`Stream`].
     ///
     /// # Errors
     ///
-    /// This function will return an error if .
-    pub fn into_inner(self) -> Result<Stream, Error> {
+    /// Returns an error if the writer thread cannot be signalled or joined.
+    pub fn into_inner(self) -> Result<Stream, Report<Error>> {
         self.sender
             .send(Operation::Exit)
-            .map_err(|_| Error::general("owner/into_inner/send"))?;
+            .map_err(|_| Report::new(Error).attach("owner/into_inner/send"))?;
 
         self.handle
             .join()
-            .map_err(|_| Error::general("owner/into_inner/join"))
+            .map_err(|_| Report::new(Error).attach("owner/into_inner/join"))
             .flatten()
             .map(Into::into)
     }
