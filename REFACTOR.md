@@ -34,6 +34,17 @@ current state:
   version ranges are half-open `Range<Version>`, so `Version::MAX` (255) is not
   selectable — a pre-existing design point shared with the old tree; revisit if
   255 must be a usable version (would need inclusive ranges).
+- **Phase 3 — ✅ done (2026-06-22).** Conditional (DCB) append. `append` now
+  takes a `Condition` (reusing the Phase 2 type): empty selections = unconditional
+  append; non-empty = reject iff a matching event exists at or after
+  `condition.position` (from-inclusive; `None` = whole stream), with a head
+  shortcut. Rejection returns an `Error` report carrying a downcastable `Conflict`
+  marker (the new `Error` is an opaque ZST — there is no `Concurrency` variant, so
+  concurrency is signalled via `report.downcast_ref::<Conflict>()`). Existence is
+  checked over the index positions only (`Store::matches`), no event materialized.
+  **Note:** the old tree's no-selection *positional* concurrency check ("fail if
+  the stream grew at all") was intentionally dropped — DCB conditions are
+  selection-scoped; empty selections now mean unconditional.
 
 ## TL;DR
 
@@ -299,7 +310,7 @@ Three directions are now locked:
 - **Done when:** an external caller can build a multi-selection query, run it, and
   read back events with a correct match-mask; round-trip test passes.
 
-### Phase 3 — Conditional append (DCB parity)
+### Phase 3 — Conditional append (DCB parity) ✅ done (2026-06-22)
 - Add a selection-based optimistic-concurrency check to append: a `Condition`
   (selection + `after`) fails with a concurrency error iff a matching event exists at
   `after+1..` (an existence-only index scan — the old `Indices::contains`). Today

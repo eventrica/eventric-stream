@@ -112,6 +112,26 @@ impl Store {
     }
 }
 
+impl Store {
+    /// Whether any event matching `selections` exists at or after `from`. Used
+    /// for the append concurrency (DCB) check; resolves index positions only,
+    /// so it never materializes an event. Empty `selections` is vacuously
+    /// `false`.
+    pub fn matches(&self, selections: &[Selection], from: Option<Position>) -> Result<bool> {
+        let mut iter = self.indices.iterate(
+            selections
+                .iter()
+                .flat_map(|selection| selection.selectors.iter()),
+            from,
+        );
+
+        match iter.next() {
+            Some(result) => result.map(|_| true),
+            None => Ok(false),
+        }
+    }
+}
+
 // -------------------------------------------------------------------------------------------------
 
 // Iterators

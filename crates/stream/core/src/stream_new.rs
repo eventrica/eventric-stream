@@ -90,6 +90,21 @@ pub struct Error;
 
 // -------------------------------------------------------------------------------------------------
 
+// Conflict
+
+/// Marker attached to an [`Error`] report when an append is rejected by its
+/// condition (an optimistic-concurrency / DCB conflict). Distinguish a conflict
+/// from any other failure with `report.downcast_ref::<Conflict>()`.
+///
+/// An index-read failure while evaluating the condition surfaces as a plain
+/// [`Error`] with no `Conflict` attached, so the absence of this marker does
+/// not imply the append would otherwise have succeeded.
+#[derive(Debug, Display)]
+#[display("append condition conflict")]
+pub struct Conflict;
+
+// -------------------------------------------------------------------------------------------------
+
 // Facets
 
 #[derive(new, Debug)]
@@ -135,12 +150,12 @@ impl Stream {
 }
 
 impl Append for Stream {
-    fn append<E>(&mut self, events: E, after: Option<Position>) -> Result<Position, Error>
+    fn append<E>(&mut self, events: E, condition: Condition) -> Result<Position, Error>
     where
         E: IntoIterator<Item = Event<(), String>>,
         E::IntoIter: Send + 'static,
     {
-        (&mut || self.database.batch(), &mut self.next, &self.store).append(events, after)
+        (&mut || self.database.batch(), &mut self.next, &self.store).append(events, condition)
     }
 }
 
@@ -255,6 +270,7 @@ mod tests {
     use super::{
         Append,
         Condition,
+        Conflict,
         Position,
         Select,
         Selection,
@@ -306,7 +322,7 @@ mod tests {
                     event("Enrolled", 0, &["student:2", "course:1"]),
                     event("Dropped", 0, &["student:1", "course:1"]),
                 ],
-                None,
+                Condition::new(),
             )
             .unwrap();
 
@@ -335,7 +351,10 @@ mod tests {
         let mut stream = stream();
 
         stream
-            .append(vec![event("A", 0, &[]), event("B", 0, &[])], None)
+            .append(
+                vec![event("A", 0, &[]), event("B", 0, &[])],
+                Condition::new(),
+            )
             .unwrap();
 
         let results = stream
@@ -356,7 +375,7 @@ mod tests {
         stream
             .append(
                 vec![event("T", 0, &[]), event("T", 1, &[]), event("T", 2, &[])],
-                None,
+                Condition::new(),
             )
             .unwrap();
 
@@ -388,7 +407,7 @@ mod tests {
                     event("Enrolled", 0, &["student:1"]),
                     event("Enrolled", 0, &[]),
                 ],
-                None,
+                Condition::new(),
             )
             .unwrap();
 
@@ -423,7 +442,7 @@ mod tests {
                     event("Enrolled", 0, &["student:2", "course:1"]),
                     event("Dropped", 0, &["student:1", "course:1"]),
                 ],
-                None,
+                Condition::new(),
             )
             .unwrap();
 
@@ -462,7 +481,7 @@ mod tests {
                     event("Enrolled", 0, &[]),
                     event("Dropped", 0, &[]),
                 ],
-                None,
+                Condition::new(),
             )
             .unwrap();
 
@@ -490,7 +509,7 @@ mod tests {
         stream
             .append(
                 vec![event("A", 0, &[]), event("B", 0, &[]), event("C", 0, &[])],
-                None,
+                Condition::new(),
             )
             .unwrap();
 
@@ -507,5 +526,205 @@ mod tests {
         assert_eq!(results.len(), 2); // A and B, not C
         assert_eq!(results[0].mask.as_ref(), [true].as_slice());
         assert_eq!(results[1].mask.as_ref(), [true].as_slice());
+    }
+
+    // Phase 3: conditional (DCB) append. A condition rejects the append iff a
+    // matching event already exists at or after the condition's position.
+
+    #[test]
+    fn append_with_empty_condition_is_unconditional() {
+        let mut stream = stream();
+
+        stream
+            .append(vec![event("A", 0, &[])], Condition::new())
+            .unwrap();
+        // No selections => no concurrency check, even though events exist.
+        assert!(
+            stream
+                .append(vec![event("B", 0, &[])], Condition::new())
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn append_is_rejected_when_a_matching_event_exists() {
+        let mut stream = stream();
+
+        stream
+            .append(vec![event("Enrolled", 0, &[])], Condition::new())
+            .unwrap();
+
+        // Append only if no "Enrolled" event exists from position 0 — one does.
+        let condition = Condition::new()
+            .from(Position::new(0))
+            .selections([Selection::new([Selector::types([TypeSelector::new(
+                "Enrolled",
+            )
+            .unwrap()])])]);
+        let result = stream.append(vec![event("Dropped", 0, &[])], condition);
+
+        let report = result.unwrap_err();
+        assert!(report.downcast_ref::<Conflict>().is_some());
+        // The rejected append did not write anything.
+        assert_eq!(stream.len(), 1);
+    }
+
+    #[test]
+    fn append_is_allowed_when_no_matching_event_exists() {
+        let mut stream = stream();
+
+        stream
+            .append(vec![event("Enrolled", 0, &[])], Condition::new())
+            .unwrap();
+
+        // Watch for "Dropped" from position 0 — none exists, so the append
+        // proceeds (this exercises the real index check, not the head shortcut).
+        let condition = Condition::new()
+            .from(Position::new(0))
+            .selections([Selection::new([Selector::types([TypeSelector::new(
+                "Dropped",
+            )
+            .unwrap()])])]);
+
+        assert!(
+            stream
+                .append(vec![event("Dropped", 0, &[])], condition)
+                .is_ok()
+        );
+        assert_eq!(stream.len(), 2);
+    }
+
+    #[test]
+    fn append_condition_window_starts_at_position() {
+        let mut stream = stream();
+
+        stream
+            .append(
+                vec![event("Enrolled", 0, &[]), event("Dropped", 0, &[])],
+                Condition::new(),
+            )
+            .unwrap();
+
+        // The conflicting "Enrolled" is at position 0; a window starting at
+        // position 1 does not see it, so the append is allowed.
+        let condition = Condition::new()
+            .from(Position::new(1))
+            .selections([Selection::new([Selector::types([TypeSelector::new(
+                "Enrolled",
+            )
+            .unwrap()])])]);
+
+        assert!(
+            stream
+                .append(vec![event("Enrolled", 0, &[])], condition)
+                .is_ok()
+        );
+    }
+
+    // A window starting at or after the head short-circuits the index scan: a
+    // caller anchored at the head gets no spurious conflict, even though a
+    // matching event exists below the window.
+    #[test]
+    fn append_condition_window_at_head_never_conflicts() {
+        let mut stream = stream();
+
+        stream
+            .append(vec![event("Enrolled", 0, &[])], Condition::new())
+            .unwrap();
+
+        let condition = Condition::new()
+            .from(Position::new(1)) // == next; the Enrolled at position 0 is below it
+            .selections([Selection::new([Selector::types([
+                TypeSelector::new("Enrolled").unwrap(),
+            ])])]);
+
+        assert!(
+            stream
+                .append(vec![event("Dropped", 0, &[])], condition)
+                .is_ok()
+        );
+    }
+
+    // With no position the condition checks the whole stream.
+    #[test]
+    fn append_with_no_position_checks_whole_stream() {
+        let mut stream = stream();
+
+        stream
+            .append(vec![event("Enrolled", 0, &[])], Condition::new())
+            .unwrap();
+
+        // Watching "Enrolled" with no `from` — one exists anywhere => conflict.
+        let conflicting =
+            Condition::new().selections([Selection::new([Selector::types([TypeSelector::new(
+                "Enrolled",
+            )
+            .unwrap()])])]);
+        assert!(
+            stream
+                .append(vec![event("Dropped", 0, &[])], conflicting)
+                .is_err()
+        );
+        assert_eq!(stream.len(), 1);
+
+        // Watching "Dropped" with no `from` — none exists => allowed.
+        let clear =
+            Condition::new().selections([Selection::new([Selector::types([TypeSelector::new(
+                "Dropped",
+            )
+            .unwrap()])])]);
+        assert!(stream.append(vec![event("Dropped", 0, &[])], clear).is_ok());
+        assert_eq!(stream.len(), 2);
+    }
+
+    // A tag-scoped selector conflicts only when both the type and the tag match.
+    #[test]
+    fn append_conflict_via_tag_scoped_selector() {
+        let mut stream = stream();
+
+        stream
+            .append(vec![event("Enrolled", 0, &["student:1"])], Condition::new())
+            .unwrap();
+
+        let condition = |tag: &str| {
+            Condition::new()
+                .from(Position::new(0))
+                .selections([Selection::new([Selector::types_and_tags(
+                    [TypeSelector::new("Enrolled").unwrap()],
+                    [Tag::new(tag).unwrap()],
+                )])])
+        };
+
+        // Same type + same tag => conflict.
+        assert!(
+            stream
+                .append(vec![event("X", 0, &[])], condition("student:1"))
+                .is_err()
+        );
+        // Same type, different tag => no matching event, allowed.
+        assert!(
+            stream
+                .append(vec![event("X", 0, &[])], condition("student:2"))
+                .is_ok()
+        );
+    }
+
+    // A multi-selection condition honors every selection, not just the first.
+    #[test]
+    fn append_multi_selection_condition_honors_all_selections() {
+        let mut stream = stream();
+
+        stream
+            .append(vec![event("B", 0, &[])], Condition::new())
+            .unwrap();
+
+        // Two selections: type "A" (no match) and type "B" (matches the event).
+        // A regression that only checked the first selection would miss this.
+        let condition = Condition::new().from(Position::new(0)).selections([
+            Selection::new([Selector::types([TypeSelector::new("A").unwrap()])]),
+            Selection::new([Selector::types([TypeSelector::new("B").unwrap()])]),
+        ]);
+
+        assert!(stream.append(vec![event("C", 0, &[])], condition).is_err());
     }
 }
