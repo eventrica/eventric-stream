@@ -7,7 +7,6 @@
 #![allow(clippy::missing_safety_doc)]
 #![allow(missing_docs)]
 #![deny(unsafe_code)]
-#![feature(bool_to_result)]
 #![feature(exclusive_wrapper)]
 
 pub mod error;

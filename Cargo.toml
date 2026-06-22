@@ -20,15 +20,15 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-assertables                  = { version = "9" }
+assertables                  = { version = "10" }
 bytes                        = { version = "1" }
 criterion                    = { version = "0.8" }
 crossbeam                    = { version = "0.8" }
 darling                      = { version = "0.23" }
 dashmap                      = { version = "6", features = ["inline"] }
 derive_more                  = { version = "2", features = ["full"] }
-double-ended-peekable        = { version = "0.1.0" }
-error-stack                  = { version = "0.6" }
+double-ended-peekable        = { version = "0.1" }
+error-stack                  = { version = "0.7" }
 eventric-model               = { path = "crates/model" }
 eventric-model-core          = { path = "crates/model/core" }
 eventric-model-macros        = { path = "crates/model/macros" }
@@ -47,7 +47,7 @@ proc-macro2                  = { version = "1" }
 quote                        = { version = "1" }
 rand                         = { version = "0.10" }
 rapidhash                    = { version = "4" }
-revision                     = { version = "0.17" }
+revision                     = { version = "0.28" }
 smallvec                     = { version = "1", features = ["const_generics", "const_new", "union"] }
 syn                          = { version = "2" }
 thiserror                    = { version = "2" }
