@@ -1,6 +1,5 @@
 mod events;
 mod indices;
-mod references;
 
 use error_stack::ResultExt as _;
 use fancy_constructor::new;
@@ -44,16 +43,14 @@ static POSITION_LEN: usize = size_of::<u64>();
 pub struct Store {
     pub(crate) events: Events,
     pub(crate) indices: Indices,
-    pub(crate) references: References,
 }
 
 impl Store {
     pub fn open(database: &Database) -> Result<Self> {
         let events = Events::open(database)?;
         let indices = Indices::open(database)?;
-        let references = References::open(database)?;
 
-        Ok(Self::new(events, indices, references))
+        Ok(Self::new(events, indices))
     }
 }
 
@@ -76,9 +73,6 @@ impl Store {
         for event in events {
             let event = event.into();
 
-            self.references.insert(&mut batch, &event);
-
-            let event = event.into();
             let facets = Timestamp::now()
                 .map(|timestamp| Facets::new(position, timestamp))
                 .attach("failed to create timestamped facets")?;
@@ -169,5 +163,85 @@ impl Iterator for StoreIter {
 pub use self::{
     events::Events,
     indices::Indices,
-    references::References,
 };
+
+// =================================================================================================
+// Tests
+// =================================================================================================
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeSet;
+
+    use fjall::Database;
+
+    use super::Store;
+    use crate::{
+        event_new::{
+            Data,
+            Event,
+            Facets,
+            Name,
+            Tag,
+            Type,
+            Version,
+        },
+        stream_new::Position,
+        utils::temp_path,
+    };
+
+    fn event(identifier: &str, tags: &[&str]) -> Event<(), String> {
+        let ty = Type::new(Name::new(identifier).unwrap(), Version::new(0));
+        let tags = tags
+            .iter()
+            .map(|t| Tag::new(*t).unwrap())
+            .collect::<BTreeSet<_>>();
+
+        Event::new(
+            Data::new(b"payload".to_vec()).unwrap(),
+            Facets::new(ty, tags),
+            (),
+        )
+    }
+
+    // Phase 1 is a data-format change to the new tree, which otherwise has no
+    // tests. This drives the pub `Store` API directly (no dependency on the
+    // not-yet-built public `Stream`/`Condition` surface) to prove the collapsed
+    // single `String -> u64` insert hop and the events/indices round-trip still
+    // work after the `references` keyspace was removed.
+    #[test]
+    fn insert_then_iterate_round_trips_with_positions() {
+        let database = Database::builder(temp_path())
+            .temporary(true)
+            .open()
+            .unwrap();
+        let store = Store::open(&database).unwrap();
+
+        let events = vec![
+            event("StudentSubscribedToCourse", &["student:1", "course:1"]),
+            event("StudentSubscribedToCourse", &["student:2", "course:1"]),
+            event("CourseCreated", &["course:1"]),
+        ];
+
+        let mut next = Position::new(0);
+        let last = store
+            .insert(&mut || database.batch(), events, &mut next)
+            .unwrap();
+
+        assert_eq!(last, Position::new(2));
+        assert_eq!(next, Position::new(3));
+
+        let read = store
+            .iterate(None, None)
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(read.len(), 3);
+
+        let mut expected = Position::new(0);
+        for event in &read {
+            assert_eq!(event.2.0, expected);
+            expected += 1u64;
+        }
+    }
+}

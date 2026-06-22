@@ -215,7 +215,7 @@ mod tests {
 
         let filter = Filter::new(&query);
 
-        assert!(filter.filters.len() == 1);
+        assert_eq!(filter.filters.len(), 1);
     }
 
     #[test]
@@ -228,7 +228,7 @@ mod tests {
 
         let filter = Filter::new(&query);
 
-        assert!(filter.filters.len() == 1);
+        assert_eq!(filter.filters.len(), 1);
     }
 
     #[test]
@@ -241,7 +241,7 @@ mod tests {
 
         let filter = Filter::new(&query);
 
-        assert!(filter.filters.len() == 2);
+        assert_eq!(filter.filters.len(), 2);
     }
 
     // Filter::new with SpecifiersAndTags
@@ -257,7 +257,7 @@ mod tests {
 
         let filter = Filter::new(&query);
 
-        assert!(filter.filters.len() == 1);
+        assert_eq!(filter.filters.len(), 1);
     }
 
     #[test]
@@ -272,7 +272,7 @@ mod tests {
 
         let filter = Filter::new(&query);
 
-        assert!(filter.filters.len() == 1);
+        assert_eq!(filter.filters.len(), 1);
     }
 
     // Filter::matches - basic matching

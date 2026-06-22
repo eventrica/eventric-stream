@@ -94,8 +94,6 @@ macro_rules! selector_from {
 }
 
 selector_from!(String, u64);
-selector_from!(String, (u64, String));
-selector_from!((u64, String), u64);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -118,8 +116,6 @@ macro_rules! type_selector_from {
 }
 
 type_selector_from!(String, u64);
-type_selector_from!(String, (u64, String));
-type_selector_from!((u64, String), u64);
 
 impl<T> Ord for TypeSelector<T>
 where

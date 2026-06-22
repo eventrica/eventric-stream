@@ -285,7 +285,6 @@ mod tests {
         let range = Version::new(3)..Version::new(10);
 
         assert_eq!(ver, range);
-        assert!(ver == range);
     }
 
     #[test]
@@ -294,7 +293,6 @@ mod tests {
         let range = Version::new(5)..Version::new(10);
 
         assert_ne!(ver, range);
-        assert!(ver != range);
     }
 
     #[test]
@@ -303,7 +301,6 @@ mod tests {
         let range = Version::new(5)..Version::new(10);
 
         assert_ne!(ver, range);
-        assert!(ver != range);
     }
 
     #[test]

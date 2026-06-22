@@ -78,9 +78,7 @@ macro_rules! event_from {
     };
 }
 
-event_from!(String, (u64, String));
 event_from!(String, u64);
-event_from!((u64, String), u64);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -105,9 +103,7 @@ macro_rules! facets_from {
     };
 }
 
-facets_from!(String, (u64, String));
 facets_from!(String, u64);
-facets_from!((u64, String), u64);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -129,21 +125,9 @@ macro_rules! string_type {
                 }
             }
 
-            impl From<$name<String>> for $name<(u64, String)> {
-                fn from([< $name:lower >]: $name<String>) -> Self {
-                    Self((hashing::hash(&[< $name:lower >].0), [< $name:lower >].0))
-                }
-            }
-
             impl From<$name<String>> for $name<u64> {
                 fn from([< $name:lower >]: $name<String>) -> Self {
                     Self(hashing::hash(&[< $name:lower >].0))
-                }
-            }
-
-            impl From<$name<(u64, String)>> for $name<u64> {
-                fn from([< $name:lower >]: $name<(u64, String)>) -> Self {
-                    Self([< $name:lower >].0.0)
                 }
             }
 
@@ -188,9 +172,7 @@ macro_rules! type_from {
     };
 }
 
-type_from!(String, (u64, String));
 type_from!(String, u64);
-type_from!((u64, String), u64);
 
 // -------------------------------------------------------------------------------------------------
 

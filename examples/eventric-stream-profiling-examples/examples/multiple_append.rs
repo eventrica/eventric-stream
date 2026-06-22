@@ -50,7 +50,7 @@ pub fn main() -> Result<(), Error> {
     let duration = Instant::now().duration_since(start);
     let events_per_sec = ((iterations * count) / duration.as_secs_f64()) as u64;
 
-    println!("time: {duration:?} ({events_per_sec} events/sec)",);
+    println!("time: {duration:?} ({events_per_sec} events/sec)");
 
     Ok(())
 }

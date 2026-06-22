@@ -5,6 +5,23 @@
 > original, what's new, *why*, and exactly where the work stopped. For the live
 > API and overall workspace, see [`CLAUDE.md`](./CLAUDE.md).
 
+## Progress
+
+The analysis/map sections below describe the **starting state** as of the
+analysis date (e.g. they describe `references` as a still-present, write-only
+keyspace). Completed phases since then — consult this list (and git) for the
+current state:
+
+- **Phase 0 — ✅ done (2026-06-22).** Persisted hashing switched to the stable
+  seeded rapidhash (`utils::hashing::hash`); on-disk hash values pinned by a test.
+- **Phase 1 — ✅ done (2026-06-22).** `references` keyspace **deleted outright**
+  (`store/references.rs` removed; no field/open/insert/re-export remain) and the
+  `event_new` representation lattice collapsed to a single `String → u64` hop
+  (the `(u64, String)` rung is gone from `event_new.rs` and `operate/select.rs`).
+  A `pub(crate)` smoke test in `store.rs` now exercises the new insert→iterate
+  round-trip. **So `references` no longer exists anywhere in the new tree** —
+  wherever the map below calls it "write-only/retained", read "removed".
+
 ## TL;DR
 
 There are **two parallel implementations of the stream core living side by side**:
@@ -231,7 +248,7 @@ Three directions are now locked:
 - **Full cutover** — re-point facade + model + multi-thread, delete the old tree,
   rename `stream_new`/`event_new` back to `stream`/`event`.
 
-### Phase 0 — Baseline & hash foundation
+### Phase 0 — Baseline & hash foundation ✅ done (2026-06-22)
 *Small, do first; unblocks everything and de-risks the data format.*
 - Commit the current uncommitted reorg as-is (it compiles) so there's a clean
   baseline: `operations→operate`, `storage→store`, top-level `iterate.rs`.
@@ -243,7 +260,7 @@ Three directions are now locked:
 - **Done when:** baseline committed; all stored hashes derive from rapidhash; a test
   pins a known string→hash value.
 
-### Phase 1 — Drop `references` & simplify the event model
+### Phase 1 — Drop `references` & simplify the event model ✅ done (2026-06-22)
 *Self-contained; shrinks the surface before building on it.*
 - Delete `stream_new/store/references.rs`; remove the `References` field from
   `Store`, the `references.insert` call in `Store::insert`, and the
