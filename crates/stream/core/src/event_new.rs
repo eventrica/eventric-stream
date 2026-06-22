@@ -80,6 +80,27 @@ macro_rules! event_from {
 
 event_from!(String, u64);
 
+impl<M, T> Event<M, T> {
+    /// The event payload.
+    #[must_use]
+    pub fn data(&self) -> &Data {
+        &self.0
+    }
+
+    /// The event's queryable facets (its type and its tags).
+    #[must_use]
+    pub fn facets(&self) -> &Facets<T> {
+        &self.1
+    }
+
+    /// The event's metadata (for a persisted event, its position and
+    /// timestamp).
+    #[must_use]
+    pub fn meta(&self) -> &M {
+        &self.2
+    }
+}
+
 // -------------------------------------------------------------------------------------------------
 
 // Facets
@@ -104,6 +125,20 @@ macro_rules! facets_from {
 }
 
 facets_from!(String, u64);
+
+impl<T> Facets<T> {
+    /// The event's type (its name and version).
+    #[must_use]
+    pub fn ty(&self) -> &Type<T> {
+        &self.0
+    }
+
+    /// The event's tags.
+    #[must_use]
+    pub fn tags(&self) -> &BTreeSet<Tag<T>> {
+        &self.1
+    }
+}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -173,6 +208,20 @@ macro_rules! type_from {
 }
 
 type_from!(String, u64);
+
+impl<T> Type<T> {
+    /// The type's name.
+    #[must_use]
+    pub fn name(&self) -> &Name<T> {
+        &self.0
+    }
+
+    /// The type's version.
+    #[must_use]
+    pub fn version(&self) -> Version {
+        self.1
+    }
+}
 
 // -------------------------------------------------------------------------------------------------
 

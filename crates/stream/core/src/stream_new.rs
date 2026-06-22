@@ -114,6 +114,20 @@ pub struct Facets(
     #[new(name(timestamp))] pub(crate) Timestamp,
 );
 
+impl Facets {
+    /// The position the event was appended at.
+    #[must_use]
+    pub fn position(&self) -> Position {
+        self.0
+    }
+
+    /// The timestamp the event was appended at.
+    #[must_use]
+    pub fn timestamp(&self) -> Timestamp {
+        self.1
+    }
+}
+
 // -------------------------------------------------------------------------------------------------
 
 // Stream
@@ -899,5 +913,35 @@ mod tests {
                 .is_err()
         );
         assert_eq!(stream.len(), 0);
+    }
+
+    // Phase 6a: a queried event is fully readable through the public accessors a
+    // consumer (e.g. the model layer) needs — payload, metadata, and type.
+    #[test]
+    fn queried_event_exposes_public_accessors() {
+        let mut stream = stream();
+        stream
+            .append(vec![event("Enrolled", 0, &["student:1"])], Condition::new())
+            .unwrap();
+
+        let condition =
+            Condition::new().selections([Selection::new([Selector::types([TypeSelector::new(
+                "Enrolled",
+            )
+            .unwrap()])])]);
+        let results = stream
+            .select(condition)
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        let event = &results[0].event;
+        assert_eq!(event.meta().position(), Position::new(0));
+        assert_eq!(event.data().as_ref(), &b"payload"[..]);
+        assert_eq!(event.facets().ty().version(), Version::new(0));
+
+        // The type-name is the same `Name<u64>` derived from the identifier
+        // string via the stable hash — how the model will match event types.
+        let expected: Name<u64> = Name::<String>::new("Enrolled").unwrap().into();
+        assert_eq!(event.facets().ty().name(), &expected);
     }
 }
