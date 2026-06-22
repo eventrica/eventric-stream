@@ -61,7 +61,7 @@ impl Validate for Data {
 
 // Event
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 pub struct Event<M, T>(
     #[new(name(data))] pub(crate) Data,
     #[new(name(facets))] pub(crate) Facets<T>,
@@ -105,7 +105,7 @@ impl<M, T> Event<M, T> {
 
 // Facets
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 pub struct Facets<T>(
     #[new(name(ty))] pub(crate) Type<T>,
     #[new(name(tags))] pub(crate) BTreeSet<Tag<T>>,
@@ -147,7 +147,7 @@ impl<T> Facets<T> {
 macro_rules! string_type {
     ($name:ident) => {
         paste! {
-            #[derive(new, Debug, Eq, Ord, PartialEq, PartialOrd)]
+            #[derive(new, Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
             #[new(const_fn, name(new_unvalidated), vis())]
             pub struct $name<T>(pub(crate) T);
 
@@ -191,7 +191,7 @@ string_type!(Tag);
 
 // Type
 
-#[derive(new, Debug)]
+#[derive(new, Clone, Debug)]
 pub struct Type<T>(
     #[new(name(name))] pub(crate) Name<T>,
     #[new(name(version))] pub(crate) Version,

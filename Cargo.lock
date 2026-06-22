@@ -434,10 +434,10 @@ name = "eventric-model-core"
 version = "0.1.0"
 dependencies = [
  "derive_more",
+ "error-stack",
  "eventric-stream",
  "fancy_constructor",
  "revision",
- "thiserror",
 ]
 
 [[package]]
@@ -445,6 +445,7 @@ name = "eventric-model-examples"
 version = "0.1.0"
 dependencies = [
  "derive_more",
+ "error-stack",
  "eventric-model",
  "eventric-stream",
  "fancy_constructor",
@@ -507,8 +508,6 @@ name = "eventric-stream-examples"
 version = "0.1.0"
 dependencies = [
  "eventric-stream",
- "eventric-stream-core",
- "eventric-stream-multi-thread",
 ]
 
 [[package]]

@@ -132,10 +132,10 @@ impl Action {
                     &self,
                     context: &Self::Context
                 ) -> ::std::result::Result<
-                    ::eventric_stream::stream::select::Selections,
-                    ::eventric_stream::error::Error
+                    ::std::vec::Vec<::eventric_stream::stream::Selection>,
+                    ::error_stack::Report<::eventric_stream::error::Error>
                 > {
-                    ::eventric_stream::stream::select::Selections::new([
+                    ::std::result::Result::Ok(::std::vec![
                       #(::eventric_model::projection::Select::select(&context.#context_field_name)?),*
                     ])
                 }
@@ -156,8 +156,8 @@ impl Action {
                 fn update(
                     &self,
                     context: &mut Self::Context,
-                    event: &::eventric_stream::stream::select::EventAndMask
-                ) -> ::std::result::Result<(), ::eventric_stream::error::Error> {
+                    event: &::eventric_stream::stream::EventAndMask
+                ) -> ::std::result::Result<(), ::error_stack::Report<::eventric_stream::error::Error>> {
                     let mut dispatch_event = None;
 
                   #(if event.mask[#context_field_index] && dispatch_event.is_none() {
@@ -174,7 +174,7 @@ impl Action {
                         );
                     })*
 
-                    Ok(())
+                    ::std::result::Result::Ok(())
                 }
             }
         }

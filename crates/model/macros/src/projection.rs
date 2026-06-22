@@ -105,17 +105,17 @@ impl Projection {
             impl ::eventric_model::projection::Recognize for #ident {
                 fn recognize(
                     &self,
-                    event: &::eventric_stream::stream::select::EventAndMask
+                    event: &::eventric_stream::stream::EventAndMask
                 ) -> ::std::result::Result<
                     ::std::option::Option<::eventric_model::projection::DispatchEvent>,
-                    ::eventric_stream::error::Error
+                    ::error_stack::Report<::eventric_stream::error::Error>
                 > {
                     let event = match event {
                      #(#recognize_match_arm),*
-                        _ => std::option::Option::None,
+                        _ => ::std::option::Option::None,
                     };
 
-                    Ok(event)
+                    ::std::result::Result::Ok(event)
                 }
             }
         }
@@ -133,12 +133,12 @@ impl Projection {
             #[automatically_derived]
             impl ::eventric_model::projection::Select for #ident {
                 fn select(&self) -> ::std::result::Result<
-                    ::eventric_stream::stream::select::Selection,
-                    ::eventric_stream::error::Error
+                    ::eventric_stream::stream::Selection,
+                    ::error_stack::Report<::eventric_stream::error::Error>
                 > {
-                    ::eventric_stream::stream::select::Selection::new([
-                     #(#selector_initialize?),*
-                    ])
+                    ::std::result::Result::Ok(::eventric_stream::stream::Selection::new([
+                     #(#selector_initialize),*
+                    ]))
                 }
             }
         }
@@ -166,9 +166,9 @@ impl ToTokens for RecognizeMatchArm<'_> {
         let RecognizeMatchArm(event) = *self;
 
         tokens.append_all(quote! {
-            _ if event.event.identifier() == <#event as ::eventric_model::event::Identifier>::identifier()? => {
-                std::option::Option::Some(
-                    ::eventric_model::projection::DispatchEvent::from_event::<#event>(&event.event)?
+            _ if event.event.facets().ty().name() == &<#event as ::eventric_model::event::Identifier>::type_name()? => {
+                ::std::option::Option::Some(
+                    ::eventric_model::projection::DispatchEvent::from_event::<#event>(event)?
                 )
             }
         });
@@ -199,15 +199,15 @@ impl ToTokens for SelectorInitialize<'_> {
 
         if tag.is_empty() {
             tokens.append_all(quote! {
-                ::eventric_stream::stream::select::Selector::specifiers(
+                ::eventric_stream::stream::Selector::types(
                     [#(<#event as ::eventric_model::event::Specifier>::specifier()?),*]
                 )
             });
         } else {
             tokens.append_all(quote! {
-                ::eventric_stream::stream::select::Selector::specifiers_and_tags(
+                ::eventric_stream::stream::Selector::types_and_tags(
                     [#(<#event as ::eventric_model::event::Specifier>::specifier()?),*],
-                    [#(#tag?),*]
+                    [#(::error_stack::ResultExt::change_context(#tag, ::eventric_stream::error::Error)?),*]
                 )
             });
         }

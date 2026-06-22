@@ -4,12 +4,17 @@
 use std::any::Any;
 
 use derive_more::Deref;
+use error_stack::{
+    Report,
+    ResultExt as _,
+};
 use eventric_stream::{
     error::Error,
-    event,
-    stream::select::{
+    stream::{
         EventAndMask,
+        Position,
         Selection,
+        Timestamp,
     },
 };
 use fancy_constructor::new;
@@ -42,13 +47,13 @@ where
 // Recognize
 
 pub trait Recognize {
-    fn recognize(&self, event: &EventAndMask) -> Result<Option<DispatchEvent>, Error>;
+    fn recognize(&self, event: &EventAndMask) -> Result<Option<DispatchEvent>, Report<Error>>;
 }
 
 // Select
 
 pub trait Select {
-    fn select(&self) -> Result<Selection, Error>;
+    fn select(&self) -> Result<Selection, Report<Error>>;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -59,9 +64,8 @@ pub trait Select {
 #[new(const_fn, vis(pub(crate)))]
 pub struct DispatchEvent {
     pub event: Box<dyn Any>,
-    pub identifier: event::Identifier,
-    pub position: event::Position,
-    pub timestamp: event::Timestamp,
+    pub position: Position,
+    pub timestamp: Timestamp,
 }
 
 impl DispatchEvent {
@@ -75,21 +79,19 @@ impl DispatchEvent {
             .map(|inner_event| ProjectionEvent::new(inner_event, self.position, self.timestamp))
     }
 
-    pub fn from_event<E>(event: &event::Event) -> Result<Self, Error>
+    pub fn from_event<E>(event: &EventAndMask) -> Result<Self, Report<Error>>
     where
         E: Event + 'static,
     {
-        revision::from_slice::<E>(event.data().as_ref())
-            .map_err(|err| Error::general(format!("dispatch_event/from_event/from_slice: {err}")))
-            .map(|inner_event| Box::new(inner_event) as Box<dyn Any>)
-            .map(|inner_event| {
-                Self::new(
-                    inner_event,
-                    event.identifier().clone(),
-                    *event.position(),
-                    *event.timestamp(),
-                )
-            })
+        let inner_event = revision::from_slice::<E>(event.event.data().as_ref())
+            .change_context(Error)
+            .attach("dispatch_event/from_event/from_slice")?;
+
+        Ok(Self::new(
+            Box::new(inner_event),
+            event.event.meta().position(),
+            event.event.meta().timestamp(),
+        ))
     }
 }
 
@@ -105,8 +107,8 @@ where
 {
     #[deref]
     event: &'a E,
-    position: event::Position,
-    timestamp: event::Timestamp,
+    position: Position,
+    timestamp: Timestamp,
 }
 
 impl<E> ProjectionEvent<'_, E>
@@ -114,12 +116,12 @@ where
     E: Event,
 {
     #[must_use]
-    pub fn position(&self) -> &event::Position {
-        &self.position
+    pub fn position(&self) -> Position {
+        self.position
     }
 
     #[must_use]
-    pub fn timestamp(&self) -> &event::Timestamp {
-        &self.timestamp
+    pub fn timestamp(&self) -> Timestamp {
+        self.timestamp
     }
 }

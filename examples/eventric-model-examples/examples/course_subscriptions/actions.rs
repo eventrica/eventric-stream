@@ -1,4 +1,5 @@
 use derive_more::Debug;
+use error_stack::Report;
 use eventric_model::action::{
     Act,
     Action,
@@ -38,11 +39,11 @@ pub struct DefineCourse {
 }
 
 impl Act for DefineCourse {
-    type Err = Error;
+    type Err = Report<Error>;
 
     fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
         if context.course_exists.exists {
-            return Err(Error::general("Course Already Exists"));
+            return Err(Report::new(Error).attach("Course Already Exists"));
         }
 
         context.append(&CourseDefined::new(&self.id, self.capacity))?;
@@ -63,17 +64,15 @@ pub struct ChangeCourseCapacity {
 }
 
 impl Act for ChangeCourseCapacity {
-    type Err = Error;
+    type Err = Report<Error>;
 
     fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
         if !context.course_exists.exists {
-            return Err(Error::general("Course Does Not Exist"));
+            return Err(Report::new(Error).attach("Course Does Not Exist"));
         }
 
         if context.course_capacity.capacity == self.new_capacity {
-            return Err(Error::general(
-                "Current Course Capacity Equals New Capacity",
-            ));
+            return Err(Report::new(Error).attach("Current Course Capacity Equals New Capacity"));
         }
 
         context.append(&CourseCapacityChanged::new(&self.id, self.new_capacity))?;
@@ -98,23 +97,23 @@ pub struct SubscribeStudentToCourse {
 }
 
 impl Act for SubscribeStudentToCourse {
-    type Err = Error;
+    type Err = Report<Error>;
 
     fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
         if !context.course_exists.exists {
-            return Err(Error::general("Course Does Not Exist"));
+            return Err(Report::new(Error).attach("Course Does Not Exist"));
         }
 
         if context.number_of_course_subscriptions.count >= context.course_capacity.capacity {
-            return Err(Error::general("Course Fully Booked"));
+            return Err(Report::new(Error).attach("Course Fully Booked"));
         }
 
         if context.student_already_subscribed.subscribed {
-            return Err(Error::general("Student Already Subscribed"));
+            return Err(Report::new(Error).attach("Student Already Subscribed"));
         }
 
         if context.number_of_student_subscriptions.count >= 5 {
-            return Err(Error::general("Student Reached Course Limit"));
+            return Err(Report::new(Error).attach("Student Reached Course Limit"));
         }
 
         context.append(&StudentSubscribedToCourse::new(

@@ -1,5 +1,7 @@
 #![allow(clippy::missing_panics_doc)]
 
+use std::collections::BTreeSet;
+
 use criterion::{
     Criterion,
     criterion_group,
@@ -7,21 +9,38 @@ use criterion::{
 };
 use eventric_stream::{
     event::{
-        CandidateEvent,
         Data,
-        Identifier,
+        Event,
+        Facets,
+        Name,
         Tag,
+        Type,
         Version,
     },
     stream::{
+        Append as _,
+        Condition,
         Stream,
-        append::Append as _,
     },
 };
 
 // =================================================================================================
 // Append
 // =================================================================================================
+
+fn event() -> Event<(), String> {
+    Event::new(
+        Data::new("Hello World").unwrap(),
+        Facets::new(
+            Type::new(Name::new("test_identifier").unwrap(), Version::new(0)),
+            BTreeSet::from([
+                Tag::new("test_tag_a").unwrap(),
+                Tag::new("test_tag_b").unwrap(),
+            ]),
+        ),
+        (),
+    )
+}
 
 // Single
 
@@ -34,19 +53,11 @@ pub fn single_append(c: &mut Criterion) {
             .open()
             .unwrap();
 
-        let events = [CandidateEvent::new(
-            Data::new("Hello World").unwrap(),
-            Identifier::new("test_identifier").unwrap(),
-            Vec::from_iter([
-                Tag::new("test_tag_a").unwrap(),
-                Tag::new("test_tag_b").unwrap(),
-            ]),
-            Version::new(0),
-        )];
+        let events = [event()];
 
         b.iter_with_large_drop(|| {
             for _ in 0..1_000 {
-                stream.append(events.clone(), None).unwrap();
+                stream.append(events.clone(), Condition::new()).unwrap();
             }
         });
 
@@ -69,23 +80,11 @@ pub fn multiple_append(c: &mut Criterion) {
                 .open()
                 .unwrap();
 
-            let events = (0..10)
-                .map(|_| {
-                    CandidateEvent::new(
-                        Data::new("Hello World").unwrap(),
-                        Identifier::new("test_identifier").unwrap(),
-                        Vec::from_iter([
-                            Tag::new("test_tag_a").unwrap(),
-                            Tag::new("test_tag_b").unwrap(),
-                        ]),
-                        Version::new(0),
-                    )
-                })
-                .collect::<Vec<_>>();
+            let events = (0..10).map(|_| event()).collect::<Vec<_>>();
 
             b.iter_with_large_drop(|| {
                 for _ in 0..1_000 {
-                    stream.append(events.clone(), None).unwrap();
+                    stream.append(events.clone(), Condition::new()).unwrap();
                 }
             });
 

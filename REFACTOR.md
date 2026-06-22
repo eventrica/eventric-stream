@@ -68,6 +68,45 @@ current state:
   final names: writing docs now would partly churn at the rename, and `core`
   currently relaxes that lint, so it isn't gating.
 
+- **Phase 6a — ✅ done (2026-06-22).** Public read surface. Added `#[must_use]`
+  accessors so consumers read queried events without naming internal types:
+  `Event::{data,facets,meta}`, `Facets::{ty,tags}`, `Type::{name,version}`, and
+  `stream_new::Facets::{position,timestamp}`. This let the model match event types
+  by comparing `Name<u64>` values (same stable hash) with no raw-hash exposure.
+
+- **Phase 6b — ✅ done (2026-06-22).** Ported `eventric-stream-multi-thread` to
+  `split`/`Reader`/`Writer`/`Append(Condition)`/`Select(Condition)`; error rewrite
+  to `Report<Error>` channel payloads. **Found & fixed a pre-existing concurrency
+  bug**: the proxy used a non-blocking `oneshot::try_recv` that races the writer —
+  and blocking `recv` wasn't even compiled in (oneshot 0.2.1 has no default `std`
+  feature). Enabled oneshot's `std` feature + switched to blocking `recv`; the
+  `stream` example now round-trips correctly.
+
+- **Phase 6c — ✅ done (2026-06-22). The big one — coordinated cutover (approach A).**
+  The facade chokepoint couples 6c and the 6d facade re-point (the model macros emit
+  `::eventric_stream::…` paths), so they moved together: re-pointed the facade to the
+  new surface AND ported every facade consumer in one green step. Scope: model core
+  traits + `Enactor` (error_stack end-to-end; `Recognize` by `Name<u64>` hash; one
+  `Condition`, select-then-conditional-append), model macros (codegen for the new
+  selectors/recognize/update), model example, stream example, profiling examples,
+  benches. Made the new event types `Clone` (benchmarks clone a prebuilt array).
+  Both examples run correctly end-to-end through the facade; build + clippy
+  `-D warnings` + tests all green. Adversarially reviewed (no correctness bugs;
+  DCB conflict logic, hash consistency, and mask/dispatch reuse all confirmed sound).
+  - **⚠ Coverage gap:** the old facade integration tests (`crates/stream/tests/` —
+    `append`, `append_query`, `iterate`, `properties`, ~1600 lines) tested the
+    removed old API and were **deleted** (6e's deletion, pulled forward by the
+    facade flip). The new tree has core unit tests, but the **facade now has no
+    end-to-end integration tests**. Re-creating integration/round-trip tests
+    against the new facade is a recommended near-term follow-up.
+  - **Note (error model consequence):** business-rule errors in actions are now
+    `Report::new(Error).attach("…")` — attachments on the stream `Error` ZST. Works,
+    but a business violation riding a stream-error context is a touch muddy (the
+    accepted trade-off of error_stack-end-to-end / option B).
+  - **6d is effectively absorbed** into 6c (the facade is re-pointed). Remaining:
+    **6e** (rename `stream_new`→`stream`, `event_new`→`event`; delete the now-dead
+    old tree) and **6f** (docs + `#![deny(missing_docs)]`).
+
 ### Deferred extension — stream-level "fail if grown" concurrency
 
 A coarse "fail if the stream has grown since position P" guard is **not currently
@@ -412,7 +451,18 @@ names) and verify it; do the destructive rename + delete **last**.
   `Metadata`** to break the clash with `event_new::Facets`.
 
 **Sub-phases (each independently verifiable):**
-- **6a — Public read surface (prerequisite).** The queried `Event<Facets,u64>` has
+
+> **Status (2026-06-22): 6a ✅, 6b ✅, 6c ✅ (see Progress for outcomes).** Two
+> deviations from this original plan, both deliberate: (1) **6d is absorbed into
+> 6c** — the facade had to be re-pointed as part of the coordinated cutover
+> (approach A), since the model macros emit `::eventric_stream::…` paths. (2) The
+> **`stream_new::Facets` → `Metadata` rename is NOT needed** — the 6a accessors let
+> consumers reach position/timestamp/type without ever naming `Facets`, so neither
+> `Facets` is exposed and there's no clash. The old integration tests (6e's
+> deletion) were also pulled forward (the facade flip obsoleted them). Remaining:
+> **6e** (rename `*_new` → final names; delete the now-dead old tree) and **6f** (docs).
+
+- **6a — ✅ Public read surface (prerequisite).** The queried `Event<Facets,u64>` has
   no public accessors; add them (data, position, timestamp, tags, **type-name
   hash**) and expose a **stable string→hash entry point**. Without this the model
   cannot compile or match events. Required new public API.

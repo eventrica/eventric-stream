@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use darling::FromDeriveInput;
-use eventric_stream::event::Identifier;
+use eventric_stream::event::Name;
 use proc_macro2::{
     TokenStream,
     TokenTree,
@@ -65,13 +65,8 @@ impl Event {
         quote! {
             #[automatically_derived]
             impl ::eventric_model::event::Identifier for #ident {
-                fn identifier() -> ::std::result::Result<
-                    &'static ::eventric_stream::event::Identifier,
-                    ::eventric_stream::error::Error
-                > {
-                    static IDENTIFIER: ::std::sync::OnceLock<eventric_stream::event::Identifier> = ::std::sync::OnceLock::new();
-
-                    IDENTIFIER.get_or_try_init(|| ::eventric_stream::event::Identifier::new(#identifier))
+                fn identifier() -> &'static str {
+                    #identifier
                 }
             }
         }
@@ -88,14 +83,14 @@ impl Event {
             #[automatically_derived]
             impl ::eventric_model::event::Tags for #ident {
                 fn tags(&self) -> ::std::result::Result<
-                    ::std::vec::Vec<::eventric_stream::event::Tag>,
-                    ::eventric_stream::error::Error
+                    ::std::vec::Vec<::eventric_stream::event::Tag<::std::string::String>>,
+                    ::error_stack::Report<::eventric_stream::error::Error>
                 > {
                     let mut tags = ::std::vec::Vec::with_capacity(#tag_count);
 
-                  #(tags.push(#tag?);)*
+                  #(tags.push(::error_stack::ResultExt::change_context(#tag, ::eventric_stream::error::Error)?);)*
 
-                    Ok(tags)
+                    ::std::result::Result::Ok(tags)
                 }
             }
         }
@@ -108,7 +103,7 @@ impl Event {
     }
 
     fn validate_identifier(&self) -> darling::Result<()> {
-        Identifier::new(&self.identifier)
+        Name::new(&self.identifier)
             .map(|_| ())
             .map_err(darling::Error::custom)
     }

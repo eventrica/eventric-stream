@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
-use eventric_stream_core::{
-    event_new::{
+use eventric_stream::{
+    event::{
         Data,
         Event,
         Facets,
@@ -10,18 +10,18 @@ use eventric_stream_core::{
         Type,
         Version,
     },
-    stream_new::{
+    stream::{
         Append as _,
         Condition,
+        Owner,
         Select as _,
         Selection,
         Selector,
         Stream,
         TypeSelector,
     },
-    utils::temp_path,
+    temp_path,
 };
-use eventric_stream_multi_thread::owner::Owner;
 
 fn event(identifier: &str, data: &str, tags: &[&str], version: u8) -> Event<(), String> {
     let ty = Type::new(Name::new(identifier).unwrap(), Version::new(version));

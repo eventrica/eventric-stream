@@ -1,9 +1,9 @@
 [dependencies]
 derive_more.workspace       = true
+error-stack.workspace       = true
 eventric-stream.workspace   = true
 fancy_constructor.workspace = true
 revision.workspace          = true
-thiserror.workspace         = true
 
 [lints]
 workspace = true

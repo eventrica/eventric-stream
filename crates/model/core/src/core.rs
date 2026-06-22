@@ -1,6 +1,7 @@
 use eventric_stream::stream::{
-    append::AppendSelect,
-    select::Select,
+    Append,
+    Condition,
+    Select,
 };
 
 use crate::action::Action;
@@ -19,33 +20,43 @@ pub trait Enactor {
 
 impl<T> Enactor for T
 where
-    T: AppendSelect + Select,
+    T: Append + Select,
 {
     fn enact<A>(&mut self, mut action: A) -> Result<A::Ok, A::Err>
     where
         A: Action,
     {
-        let mut after = None;
         let mut context = action.context();
+        let mut after = None;
 
-        let selections = action.select(&context)?;
+        // Replay every event matching the action's selections, folding each into
+        // the projection it matched (via the mask, inside `update`).
+        let condition = Condition::new().selections(action.select(&context)?);
 
-        let (events, select) = self.select_multiple(selections, None);
-
-        for event in events {
+        for event in self.select(condition) {
             let event_and_mask = event?;
-            let position = *event_and_mask.event.position();
 
-            after = Some(position);
+            after = Some(event_and_mask.event.meta().position());
 
             action.update(&mut context, &event_and_mask)?;
         }
 
+        // Run the business logic, then append any emitted events under a DCB
+        // condition: reject if a matching event appeared after the last replayed
+        // position.
         let ok = action.action(&mut context)?;
+
+        let selections = action.select(&context)?;
         let events = context.into().take();
 
         if !events.is_empty() {
-            self.append_select_multiple(events, select, after)?;
+            let mut condition = Condition::new().selections(selections);
+
+            if let Some(position) = after {
+                condition = condition.from(position + 1);
+            }
+
+            self.append(events, condition)?;
         }
 
         Ok(ok)

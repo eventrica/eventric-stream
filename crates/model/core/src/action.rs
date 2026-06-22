@@ -6,11 +6,12 @@ use std::ops::{
     DerefMut,
 };
 
+use error_stack::Report;
 use eventric_stream::{
     error::Error,
-    stream::select::{
+    stream::{
         EventAndMask,
-        Selections,
+        Selection,
     },
 };
 
@@ -28,7 +29,7 @@ pub trait Action: Act + Context + Select + Update {}
 
 pub trait Act: Context
 where
-    Self::Err: From<Error>,
+    Self::Err: From<Report<Error>>,
 {
     type Err;
     type Ok = ();
@@ -50,11 +51,15 @@ where
 // Select
 
 pub trait Select: Context {
-    fn select(&self, context: &Self::Context) -> Result<Selections, Error>;
+    fn select(&self, context: &Self::Context) -> Result<Vec<Selection>, Report<Error>>;
 }
 
 // Update
 
 pub trait Update: Context {
-    fn update(&self, context: &mut Self::Context, event: &EventAndMask) -> Result<(), Error>;
+    fn update(
+        &self,
+        context: &mut Self::Context,
+        event: &EventAndMask,
+    ) -> Result<(), Report<Error>>;
 }

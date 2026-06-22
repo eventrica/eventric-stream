@@ -1,9 +1,8 @@
-#![feature(once_cell_try)]
-
 mod actions;
 mod events;
 mod projections;
 
+use error_stack::Report;
 use eventric_model::Enactor as _;
 use eventric_stream::{
     error::Error,
@@ -25,7 +24,7 @@ use crate::actions::{
 
 // Example
 
-pub fn main() -> Result<(), Error> {
+pub fn main() -> Result<(), Report<Error>> {
     let mut stream = Stream::builder("./temp").open()?;
 
     let action = DefineCourse::new("cs:101", 30);

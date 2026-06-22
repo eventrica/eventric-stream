@@ -13,27 +13,29 @@
 // Re-Exports
 
 pub mod error {
-    //! The [`error`][self] module contains the common [`Error`] type
-    //! used throughout `eventric-stream`.
+    //! The [`error`][self] module contains the common [`Error`] type and the
+    //! [`Conflict`] marker (attached when an append is rejected by its
+    //! condition), along with the crate [`Result`] alias.
 
-    pub use eventric_stream_core::error::Error;
+    pub use eventric_stream_core::stream_new::{
+        Conflict,
+        Error,
+        Result,
+    };
 }
 
 pub mod event {
     //! The [`event`][self] module contains the constituent components for
-    //! events, both pre- and post- stream append, as well as types related
-    //! to specifying events within queries.
+    //! events: the payload [`Data`], the [`Type`] (a [`Name`] plus
+    //! [`Version`]), and [`Tag`]s, along with the [`tag`] macro.
 
-    pub use eventric_stream_core::event::{
-        CandidateEvent,
+    pub use eventric_stream_core::event_new::{
         Data,
         Event,
-        Identifier,
-        Position,
-        Range,
-        Specifier,
+        Facets,
+        Name,
         Tag,
-        Timestamp,
+        Type,
         Version,
     };
     pub use eventric_stream_macros::tag;
@@ -41,66 +43,34 @@ pub mod event {
 
 #[rustfmt::skip]
 pub mod stream {
-    //! The [`stream`][self] module contains the core stream abstraction,
-    //! along with support for configuring and opening stream instances.
-    //! Sub-modules contain types related to appending events to the stream,
-    //! and querying the stream for previously appended events.
+    //! The [`stream`][self] module contains the core stream abstraction, the
+    //! [`Reader`]/[`Writer`] split and the multi-threaded [`Owner`]/[`Proxy`]
+    //! wrapper, the [`Append`] and [`Select`] operations, and the [`Condition`]
+    //! query/concurrency model.
 
-    pub use eventric_stream_core::stream::{
+    pub use eventric_stream_core::stream_new::{
+        Append,
         Builder,
+        Condition,
+        EventAndMask,
+        Mask,
+        Position,
         Reader,
+        Select,
+        SelectIter,
+        Selection,
+        Selector,
         Stream,
+        Timestamp,
+        TypeSelector,
+        VersionSelector,
         Writer,
     };
-    
+
     pub use eventric_stream_multi_thread::{
         owner::Owner,
         proxy::Proxy,
     };
-
-    pub mod append {
-        //! The [`append`][self] module contains types and functionality related
-        //! to the [`Stream::append`] operation, such as the
-        //! append-specific [`Condition`] type.
-
-        pub use eventric_stream_core::stream::append::{
-            Append,
-            AppendSelect,
-        };
-    }
-
-    pub mod iterate {
-        //! The [`iterate`][self] module contains types and functionality
-        //! related to iteration over a stream, which supports multiple models
-        //! of operation.
-
-        pub use eventric_stream_core::stream::iterate::{
-            Iter,
-            Iterate,
-        };
-    }
-
-    pub mod select {
-        //! The [`select`][self] module contains types and functionality related
-        //! to the construction and use instances of [`Stream::query`], used as
-        //! part of iteration and append operations via the respective
-        //! condition models.
-
-        pub use eventric_stream_core::stream::select::{
-            EventAndMask,
-            IterSelect,
-            IterSelectMultiple,
-            Mask,
-            Prepared,
-            PreparedMultiple,
-            Select,
-            Selection,
-            Selections,
-            Selector,
-            Specifiers,
-            Tags,
-        };
-    }
 }
 
 pub use eventric_stream_core::utils::temp_path;
