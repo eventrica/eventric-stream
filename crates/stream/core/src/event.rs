@@ -18,19 +18,21 @@ use derive_more::{
         SubAssign,
     },
 };
-use eventric_utils::validation::{
-    self,
-    Error,
-    NoControlCharacters,
-    NoPrecedingWhiteSpace,
-    NoTrailingWhiteSpace,
-    NotEmpty,
-    Validate,
-};
 use fancy_constructor::new;
 use paste::paste;
 
-use crate::utils::hashing;
+use crate::utils::{
+    hashing,
+    validation::{
+        self,
+        Error,
+        NoControlCharacters,
+        NoPrecedingWhiteSpace,
+        NoTrailingWhiteSpace,
+        NotEmpty,
+        Validate,
+    },
+};
 
 // =================================================================================================
 // Event

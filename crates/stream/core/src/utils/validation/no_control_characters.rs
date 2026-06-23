@@ -1,4 +1,4 @@
-use crate::validation::Validator;
+use crate::utils::validation::Validator;
 
 // =================================================================================================
 // Control Characters
@@ -43,7 +43,7 @@ mod tests {
         assert_some_eq,
     };
 
-    use crate::validation::{
+    use crate::utils::validation::{
         Validator as _,
         no_control_characters::NoControlCharacters,
     };

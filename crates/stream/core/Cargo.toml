@@ -3,13 +3,13 @@ bytes.workspace                 = true
 derive_more.workspace           = true
 double-ended-peekable.workspace = true
 error-stack.workspace           = true
-eventric-utils.workspace        = true
 fancy_constructor.workspace     = true
 fjall.workspace                 = true
 paste.workspace                 = true
 rand.workspace                  = true
 rapidhash.workspace             = true
 smallvec.workspace              = true
+thiserror.workspace             = true
 
 [dev-dependencies]
 assertables.workspace = true

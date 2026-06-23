@@ -108,7 +108,6 @@ pub use self::{
     no_white_space::{
         NoPrecedingWhiteSpace,
         NoTrailingWhiteSpace,
-        NoWhiteSpace,
     },
     not_empty::NotEmpty,
 };
@@ -121,7 +120,7 @@ pub use self::{
 mod tests {
     use assertables::assert_ok;
 
-    use crate::validation::{
+    use crate::utils::validation::{
         Error,
         Validator,
         validate,

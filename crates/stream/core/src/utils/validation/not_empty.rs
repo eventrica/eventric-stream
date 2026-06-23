@@ -5,7 +5,7 @@ use std::collections::{
     HashSet,
 };
 
-use crate::validation::Validator;
+use crate::utils::validation::Validator;
 
 // =================================================================================================
 // Not Empty
@@ -92,7 +92,7 @@ mod tests {
         assert_some_eq,
     };
 
-    use crate::validation::{
+    use crate::utils::validation::{
         Validator as _,
         not_empty::NotEmpty,
     };

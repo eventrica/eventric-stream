@@ -2,6 +2,7 @@
 //! module-level documentation.
 
 pub(crate) mod hashing;
+pub mod validation;
 
 use std::path::{
     Path,

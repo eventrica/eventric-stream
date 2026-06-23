@@ -19,7 +19,6 @@ use derive_more::{
     AsRef,
     From,
 };
-use eventric_utils::validation::Error as ValidationError;
 use fancy_constructor::new;
 use smallvec::SmallVec;
 
@@ -42,6 +41,7 @@ use crate::{
             StoreIter,
         },
     },
+    utils::validation::Error as ValidationError,
 };
 
 // =================================================================================================

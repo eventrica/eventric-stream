@@ -14,7 +14,6 @@ members = [
     "crates/stream",
     "crates/stream/core",
     "crates/stream/macros",
-    "crates/utils",
     "examples/*",
 ]
 resolver = "2"
@@ -35,7 +34,6 @@ eventric-stream              = { path = "crates/stream" }
 eventric-stream-core         = { path = "crates/stream/core" }
 eventric-stream-macros       = { path = "crates/stream/macros" }
 eventric-stream-multi-thread = { path = "crates/eventric-stream-multi-thread" }
-eventric-utils               = { path = "crates/utils" }
 fancy_constructor            = { version = "2" }
 fjall                        = { version = "3" }
 heck                         = { version = "0.5" }
