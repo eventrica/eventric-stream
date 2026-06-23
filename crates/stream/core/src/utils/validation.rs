@@ -11,10 +11,11 @@ mod not_empty;
 
 use std::{
     error,
-    fmt::Display,
+    fmt::{
+        self,
+        Display,
+    },
 };
-
-use thiserror::Error;
 
 // =================================================================================================
 // Validation
@@ -31,36 +32,34 @@ pub trait Validator<T> {
 
 /// Defines an implementation to be validatable, i.e. that it may or may not be
 /// in a valid state.
-pub trait Validate
-where
-    Self::Err: error::Error + From<Error>,
-    Self: Sized,
-{
-    /// The error type to return from validation, which must be convertible from
-    /// the standard validation [`enum@Error`] type.
-    type Err;
-
-    /// Validate self, and return self if valid, or an error if not.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error on validation fails, which should be the
-    /// [`Error::Invalid`] variant of the core error type.
-    fn validate(self) -> Result<Self, Self::Err>;
+pub trait Validate: Sized {
+    /// Validate self, returning self if valid or a stream-`Error` report if
+    /// not.
+    fn validate(self) -> crate::error::Result<Self>;
 }
 
 // -------------------------------------------------------------------------------------------------
 
 // Errors
 
-/// The [`enum@Error`] enumeration gives possible error cases when validation
-/// fails.
-#[derive(Clone, Debug, Error, Eq, PartialEq)]
+/// The error cases when validation fails. An internal type — it is
+/// `change_context`'d to the crate [`Error`](crate::error::Error) at the value
+/// constructors, so it never appears in a public signature.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
     /// The validation request failed with the supplied error message.
-    #[error("Validation Error: {0}")]
     Invalid(String),
 }
+
+impl Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let Self::Invalid(message) = self;
+
+        write!(f, "Validation Error: {message}")
+    }
+}
+
+impl error::Error for Error {}
 
 impl Error {
     /// Creates an [`Error::Invalid`] variant with the supplied error message.

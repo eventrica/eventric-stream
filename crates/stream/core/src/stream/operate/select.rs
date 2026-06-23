@@ -41,7 +41,6 @@ use crate::{
             StoreIter,
         },
     },
-    utils::validation::Error as ValidationError,
 };
 
 // =================================================================================================
@@ -247,7 +246,7 @@ impl TypeSelector<String> {
     /// Select a type by name, across all versions
     /// (`Version::MIN..Version::MAX`; note the half-open range excludes the
     /// maximum sentinel version).
-    pub fn new<N>(name: N) -> Result<Self, ValidationError>
+    pub fn new<N>(name: N) -> Result<Self>
     where
         N: Into<String>,
     {
@@ -256,7 +255,7 @@ impl TypeSelector<String> {
 
     /// Select a type by name, restricted to a range of versions (accepts
     /// `a..b`, `a..`, `..b`, `..`, or a [`VersionSelector`]).
-    pub fn with_versions<N, V>(name: N, versions: V) -> Result<Self, ValidationError>
+    pub fn with_versions<N, V>(name: N, versions: V) -> Result<Self>
     where
         N: Into<String>,
         V: Into<VersionSelector>,

@@ -18,19 +18,25 @@ use derive_more::{
         SubAssign,
     },
 };
+use error_stack::ResultExt;
 use fancy_constructor::new;
 use paste::paste;
 
-use crate::utils::{
-    hashing,
-    validation::{
-        self,
+use crate::{
+    error::{
         Error,
-        NoControlCharacters,
-        NoPrecedingWhiteSpace,
-        NoTrailingWhiteSpace,
-        NotEmpty,
-        Validate,
+        Result,
+    },
+    utils::{
+        hashing,
+        validation::{
+            self,
+            NoControlCharacters,
+            NoPrecedingWhiteSpace,
+            NoTrailingWhiteSpace,
+            NotEmpty,
+            Validate,
+        },
     },
 };
 
@@ -48,7 +54,7 @@ pub struct Data(#[new(name(data))] pub(crate) Vec<u8>);
 
 impl Data {
     /// Creates a `Data` payload, validating that it is non-empty.
-    pub fn new<D>(data: D) -> Result<Self, Error>
+    pub fn new<D>(data: D) -> Result<Self>
     where
         D: Into<Vec<u8>>,
     {
@@ -57,10 +63,8 @@ impl Data {
 }
 
 impl Validate for Data {
-    type Err = Error;
-
-    fn validate(self) -> Result<Self, Self::Err> {
-        validation::validate(&self.0, "data", &[&NotEmpty])?;
+    fn validate(self) -> Result<Self> {
+        validation::validate(&self.0, "data", &[&NotEmpty]).change_context(Error)?;
 
         Ok(self)
     }
@@ -169,7 +173,7 @@ macro_rules! string_type {
             impl $name<String> {
                 /// Creates the value, validating it is non-empty, free of
                 /// control characters, and has no leading/trailing whitespace.
-                pub fn new<T>([< $name:lower >]: T) -> Result<Self, Error>
+                pub fn new<T>([< $name:lower >]: T) -> Result<Self>
                 where
                     T: Into<String>,
                 {
@@ -184,15 +188,14 @@ macro_rules! string_type {
             }
 
             impl Validate for $name<String> {
-                type Err = Error;
-
-                fn validate(self) -> Result<Self, Self::Err> {
+                fn validate(self) -> Result<Self> {
                     validation::validate(&self.0, stringify!([< $name:snake >]), &[
                         &NotEmpty,
                         &NoControlCharacters,
                         &NoPrecedingWhiteSpace,
                         &NoTrailingWhiteSpace,
-                    ])?;
+                    ])
+                    .change_context(Error)?;
 
                     Ok(self)
                 }

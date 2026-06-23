@@ -43,9 +43,7 @@ pub trait Identifier {
     /// The event type's name hashed the same way the stream indexes it, used to
     /// recognise an event by type.
     fn type_name() -> Result<Name<u64>, Report<Error>> {
-        Name::new(Self::identifier())
-            .change_context(Error)
-            .map(Into::into)
+        Name::new(Self::identifier()).map(Into::into)
     }
 }
 
@@ -60,7 +58,7 @@ where
     T: Identifier,
 {
     fn specifier() -> Result<TypeSelector<String>, Report<Error>> {
-        TypeSelector::new(T::identifier()).change_context(Error)
+        TypeSelector::new(T::identifier())
     }
 }
 
@@ -88,9 +86,9 @@ impl Events {
         let data = revision::to_vec(event)
             .change_context(Error)
             .attach("events/append/revision")?;
-        let data = Data::new(data).change_context(Error)?;
+        let data = Data::new(data)?;
 
-        let name = Name::new(E::identifier()).change_context(Error)?;
+        let name = Name::new(E::identifier())?;
         let ty = Type::new(name, Version::default());
         let tags = event.tags()?.into_iter().collect::<BTreeSet<_>>();
 

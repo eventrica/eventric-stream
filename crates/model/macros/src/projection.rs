@@ -207,7 +207,7 @@ impl ToTokens for SelectorInitialize<'_> {
             tokens.append_all(quote! {
                 ::eventric_stream::stream::Selector::types_and_tags(
                     [#(<#event as ::eventric_model::event::Specifier>::specifier()?),*],
-                    [#(::error_stack::ResultExt::change_context(#tag, ::eventric_stream::error::Error)?),*]
+                    [#(#tag?),*]
                 )
             });
         }

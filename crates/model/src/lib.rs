@@ -42,6 +42,22 @@ pub mod projection {
     //! Projections: the [`Projection`] trait (and its [`Dispatch`]/[`Project`]/
     //! [`Recognize`]/[`Select`] components, plus [`DispatchEvent`]/
     //! [`ProjectionEvent`]), and the `#[derive(Projection)]` macro.
+    //!
+    //! # The two-tools rule for shaping a projection's inputs
+    //!
+    //! Many `select(..)` clauses in one projection mean "all inputs to *one*
+    //! piece of derived state" — they OR into a single `Selection` (one mask
+    //! bit), and the projection discriminates finer than type from the decoded
+    //! **payload** inside its [`Project`] impls. One projection *per* filter
+    //! means "*distinct* read-models over overlapping events" — each gets its
+    //! own mask bit and its own [`Project`] impls. Routing is by event type
+    //! (`Project<E>`, enforced by Rust coherence); any finer distinction is
+    //! read from the payload (the canonical source the tags were derived
+    //! from). Multi-match is set-valued and free, and the payload is
+    //! decoded once and shared across same-type slots. See the
+    //! `eventric-model-core` projection module docs for the full statement,
+    //! and `docs/keyed-selectors.md` (repo root) for the deferred
+    //! named-selector extension.
 
     pub use eventric_model_core::projection::{
         Dispatch,

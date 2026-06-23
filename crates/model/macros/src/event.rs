@@ -88,7 +88,7 @@ impl Event {
                 > {
                     let mut tags = ::std::vec::Vec::with_capacity(#tag_count);
 
-                  #(tags.push(::error_stack::ResultExt::change_context(#tag, ::eventric_stream::error::Error)?);)*
+                  #(tags.push(#tag?);)*
 
                     ::std::result::Result::Ok(tags)
                 }
