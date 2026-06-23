@@ -244,9 +244,7 @@ impl<T> Type<T> {
 // Version
 
 /// A `u8` schema version for an event type.
-#[rustfmt::skip]
 #[derive(new, Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-#[derive(Add, AddAssign, Sub, SubAssign)]
 #[new(const_fn)]
 pub struct Version(#[new(name(version))] pub(crate) u8);
 

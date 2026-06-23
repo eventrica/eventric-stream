@@ -1,11 +1,11 @@
 use crossbeam::channel;
 use error_stack::Report;
 use eventric_stream_core::{
+    error::Error,
     event::Event,
     stream::{
         Append,
         Condition,
-        Error,
         Position,
         Reader,
         Select,

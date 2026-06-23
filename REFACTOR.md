@@ -154,10 +154,21 @@ current state:
   `TypeSelector` default is half-open `MIN..MAX`; `Specifier` comes from a blanket impl,
   not the `Event` macro). Gate green: build, clippy `-D warnings`, `cargo doc -D
   warnings`, 24 test suites, fmt, both examples.
-  - **The refactor is complete.** Only **Phase 7** (final workspace verify & land)
-    remains. Carried-forward follow-up (not blocking): re-create facade-level
-    integration/round-trip tests against the new `Condition`/`Select`/`Append` surface
-    (the old ~1600-line integration suite was deleted in 6c).
+- **Phase 7 — ✅ done (2026-06-23). Verify & land. THE REFACTOR IS COMPLETE.**
+  Wiped the build cache (`cargo clean`, 6.2 GB) and verified the whole workspace
+  from scratch: `cargo build --workspace --all-targets` ✅, `cargo clippy
+  --workspace --all-targets -- -D warnings` ✅, `cargo doc --workspace -D warnings`
+  ✅, `cargo fmt --all --check` ✅, `cargo test --workspace` ✅ (24 suites, 119
+  tests, 0 failures). All four examples run end-to-end on the fresh build: `stream`
+  (Owner/Proxy, 2 masked events), `course_subscriptions` (model, correct DCB
+  outcomes), and the two profiling examples to completion (~281k and ~391k
+  events/sec). No `_new` anywhere; one implementation; the old tree, `references`
+  keyspace, and non-portable `hashing::get` are gone.
+  - **Carried-forward follow-up (not blocking):** re-create facade-level
+    integration/round-trip tests against the new `Condition`/`Select`/`Append`
+    surface (the old ~1600-line integration suite was deleted in 6c). Optional polish
+    noted by the 6e audit: `AndIter`/`OrIter` are `pub` in a private module and could
+    be `pub(crate)`.
 
 ### Deferred extension — stream-level "fail if grown" concurrency
 
@@ -504,8 +515,8 @@ names) and verify it; do the destructive rename + delete **last**.
 
 **Sub-phases (each independently verifiable):**
 
-> **Status (2026-06-23): 6a ✅, 6b ✅, 6c ✅, 6e ✅, 6f ✅ — Phase 6 COMPLETE
-> (see Progress for outcomes). Only Phase 7 (final verify & land) remains.**
+> **Status (2026-06-23): 6a–6f ✅ and Phase 7 ✅ — THE REFACTOR IS COMPLETE
+> (see Progress for outcomes). Clean-from-scratch build + full gate + all examples green.**
 > Deviations from this original plan, all deliberate: (1) **6d is absorbed into
 > 6c** — the facade had to be re-pointed as part of the coordinated cutover
 > (approach A), since the model macros emit `::eventric_stream::…` paths. (2) The

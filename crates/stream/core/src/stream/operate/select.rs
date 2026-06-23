@@ -24,6 +24,7 @@ use fancy_constructor::new;
 use smallvec::SmallVec;
 
 use crate::{
+    error::Result,
     event::{
         Event,
         Name,
@@ -32,7 +33,6 @@ use crate::{
     },
     stream::{
         Metadata,
-        Result,
         operate::{
             Condition,
             Selection,
@@ -159,9 +159,9 @@ impl Index<usize> for Mask {
 // present on the event. This mirrors the index-side matching, re-checked here
 // on the hashed (`u64`) representation to recover which selection(s) hit.
 fn mask(selections: &[Selection], event: &Event<Metadata, u64>) -> Mask {
-    let name = &event.1.0.0;
-    let version = event.1.0.1;
-    let tags = &event.1.1;
+    let name = event.facets().ty().name();
+    let version = event.facets().ty().version();
+    let tags = event.facets().tags();
 
     Mask::new(
         selections

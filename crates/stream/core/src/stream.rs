@@ -1,14 +1,13 @@
 //! The top-level [`Stream`], its [`Reader`]/[`Writer`] split, and the shared
-//! value types ([`Position`], [`Timestamp`], [`Metadata`]) and error model
-//! ([`struct@Error`], [`Conflict`], [`Result`]) used across the crate.
+//! value types ([`Position`], [`Timestamp`], [`Metadata`]). The error model
+//! ([`Error`], [`Conflict`](crate::error::Conflict), [`Result`]) lives in
+//! [`crate::error`].
 
-mod iterate;
 mod operate;
 mod store;
 
 use std::{
     path::Path,
-    result,
     time::{
         SystemTime,
         UNIX_EPOCH,
@@ -17,8 +16,6 @@ use std::{
 
 use derive_more::{
     Debug,
-    Display,
-    Error,
     with_trait::{
         Add,
         AddAssign,
@@ -26,14 +23,15 @@ use derive_more::{
         SubAssign,
     },
 };
-use error_stack::{
-    Report,
-    ResultExt,
-};
+use error_stack::ResultExt;
 use fancy_constructor::new;
 use fjall::Database;
 
 use crate::{
+    error::{
+        Error,
+        Result,
+    },
     event::Event,
     stream::store::Store,
 };
@@ -89,32 +87,6 @@ where
         self
     }
 }
-
-// -------------------------------------------------------------------------------------------------
-
-// Error
-
-/// The opaque error type for every fallible stream operation. Detail rides as
-/// `.attach(..)` on the `error-stack` report; a rejected append additionally
-/// attaches the [`Conflict`] marker.
-#[derive(Debug, Display, Error)]
-#[display("stream error")]
-pub struct Error;
-
-// -------------------------------------------------------------------------------------------------
-
-// Conflict
-
-/// Marker attached to an [`struct@Error`] report when an append is rejected by
-/// its condition (an optimistic-concurrency / DCB conflict). Distinguish a
-/// conflict from any other failure with `report.downcast_ref::<Conflict>()`.
-///
-/// An index-read failure while evaluating the condition surfaces as a plain
-/// [`struct@Error`] with no `Conflict` attached, so the absence of this marker
-/// does not imply the append would otherwise have succeeded.
-#[derive(Debug, Display)]
-#[display("append condition conflict")]
-pub struct Conflict;
 
 // -------------------------------------------------------------------------------------------------
 
@@ -201,7 +173,8 @@ impl Append for Stream {
         E: IntoIterator<Item = Event<(), String>>,
         E::IntoIter: Send + 'static,
     {
-        (&mut || self.database.batch(), &mut self.next, &self.store).append(events, condition)
+        operate::Appender::new(&mut || self.database.batch(), &mut self.next, &self.store)
+            .append(events, condition)
     }
 }
 
@@ -251,7 +224,8 @@ impl Append for Writer {
         E: IntoIterator<Item = Event<(), String>>,
         E::IntoIter: Send + 'static,
     {
-        (&mut || self.database.batch(), &mut self.next, &self.store).append(events, condition)
+        operate::Appender::new(&mut || self.database.batch(), &mut self.next, &self.store)
+            .append(events, condition)
     }
 }
 
@@ -267,9 +241,7 @@ impl From<Writer> for Stream {
 
 /// A `u64` ordinal identifying an event's place in the stream. Also the unit of
 /// the position-based (DCB) append concurrency check.
-#[rustfmt::skip]
 #[derive(new, Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-#[derive(Add, AddAssign, Sub, SubAssign)]
 #[new(const_fn)]
 pub struct Position(#[new(name(position))] pub(crate) u64);
 
@@ -313,14 +285,6 @@ impl SubAssign<u64> for Position {
         self.0 -= rhs;
     }
 }
-
-// -------------------------------------------------------------------------------------------------
-
-// Result
-
-/// The result type for fallible stream operations: an `error-stack`
-/// [`Report`] over [`struct@Error`].
-pub type Result<T, E = Error> = result::Result<T, Report<E>>;
 
 // -------------------------------------------------------------------------------------------------
 
@@ -375,7 +339,6 @@ mod tests {
     use super::{
         Append,
         Condition,
-        Conflict,
         Position,
         Reader,
         Select,
@@ -386,6 +349,7 @@ mod tests {
         Writer,
     };
     use crate::{
+        error::Conflict,
         event::{
             Data,
             Event,

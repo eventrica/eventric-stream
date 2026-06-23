@@ -17,7 +17,7 @@ pub mod error {
     //! [`Conflict`] marker (attached when an append is rejected by its
     //! condition), along with the crate [`Result`] alias.
 
-    pub use eventric_stream_core::stream::{
+    pub use eventric_stream_core::error::{
         Conflict,
         Error,
         Result,

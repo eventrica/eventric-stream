@@ -9,6 +9,9 @@
 #![deny(unsafe_code)]
 #![feature(exclusive_wrapper)]
 
+mod combine;
+
+pub mod error;
 pub mod event;
 pub mod stream;
 pub mod utils;

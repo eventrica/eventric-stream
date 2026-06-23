@@ -75,6 +75,7 @@ impl Selection {
 
 // Re-Exports
 
+pub(crate) use self::append::Appender;
 pub use self::{
     append::Append,
     select::{

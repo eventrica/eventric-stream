@@ -5,11 +5,11 @@ use derive_more::{
 };
 use error_stack::Report;
 use eventric_stream_core::{
+    error::Error,
     event::Event,
     stream::{
         Append as _,
         Condition,
-        Error,
         Position,
         Writer,
     },

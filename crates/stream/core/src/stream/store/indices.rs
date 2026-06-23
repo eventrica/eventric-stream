@@ -11,7 +11,10 @@ use derive_more::{
     Debug,
     From,
 };
-use error_stack::ResultExt;
+use error_stack::{
+    Report,
+    ResultExt,
+};
 use fancy_constructor::new;
 use fjall::{
     Database,
@@ -23,6 +26,14 @@ use fjall::{
 };
 
 use crate::{
+    combine::{
+        AndIter,
+        OrIter,
+    },
+    error::{
+        Error,
+        Result,
+    },
     event::{
         Event,
         Name,
@@ -30,15 +41,9 @@ use crate::{
         Version,
     },
     stream::{
-        Error,
         Metadata,
         Position,
-        Result,
         Timestamp,
-        iterate::{
-            AndIter,
-            OrIter,
-        },
         operate::{
             Selector,
             TypeSelector,
@@ -79,10 +84,10 @@ impl Indices {
 }
 
 impl Indices {
-    pub fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, facets: &Metadata) {
-        self.tags.insert(batch, event, facets);
-        self.timestamps.insert(batch, facets);
-        self.types.insert(batch, event, facets);
+    pub fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, meta: &Metadata) {
+        self.tags.insert(batch, event, meta);
+        self.timestamps.insert(batch, meta);
+        self.types.insert(batch, event, meta);
     }
 }
 
@@ -107,8 +112,8 @@ impl Indices {
 
 #[derive(Debug, From)]
 pub enum IndicesIter {
-    And(AndIter<IndicesIter, Position>),
-    Or(OrIter<IndicesIter, Position>),
+    And(AndIter<IndicesIter, Position, Report<Error>>),
+    Or(OrIter<IndicesIter, Position, Report<Error>>),
     Tags(TagsIter),
     Types(TypesIter),
 }
@@ -219,9 +224,9 @@ struct Tags {
 }
 
 impl Tags {
-    fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, facets: &Metadata) {
-        for tag in &event.1.1 {
-            let key: TagKey = TagKeyWriter(tag, &facets.0).into(); // Tag & Position
+    fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, meta: &Metadata) {
+        for tag in event.facets().tags() {
+            let key: TagKey = TagKeyWriter(tag, &meta.0).into(); // Tag & Position
             let value = []; // Empty
 
             batch.insert(&self.keyspace, key, value);
@@ -329,9 +334,9 @@ struct Timestamps {
 }
 
 impl Timestamps {
-    fn insert(&self, batch: &mut Batch, facets: &Metadata) {
-        let key: TimestampKey = TimestampKeyWriter(&facets.1).into(); // Timestamp
-        let value = facets.0.0.to_be_bytes(); // Position
+    fn insert(&self, batch: &mut Batch, meta: &Metadata) {
+        let key: TimestampKey = TimestampKeyWriter(&meta.1).into(); // Timestamp
+        let value = meta.0.0.to_be_bytes(); // Position
 
         batch.insert(&self.keyspace, key, value);
     }
@@ -431,9 +436,10 @@ struct Types {
 }
 
 impl Types {
-    fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, facets: &Metadata) {
-        let key: TypeKey = TypeKeyWriter(&event.1.0.0, &facets.0).into(); // Type Name & Position
-        let value = event.1.0.1.0.to_be_bytes(); // Version
+    fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, meta: &Metadata) {
+        let ty = event.facets().ty();
+        let key: TypeKey = TypeKeyWriter(ty.name(), &meta.0).into(); // Type Name & Position
+        let value = ty.version().0.to_be_bytes(); // Version
 
         batch.insert(&self.keyspace, key, value);
     }

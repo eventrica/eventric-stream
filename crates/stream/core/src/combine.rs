@@ -1,3 +1,9 @@
+//! Generic boolean set-algebra over sorted, fallible iterators: [`AndIter`]
+//! (intersection) and [`OrIter`] (union). These combinators are independent of
+//! the stream — they work over any `DoubleEndedIterator<Item = Result<T, E>>`
+//! whose `Ok` values are `Copy + Ord` and ascending — and back the index-driven
+//! query in `stream::store`.
+
 use std::{
     cmp::Ordering,
     iter::FusedIterator,
@@ -11,17 +17,15 @@ use double_ended_peekable::{
 use fancy_constructor::new;
 use smallvec::SmallVec;
 
-use crate::stream::Result;
-
 // =================================================================================================
-// Iterate
+// Combine
 // =================================================================================================
 
 // Boolean And Iterator
 
 /// A boolean AND (set intersection) over several sorted child iterators.
 ///
-/// Each child must yield `Result<T>` in ascending order. The intersection is
+/// Each child must yield `Result<T, E>` in ascending order. The intersection is
 /// produced lazily and stays sorted: forward iteration ([`Iterator::next`])
 /// emits the values present in *every* child in ascending order, and reverse
 /// iteration ([`DoubleEndedIterator::next_back`]) is the exact mirror over
@@ -32,20 +36,20 @@ use crate::stream::Result;
 /// a macro — so the convergence logic stays easy to read and step through.
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
-pub struct AndIter<I, T>(Vec<DoubleEndedPeekable<I>>)
+pub(crate) struct AndIter<I, T, E>(Vec<DoubleEndedPeekable<I>>)
 where
-    I: DoubleEndedIterator<Item = Result<T>>,
+    I: DoubleEndedIterator<Item = Result<T, E>>,
     T: Copy + Debug + Ord + PartialOrd;
 
-impl<I, T> AndIter<I, T>
+impl<I, T, E> AndIter<I, T, E>
 where
-    I: DoubleEndedIterator<Item = Result<T>> + From<AndIter<I, T>>,
+    I: DoubleEndedIterator<Item = Result<T, E>> + From<AndIter<I, T, E>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     /// Take an iterable value of iterators, and return an iterator of the same
     /// type which will implement the boolean AND operation on the input
     /// iterators.
-    pub fn iter<S>(iters: S) -> I
+    pub(crate) fn iter<S>(iters: S) -> I
     where
         S: IntoIterator<Item = I>,
     {
@@ -58,12 +62,12 @@ where
     }
 }
 
-impl<I, T> Iterator for AndIter<I, T>
+impl<I, T, E> Iterator for AndIter<I, T, E>
 where
-    I: DoubleEndedIterator<Item = Result<T>>,
+    I: DoubleEndedIterator<Item = Result<T, E>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
-    type Item = Result<T>;
+    type Item = Result<T, E>;
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -131,9 +135,9 @@ where
     }
 }
 
-impl<I, T> DoubleEndedIterator for AndIter<I, T>
+impl<I, T, E> DoubleEndedIterator for AndIter<I, T, E>
 where
-    I: DoubleEndedIterator<Item = Result<T>>,
+    I: DoubleEndedIterator<Item = Result<T, E>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     #[inline]
@@ -189,9 +193,9 @@ where
     }
 }
 
-impl<I, T> FusedIterator for AndIter<I, T>
+impl<I, T, E> FusedIterator for AndIter<I, T, E>
 where
-    I: DoubleEndedIterator<Item = Result<T>> + FusedIterator,
+    I: DoubleEndedIterator<Item = Result<T, E>> + FusedIterator,
     T: Copy + Debug + Ord + PartialOrd,
 {
 }
@@ -202,30 +206,31 @@ where
 
 /// A boolean OR (set union) over several sorted child iterators.
 ///
-/// Each child must yield `Result<T>` in ascending order. The union is produced
-/// lazily and stays sorted with duplicates collapsed: forward iteration
-/// ([`Iterator::next`]) emits the smallest head value across the children in
-/// ascending order, and reverse iteration ([`DoubleEndedIterator::next_back`])
-/// is the mirror, emitting the largest in descending order.
+/// Each child must yield `Result<T, E>` in ascending order. The union is
+/// produced lazily and stays sorted with duplicates collapsed: forward
+/// iteration ([`Iterator::next`]) emits the smallest head value across the
+/// children in ascending order, and reverse iteration
+/// ([`DoubleEndedIterator::next_back`]) is the mirror, emitting the largest in
+/// descending order.
 ///
 /// As with [`AndIter`], `next`/`next_back` are written out in full (with the
 /// comparison flipped) rather than macro-shared, for readability.
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
-pub struct OrIter<I, T>(Vec<DoubleEndedPeekable<I>>)
+pub(crate) struct OrIter<I, T, E>(Vec<DoubleEndedPeekable<I>>)
 where
-    I: DoubleEndedIterator<Item = Result<T>>,
+    I: DoubleEndedIterator<Item = Result<T, E>>,
     T: Copy + Debug + Ord + PartialOrd;
 
-impl<I, T> OrIter<I, T>
+impl<I, T, E> OrIter<I, T, E>
 where
-    I: DoubleEndedIterator<Item = Result<T>> + From<OrIter<I, T>>,
+    I: DoubleEndedIterator<Item = Result<T, E>> + From<OrIter<I, T, E>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     /// Take an iterable value of iterators, and return an iterator of the same
     /// type which will implement the boolean OR operation on the input
     /// iterators.
-    pub fn iter<S>(iters: S) -> I
+    pub(crate) fn iter<S>(iters: S) -> I
     where
         S: IntoIterator<Item = I>,
     {
@@ -238,12 +243,12 @@ where
     }
 }
 
-impl<I, T> Iterator for OrIter<I, T>
+impl<I, T, E> Iterator for OrIter<I, T, E>
 where
-    I: DoubleEndedIterator<Item = Result<T>>,
+    I: DoubleEndedIterator<Item = Result<T, E>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
-    type Item = Result<T>;
+    type Item = Result<T, E>;
 
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -315,9 +320,9 @@ where
     }
 }
 
-impl<I, T> DoubleEndedIterator for OrIter<I, T>
+impl<I, T, E> DoubleEndedIterator for OrIter<I, T, E>
 where
-    I: DoubleEndedIterator<Item = Result<T>>,
+    I: DoubleEndedIterator<Item = Result<T, E>>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     #[inline]
@@ -369,9 +374,9 @@ where
     }
 }
 
-impl<I, T> FusedIterator for OrIter<I, T>
+impl<I, T, E> FusedIterator for OrIter<I, T, E>
 where
-    I: DoubleEndedIterator<Item = Result<T>> + FusedIterator,
+    I: DoubleEndedIterator<Item = Result<T, E>> + FusedIterator,
     T: Copy + Debug + Ord + PartialOrd,
 {
 }
@@ -388,7 +393,7 @@ mod tests {
         AndIter,
         OrIter,
     };
-    use crate::stream::{
+    use crate::error::{
         Error,
         Result,
     };
@@ -398,19 +403,19 @@ mod tests {
     // can be composed and exercised in isolation. `Leaf` wraps a fixed sequence.
     #[derive(Debug)]
     enum TestIter {
-        And(AndIter<TestIter, u64>),
-        Or(OrIter<TestIter, u64>),
+        And(AndIter<TestIter, u64, Report<Error>>),
+        Or(OrIter<TestIter, u64, Report<Error>>),
         Leaf(std::vec::IntoIter<Result<u64>>),
     }
 
-    impl From<AndIter<TestIter, u64>> for TestIter {
-        fn from(iter: AndIter<TestIter, u64>) -> Self {
+    impl From<AndIter<TestIter, u64, Report<Error>>> for TestIter {
+        fn from(iter: AndIter<TestIter, u64, Report<Error>>) -> Self {
             Self::And(iter)
         }
     }
 
-    impl From<OrIter<TestIter, u64>> for TestIter {
-        fn from(iter: OrIter<TestIter, u64>) -> Self {
+    impl From<OrIter<TestIter, u64, Report<Error>>> for TestIter {
+        fn from(iter: OrIter<TestIter, u64, Report<Error>>) -> Self {
             Self::Or(iter)
         }
     }
@@ -454,14 +459,14 @@ mod tests {
     where
         I: IntoIterator<Item = TestIter>,
     {
-        AndIter::<TestIter, u64>::iter(iters)
+        AndIter::<TestIter, u64, Report<Error>>::iter(iters)
     }
 
     fn or<I>(iters: I) -> TestIter
     where
         I: IntoIterator<Item = TestIter>,
     {
-        OrIter::<TestIter, u64>::iter(iters)
+        OrIter::<TestIter, u64, Report<Error>>::iter(iters)
     }
 
     fn forward(iter: TestIter) -> Vec<u64> {

@@ -5,11 +5,13 @@ use std::thread::{
 
 use crossbeam::channel;
 use error_stack::Report;
-use eventric_stream_core::stream::{
-    Error,
-    Reader,
-    Stream,
-    Writer,
+use eventric_stream_core::{
+    error::Error,
+    stream::{
+        Reader,
+        Stream,
+        Writer,
+    },
 };
 use fancy_constructor::new;
 

@@ -15,6 +15,10 @@ use fjall::{
 };
 
 use crate::{
+    error::{
+        Error,
+        Result,
+    },
     event::{
         self,
         Data,
@@ -25,10 +29,8 @@ use crate::{
         Version,
     },
     stream::{
-        Error,
         Metadata,
         Position,
-        Result,
         Timestamp,
     },
 };
@@ -69,17 +71,19 @@ struct EventWriter<'a>(&'a Event<(), u64>, &'a Timestamp);
 impl From<EventWriter<'_>> for Vec<u8> {
     fn from(EventWriter(event, timestamp): EventWriter<'_>) -> Self {
         let mut value = Vec::new();
+        let ty = event.facets().ty();
+        let tags = event.facets().tags();
 
-        value.put_u64(event.1.0.0.0); // Event Type Name
-        value.put_u8(event.1.0.1.0); // Event Type Version
-        value.put_u8(u8::try_from(event.1.1.len()).expect("max tag count exceeded")); // Tags Len
+        value.put_u64(ty.name().0); // Event Type Name (hash)
+        value.put_u8(ty.version().0); // Event Type Version
+        value.put_u8(u8::try_from(tags.len()).expect("max tag count exceeded")); // Tags Len
 
-        for tag in &event.1.1 {
-            value.put_u64(tag.0); // Tag
+        for tag in tags {
+            value.put_u64(tag.0); // Tag (hash)
         }
 
         value.put_u64(timestamp.0); // Timestamp
-        value.put_slice(event.0.as_ref()); // Data
+        value.put_slice(event.data().as_ref()); // Data
 
         value
     }
@@ -134,9 +138,9 @@ impl Events {
 }
 
 impl Events {
-    pub fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, facets: &Metadata) {
-        let key = facets.0.0.to_be_bytes(); // Position
-        let value: Vec<u8> = EventWriter(event, &facets.1).into(); // Event & Timestamp
+    pub fn insert(&self, batch: &mut Batch, event: &Event<(), u64>, meta: &Metadata) {
+        let key = meta.0.0.to_be_bytes(); // Position
+        let value: Vec<u8> = EventWriter(event, &meta.1).into(); // Event & Timestamp
 
         batch.insert(&self.keyspace, key, value);
     }

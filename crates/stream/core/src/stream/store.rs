@@ -12,12 +12,14 @@ use fjall::{
 };
 
 use crate::{
+    error::{
+        Error,
+        Result,
+    },
     event::Event,
     stream::{
-        Error,
         Metadata,
         Position,
-        Result,
         Timestamp,
         operate::Selection,
         store::{
@@ -76,12 +78,12 @@ impl Store {
         for event in events {
             let event = event.into();
 
-            let facets = Timestamp::now()
+            let meta = Timestamp::now()
                 .map(|timestamp| Metadata::new(position, timestamp))
-                .attach("failed to create timestamped facets")?;
+                .attach("failed to create timestamped metadata")?;
 
-            self.events.insert(&mut batch, &event, &facets);
-            self.indices.insert(&mut batch, &event, &facets);
+            self.events.insert(&mut batch, &event, &meta);
+            self.indices.insert(&mut batch, &event, &meta);
 
             position += 1;
         }
@@ -105,19 +107,23 @@ impl Store {
 }
 
 impl Store {
+    /// The candidate positions matching `selections` at or after `from`,
+    /// OR-unioned across selections (an index-only scan that resolves no
+    /// event bodies). Shared by `iterate` and `matches`.
+    fn positions(&self, selections: &[Selection], from: Option<Position>) -> IndicesIter {
+        self.indices.iterate(
+            selections
+                .iter()
+                .flat_map(|selection| selection.selectors.iter()),
+            from,
+        )
+    }
+
     pub fn iterate(&self, selections: &[Selection], from: Option<Position>) -> StoreIter {
         if selections.is_empty() {
             StoreIter::Events(self.events.iterate(from))
         } else {
-            let events = self.events.clone();
-            let iter = self.indices.iterate(
-                selections
-                    .iter()
-                    .flat_map(|selection| selection.selectors.iter()),
-                from,
-            );
-
-            StoreIter::Indices(events, iter)
+            StoreIter::Indices(self.events.clone(), self.positions(selections, from))
         }
     }
 }
@@ -128,14 +134,7 @@ impl Store {
     /// so it never materializes an event. Empty `selections` is vacuously
     /// `false`.
     pub fn matches(&self, selections: &[Selection], from: Option<Position>) -> Result<bool> {
-        let mut iter = self.indices.iterate(
-            selections
-                .iter()
-                .flat_map(|selection| selection.selectors.iter()),
-            from,
-        );
-
-        match iter.next() {
+        match self.positions(selections, from).next() {
             Some(result) => result.map(|_| true),
             None => Ok(false),
         }

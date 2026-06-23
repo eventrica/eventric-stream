@@ -2,15 +2,18 @@
 //! `Condition`.
 
 use error_stack::Report;
+use fancy_constructor::new;
 use fjall::OwnedWriteBatch as Batch;
 
 use crate::{
-    event::Event,
-    stream::{
+    error::{
         Conflict,
         Error,
-        Position,
         Result,
+    },
+    event::Event,
+    stream::{
+        Position,
         operate::Condition,
         store::Store,
     },
@@ -31,11 +34,27 @@ pub trait Append {
         E::IntoIter: Send + 'static;
 }
 
-impl<B> Append for (&mut B, &mut Position, &Store)
+// -------------------------------------------------------------------------------------------------
+
+// Appender
+
+/// The shared append worker behind [`Stream`](crate::stream::Stream) and
+/// [`Writer`](crate::stream::Writer): a batch source, the `next`-position
+/// cursor, and the `Store`. Both handles construct one and delegate to its
+/// `append`, so the DCB check and the insert live in a single place.
+#[derive(new)]
+#[new(vis(pub(crate)))]
+pub(crate) struct Appender<'a, B> {
+    batch: &'a mut B,
+    next: &'a mut Position,
+    store: &'a Store,
+}
+
+impl<B> Appender<'_, B>
 where
     B: FnMut() -> Batch,
 {
-    fn append<E>(&mut self, events: E, condition: Condition) -> Result<Position>
+    pub(crate) fn append<E>(&mut self, events: E, condition: Condition) -> Result<Position>
     where
         E: IntoIterator<Item = Event<(), String>>,
         E::IntoIter: Send + 'static,
@@ -51,14 +70,14 @@ where
         // window starting at or after the head can never conflict, so skip the
         // index scan in that case.
         let conflict = match position {
-            Some(from) if from >= *self.1 => false,
-            _ => self.2.matches(&selections, position)?,
+            Some(from) if from >= *self.next => false,
+            _ => self.store.matches(&selections, position)?,
         };
 
         if conflict {
             return Err(Report::new(Error).attach(Conflict));
         }
 
-        self.2.insert(self.0, events, self.1)
+        self.store.insert(self.batch, events, self.next)
     }
 }
