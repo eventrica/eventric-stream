@@ -43,7 +43,7 @@ impl ToTokens for Tag {
         let value = &self.value;
 
         tokens.append_all(quote! {
-            ::eventric::event::Tag::new(format!("{}:{}", #prefix, #value))
+            ::eventric_stream::event::Tag::new(format!("{}:{}", #prefix, #value))
         });
     }
 }

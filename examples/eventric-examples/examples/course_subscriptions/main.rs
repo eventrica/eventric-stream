@@ -3,9 +3,9 @@ mod events;
 mod projections;
 
 use error_stack::Report;
-use eventric::{
+use eventric_domain::enactor::Enactor as _;
+use eventric_stream::{
     error::Error,
-    model::enactor::Enactor as _,
     stream::Stream,
 };
 

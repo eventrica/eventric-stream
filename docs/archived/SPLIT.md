@@ -1,5 +1,12 @@
 # SPLIT.md
 
+> **STATUS: COMPLETE.** Done in two gated phases — **A** (structural split:
+> `eventric` → `eventric-stream` + `eventric-domain` + unified `eventric-macros`)
+> and **B** (the domain's own `Error`, `change_context`'d from the stream at the
+> boundary). Gated green: fmt + clippy `-D warnings` clean, 133 tests, doc clean,
+> all examples run, and `cargo tree -p eventric-stream` carries no `revision` —
+> the content-agnostic invariant is now compile-enforced. Historical record.
+
 Plan + tracker for splitting the single `eventric` library into **two runtime
 crates** along the one real seam — a **content-agnostic stream substrate** and a
 **content-aware domain layer** — plus the existing unified proc-macro crate.
@@ -70,29 +77,29 @@ should not, vanish.
 
 ## Steps
 
-- [ ] 1. Scaffold `eventric-stream`: move `error`/`event`/`stream`/`utils`/`combine`;
+- [x] 1. Scaffold `eventric-stream`: move `error`/`event`/`stream`/`utils`/`combine`;
   Cargo.toml with the stream deps (**no `revision`**); root features + lints.
   Gate it building **standalone** — that build is the proof the substrate carries
   no content/serialisation dependency.
-- [ ] 2. Scaffold `eventric-domain` from `model/`: promote `action`/`event`/
+- [x] 2. Scaffold `eventric-domain` from `model/`: promote `action`/`event`/
   `projection`/`enactor` to the crate root; Cargo.toml (dep `eventric-stream` +
   `revision`).
-- [ ] 3. Domain error type: add `eventric_domain::error::{Error, Result}`; switch
+- [x] 3. Domain error type: add `eventric_domain::error::{Error, Result}`; switch
   domain signatures from the stream `Error` to the domain one; `.change_context(Error)`
   at every stream call (source inferred); confirm the domain no longer names the
   stream error. (Includes the `Act::Err: From<Report<Error>>` bound.)
-- [ ] 4. Macros: repoint emitted paths — `tag!` → `::eventric_stream::…`, the
+- [x] 4. Macros: repoint emitted paths — `tag!` → `::eventric_stream::…`, the
   derives → `::eventric_domain::…`; re-export `tag!` from `eventric-stream`, the
   derives from `eventric-domain`.
-- [ ] 5. Split test suites: stream (`round_trip`, `concurrency`) →
+- [x] 5. Split test suites: stream (`round_trip`, `concurrency`) →
   `eventric-stream/tests`; domain (`enact`, `multi_selector`, `versioning`) →
   `eventric-domain/tests`.
-- [ ] 6. Examples/benches: repoint deps + paths (stream examples →
+- [x] 6. Examples/benches: repoint deps + paths (stream examples →
   `eventric-stream`; domain examples → both crates).
-- [ ] 7. Docs: `CLAUDE.md` (its "consolidated into a single library" framing
+- [x] 7. Docs: `CLAUDE.md` (its "consolidated into a single library" framing
   becomes the two-crate substrate/domain story), `versioning.md`, `FUTURE.md`,
   the archived pointers, and the project memory.
-- [ ] 8. Gate: fmt, build, clippy `-D warnings`, tests, doc, examples — all green.
+- [x] 8. Gate: fmt, build, clippy `-D warnings`, tests, doc, examples — all green.
 
 *(Exact dependency partition between the two Cargo.tomls is an execution detail —
 settled against the compiler in steps 1–2.)*

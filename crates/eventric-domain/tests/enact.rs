@@ -1,6 +1,6 @@
 //! End-to-end integration tests for the model layer: defining `Event`s,
 //! `Projection`s, and `Action`s, then running them through `Enactor::enact`
-//! against a real (temporary) `eventric::stream::Stream`.
+//! against a real (temporary) `eventric_stream::stream::Stream`.
 //!
 //! The fixture domain is a tiny item registry: an item can be registered
 //! (with a quantity) and removed, each tagged by its SKU. Two distinct event
@@ -10,27 +10,27 @@
 
 use derive_more::Debug;
 use error_stack::Report;
-use eventric::{
+use eventric_domain::{
+    action::{
+        Act,
+        Action,
+    },
+    enactor::Enactor as _,
     error::Error,
+    event::{
+        Event,
+        Identifier as _,
+    },
+    projection::{
+        Project,
+        Projection,
+        ProjectionEvent,
+    },
+};
+use eventric_stream::{
     event::{
         Name,
         Tag,
-    },
-    model::{
-        action::{
-            Act,
-            Action,
-        },
-        enactor::Enactor as _,
-        event::{
-            Event,
-            Identifier as _,
-        },
-        projection::{
-            Project,
-            Projection,
-            ProjectionEvent,
-        },
     },
     stream::{
         Stream,
@@ -204,7 +204,7 @@ impl Act for CountRegistrations {
 // Helpers
 
 fn stream() -> Stream {
-    Stream::builder(eventric::utils::temp_path())
+    Stream::builder(eventric_stream::utils::temp_path())
         .temporary(true)
         .open()
         .expect("open temporary stream")
@@ -259,7 +259,10 @@ fn enact_appends_expected_event() {
     let event = &events[0].event;
 
     // Position: first append lands at the head of the stream.
-    assert_eq!(event.meta().position(), eventric::stream::Position::MIN);
+    assert_eq!(
+        event.meta().position(),
+        eventric_stream::stream::Position::MIN
+    );
 
     // Type name: stored as the hash of `item_registered`, matching the derive's
     // `type_name()`.
@@ -308,7 +311,7 @@ fn projection_folds_prior_events() {
     assert_eq!(removed.len(), 1);
     assert_eq!(
         removed[0].event.meta().position(),
-        eventric::stream::Position::MIN + 1
+        eventric_stream::stream::Position::MIN + 1
     );
 
     // Now that it's removed, ItemPresent folds register + remove to

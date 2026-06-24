@@ -1,26 +1,27 @@
 use derive_more::Debug;
-use error_stack::Report;
-use eventric::{
-    error::Error,
-    model::{
-        action::{
-            Act,
-            Action,
-        },
-        enactor::Enactor as _,
-        event::Event,
-        projection::{
-            Project,
-            Projection,
-            ProjectionEvent,
-        },
+use error_stack::{
+    Report,
+    ResultExt as _,
+};
+use eventric_domain::{
+    action::{
+        Act,
+        Action,
     },
-    stream::{
-        Stream,
-        operate::{
-            Condition,
-            select::Select as _,
-        },
+    enactor::Enactor as _,
+    error::Error,
+    event::Event,
+    projection::{
+        Project,
+        Projection,
+        ProjectionEvent,
+    },
+};
+use eventric_stream::stream::{
+    Stream,
+    operate::{
+        Condition,
+        select::Select as _,
     },
 };
 use fancy_constructor::new;
@@ -216,7 +217,7 @@ where
     let condition = Condition::new().selections([projection.select()?]);
 
     for event in stream.select(condition) {
-        let event = event?;
+        let event = event.change_context(Error)?;
 
         if let Some(dispatch) = projection.recognize(&event)? {
             projection.dispatch(&dispatch);
@@ -229,9 +230,10 @@ where
 // Example
 
 pub fn main() -> Result<(), Report<Error>> {
-    let mut stream = Stream::builder(eventric::utils::temp_path())
+    let mut stream = Stream::builder(eventric_stream::utils::temp_path())
         .temporary(true)
-        .open()?;
+        .open()
+        .change_context(Error)?;
 
     // Seed the stream: a sequence of deposits and withdrawals on one account.
     stream.enact(Deposit::new("alice", 100))?;

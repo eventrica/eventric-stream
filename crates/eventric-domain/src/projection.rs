@@ -48,7 +48,7 @@
 //! per-selector payload enums and a per-selector-method trait) is recorded in
 //! `docs/keyed-selectors.md`; it is intentionally *not* built today.
 //!
-//! [`Update`]: crate::model::action::Update
+//! [`Update`]: crate::action::Update
 
 use std::any::Any;
 
@@ -58,19 +58,19 @@ use error_stack::{
     ResultExt as _,
 };
 pub use eventric_macros::Projection;
+use eventric_stream::stream::{
+    Position,
+    Timestamp,
+    operate::{
+        Selection,
+        select::EventAndMask,
+    },
+};
 use fancy_constructor::new;
 
 use crate::{
     error::Error,
-    model::event::Event,
-    stream::{
-        Position,
-        Timestamp,
-        operate::{
-            Selection,
-            select::EventAndMask,
-        },
-    },
+    event::Event,
 };
 
 // =================================================================================================
@@ -79,32 +79,47 @@ use crate::{
 
 // Projection
 
+/// A read-model built by folding selected events: the composite of [`Select`]
+/// (what events), [`Recognize`] (type-match + decode), and [`Dispatch`] (fold).
+/// Derived by `#[derive(Projection)]`.
 pub trait Projection: Dispatch + Recognize + Select {}
 
 // Dispatch
 
+/// Folds a recognised event into the projection's state, routing by payload
+/// type to the matching [`Project`] impl.
 pub trait Dispatch {
+    /// Dispatch a decoded [`DispatchEvent`] into this projection's fold.
     fn dispatch(&mut self, event: &DispatchEvent);
 }
 
 // Project
 
+/// Folds a single event type `E` into the projection. One impl per event type
+/// the projection consumes — coherence makes the routing exhaustive.
 pub trait Project<E>
 where
     E: Event,
 {
+    /// Fold one `E` (with its position/timestamp) into the projection's state.
     fn project(&mut self, event: ProjectionEvent<'_, E>);
 }
 
 // Recognize
 
+/// Matches a persisted event to this projection by hashed name and, if it
+/// matches, decodes it into a [`DispatchEvent`].
 pub trait Recognize {
+    /// Decode `event` into a [`DispatchEvent`] if its type is one this
+    /// projection folds, else `None`.
     fn recognize(&self, event: &EventAndMask) -> Result<Option<DispatchEvent>, Report<Error>>;
 }
 
 // Select
 
+/// Builds the [`Selection`] of events this projection folds.
 pub trait Select {
+    /// The selection — the OR of the projection's `select(..)` clauses.
     fn select(&self) -> Result<Selection, Report<Error>>;
 }
 
@@ -112,15 +127,22 @@ pub trait Select {
 
 // Dispatch Event
 
+/// A decoded event ready to fold: its boxed payload (downcast per [`Project`]
+/// impl) plus the persisted position and timestamp. Decoded once per recognised
+/// event and shared across every same-type projection slot.
 #[derive(new, Debug)]
 #[new(const_fn, vis(pub(crate)))]
 pub struct DispatchEvent {
+    /// The decoded payload, type-erased; downcast to the concrete event type.
     pub event: Box<dyn Any>,
+    /// The event's position in the stream.
     pub position: Position,
+    /// The event's timestamp.
     pub timestamp: Timestamp,
 }
 
 impl DispatchEvent {
+    /// View the boxed payload as a [`ProjectionEvent`] of `E`, if it is an `E`.
     #[must_use]
     pub fn as_projection_event<E>(&self) -> Option<ProjectionEvent<'_, E>>
     where
@@ -131,6 +153,9 @@ impl DispatchEvent {
             .map(|inner_event| ProjectionEvent::new(inner_event, self.position, self.timestamp))
     }
 
+    /// Decode a persisted `event`'s payload into an `E` (via `revision`),
+    /// paired with its position and timestamp. A decode failure carries the
+    /// stored version and the revision this consumer handles.
     pub fn from_event<E>(event: &EventAndMask) -> Result<Self, Report<Error>>
     where
         E: Event + 'static,
@@ -158,6 +183,8 @@ impl DispatchEvent {
 
 // Projection Event
 
+/// A decoded event handed to a [`Project`] impl: derefs to the payload `&E`,
+/// with the persisted position and timestamp available alongside.
 #[derive(new, Debug, Deref)]
 #[new(const_fn, vis(pub(crate)))]
 pub struct ProjectionEvent<'a, E>
@@ -174,11 +201,13 @@ impl<E> ProjectionEvent<'_, E>
 where
     E: Event,
 {
+    /// The event's position in the stream.
     #[must_use]
     pub fn position(&self) -> Position {
         self.position
     }
 
+    /// The event's timestamp.
     #[must_use]
     pub fn timestamp(&self) -> Timestamp {
         self.timestamp

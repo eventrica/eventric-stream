@@ -11,7 +11,6 @@ oneshot.workspace               = true
 pastey.workspace                = true
 rand.workspace                  = true
 rapidhash.workspace             = true
-revision.workspace              = true
 smallvec.workspace              = true
 
 [dev-dependencies]
@@ -23,11 +22,11 @@ workspace = true
 [package]
 authors.workspace    = true
 categories.workspace = true
-description          = "Eventric"
+description          = "Eventric Stream"
 edition.workspace    = true
 keywords.workspace   = true
 license.workspace    = true
-name                 = "eventric"
+name                 = "eventric-stream"
 readme.workspace     = true
 repository.workspace = true
 version.workspace    = true

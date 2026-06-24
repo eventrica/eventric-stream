@@ -53,7 +53,7 @@ impl Action {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric::model::action::Action for #ident {}
+            impl ::eventric_domain::action::Action for #ident {}
         }
     }
 
@@ -71,7 +71,7 @@ impl Action {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric::model::action::Context for #ident {
+            impl ::eventric_domain::action::Context for #ident {
                 type Context = #context_type;
 
                 fn context(&self) -> Self::Context {
@@ -81,13 +81,13 @@ impl Action {
 
             #[derive(Debug)]
             pub struct #context_type {
-                pub events: eventric::model::event::Events,
+                pub events: eventric_domain::event::Events,
               #(pub #context_field_name: #context_field_type),*
             }
 
             #[automatically_derived]
             impl ::std::ops::Deref for #context_type {
-                type Target = eventric::model::event::Events;
+                type Target = eventric_domain::event::Events;
 
                 fn deref(&self) -> &Self::Target {
                     &self.events
@@ -102,8 +102,8 @@ impl Action {
             }
 
             #[automatically_derived]
-            impl ::core::convert::Into<::eventric::model::event::Events> for #context_type {
-                fn into(self) -> ::eventric::model::event::Events {
+            impl ::core::convert::Into<::eventric_domain::event::Events> for #context_type {
+                fn into(self) -> ::eventric_domain::event::Events {
                     self.events
                 }
             }
@@ -111,7 +111,7 @@ impl Action {
             impl #context_type {
                 pub fn new(action: &#ident) -> Self {
                     Self {
-                        events: eventric::model::event::Events::new(),
+                        events: eventric_domain::event::Events::new(),
                      #(#context_field_init),*
                     }
                 }
@@ -127,16 +127,16 @@ impl Action {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric::model::action::Select for #ident {
+            impl ::eventric_domain::action::Select for #ident {
                 fn select(
                     &self,
                     context: &Self::Context
                 ) -> ::std::result::Result<
-                    ::std::vec::Vec<::eventric::stream::operate::Selection>,
-                    ::error_stack::Report<::eventric::error::Error>
+                    ::std::vec::Vec<::eventric_stream::stream::operate::Selection>,
+                    ::error_stack::Report<::eventric_domain::error::Error>
                 > {
                     ::std::result::Result::Ok(::std::vec![
-                      #(::eventric::model::projection::Select::select(&context.#context_field_name)?),*
+                      #(::eventric_domain::projection::Select::select(&context.#context_field_name)?),*
                     ])
                 }
             }
@@ -152,23 +152,23 @@ impl Action {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric::model::action::Update for #ident {
+            impl ::eventric_domain::action::Update for #ident {
                 fn update(
                     &self,
                     context: &mut Self::Context,
-                    event: &::eventric::stream::operate::select::EventAndMask
-                ) -> ::std::result::Result<(), ::error_stack::Report<::eventric::error::Error>> {
+                    event: &::eventric_stream::stream::operate::select::EventAndMask
+                ) -> ::std::result::Result<(), ::error_stack::Report<::eventric_domain::error::Error>> {
                     let mut dispatch_event = None;
 
                   #(if event.mask[#context_field_index] && dispatch_event.is_none() {
-                        dispatch_event = ::eventric::model::projection::Recognize::recognize(
+                        dispatch_event = ::eventric_domain::projection::Recognize::recognize(
                             &context.#context_field_name,
                             event,
                         )?;
                     }
 
                     if event.mask[#context_field_index] && let Some(dispatch_event) = dispatch_event.as_ref() {
-                        ::eventric::model::projection::Dispatch::dispatch(
+                        ::eventric_domain::projection::Dispatch::dispatch(
                             &mut context.#context_field_name,
                             dispatch_event,
                         );

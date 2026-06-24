@@ -28,23 +28,21 @@
 
 use derive_more::Debug;
 use error_stack::Report;
-use eventric::{
-    error::Error,
-    model::{
-        action::{
-            Act,
-            Action,
-        },
-        enactor::Enactor as _,
-        event::Event,
-        projection::{
-            Project,
-            Projection,
-            ProjectionEvent,
-        },
+use eventric_domain::{
+    action::{
+        Act,
+        Action,
     },
-    stream::Stream,
+    enactor::Enactor as _,
+    error::Error,
+    event::Event,
+    projection::{
+        Project,
+        Projection,
+        ProjectionEvent,
+    },
 };
+use eventric_stream::stream::Stream;
 use fancy_constructor::new;
 use revision::revisioned;
 
@@ -382,14 +380,14 @@ impl Act for ReadDepositStats {
 // =================================================================================================
 
 fn stream() -> Stream {
-    Stream::builder(eventric::utils::temp_path())
+    Stream::builder(eventric_stream::utils::temp_path())
         .temporary(true)
         .open()
         .expect("open temporary stream")
 }
 
 fn total_events(stream: &Stream) -> usize {
-    use eventric::stream::operate::{
+    use eventric_stream::stream::operate::{
         Condition,
         select::Select as _,
     };

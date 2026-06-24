@@ -58,7 +58,7 @@ impl Event {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric::model::event::Event for #ident {}
+            impl ::eventric_domain::event::Event for #ident {}
         }
     }
 
@@ -68,7 +68,7 @@ impl Event {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric::model::event::Identifier for #ident {
+            impl ::eventric_domain::event::Identifier for #ident {
                 fn identifier() -> &'static str {
                     #identifier
                 }
@@ -85,14 +85,19 @@ impl Event {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric::model::event::Tags for #ident {
+            impl ::eventric_domain::event::Tags for #ident {
                 fn tags(&self) -> ::std::result::Result<
-                    ::std::vec::Vec<::eventric::event::Tag<::std::string::String>>,
-                    ::error_stack::Report<::eventric::error::Error>
+                    ::std::vec::Vec<::eventric_stream::event::Tag<::std::string::String>>,
+                    ::error_stack::Report<::eventric_domain::error::Error>
                 > {
                     let mut tags = ::std::vec::Vec::with_capacity(#tag_count);
 
-                  #(tags.push(#tag?);)*
+                    #(tags.push(
+                        ::error_stack::ResultExt::change_context(
+                            #tag,
+                            ::eventric_domain::error::Error,
+                        )?
+                    );)*
 
                     ::std::result::Result::Ok(tags)
                 }
@@ -166,13 +171,13 @@ impl ToTokens for TagInitialize<'_> {
 
         match tag {
             Tag::ExprClosure(expr) => tokens.append_all(quote! {
-                ::eventric::event::tag!(
+                ::eventric_stream::event::tag!(
                     #prefix,
                     ::std::convert::identity::<for<'a> fn(&'a #ident) -> ::std::borrow::Cow<'a, _>>(#expr)(&self)
                 )
             }),
             Tag::Ident(ident) => tokens.append_all(quote! {
-                ::eventric::event::tag!(
+                ::eventric_stream::event::tag!(
                     #prefix,
                     &self.#ident
                 )

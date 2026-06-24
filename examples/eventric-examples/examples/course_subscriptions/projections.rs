@@ -1,5 +1,5 @@
 use derive_more::Debug;
-use eventric::model::projection::{
+use eventric_domain::projection::{
     Project,
     Projection,
     ProjectionEvent,

@@ -2,13 +2,11 @@
 //! schema number — the two cannot diverge (there is no separate version to
 //! declare or forget to bump).
 
-use eventric::{
-    event::Version,
-    model::event::{
-        Event,
-        Events,
-    },
+use eventric_domain::event::{
+    Event,
+    Events,
 };
+use eventric_stream::event::Version;
 use fancy_constructor::new;
 use revision::revisioned;
 

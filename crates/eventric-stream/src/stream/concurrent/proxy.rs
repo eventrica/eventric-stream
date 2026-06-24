@@ -1,3 +1,6 @@
+//! The [`Proxy`] — a cloneable handle that reads through a cloned `Reader` and
+//! funnels writes to the [`Owner`](super::owner::Owner)'s writer thread.
+
 use crossbeam::channel;
 use error_stack::Report;
 use fancy_constructor::new;
@@ -27,6 +30,10 @@ use crate::{
 // Proxy
 // =================================================================================================
 
+/// A cheaply-cloneable, shareable handle to an [`Owner`](super::owner::Owner)'s
+/// stream. It impls both [`Select`] (reads go straight through a cloned
+/// `Reader`) and [`Append`] (writes are funnelled over the channel to the
+/// writer thread, blocking on the reply).
 #[derive(new, Clone, Debug)]
 #[new(const_fn, vis(pub(crate)))]
 pub struct Proxy {

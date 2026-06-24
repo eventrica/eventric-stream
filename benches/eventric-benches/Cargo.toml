@@ -6,7 +6,7 @@ name    = "append"
 
 [dev-dependencies]
 criterion.workspace       = true
-eventric.workspace = true
+eventric-stream.workspace = true
 
 [lib]
 bench = false

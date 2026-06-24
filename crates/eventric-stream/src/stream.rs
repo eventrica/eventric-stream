@@ -3,7 +3,6 @@
 //! ([`Error`], [`Conflict`](crate::error::Conflict), [`Result`]) lives in
 //! [`crate::error`].
 
-#[allow(missing_docs)]
 pub mod concurrent;
 pub mod operate;
 mod store;

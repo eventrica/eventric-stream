@@ -1,4 +1,4 @@
-use eventric::model::event::Event;
+use eventric_domain::event::Event;
 use fancy_constructor::new;
 use revision::revisioned;
 

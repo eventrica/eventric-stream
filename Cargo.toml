@@ -17,8 +17,9 @@ darling               = { version = "0.23" }
 derive_more           = { version = "2", features = ["full"] }
 double-ended-peekable = { version = "0.1" }
 error-stack           = { version = "0.7" }
-eventric              = { path = "crates/eventric" }
+eventric-domain       = { path = "crates/eventric-domain" }
 eventric-macros       = { path = "crates/eventric-macros" }
+eventric-stream       = { path = "crates/eventric-stream" }
 fancy_constructor     = { version = "2" }
 fjall                 = { version = "3" }
 heck                  = { version = "0.5" }

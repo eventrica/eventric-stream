@@ -9,7 +9,7 @@ use std::{
 };
 
 use error_stack::Report;
-use eventric::{
+use eventric_stream::{
     error::Conflict,
     event::{
         Data,

@@ -6,7 +6,7 @@
 
 use std::collections::BTreeSet;
 
-use eventric::{
+use eventric_stream::{
     error::Conflict,
     event::{
         Data,

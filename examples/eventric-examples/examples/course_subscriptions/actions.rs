@@ -1,11 +1,11 @@
 use derive_more::Debug;
 use error_stack::Report;
-use eventric::{
-    error::Error,
-    model::action::{
+use eventric_domain::{
+    action::{
         Act,
         Action,
     },
+    error::Error,
 };
 use fancy_constructor::new;
 

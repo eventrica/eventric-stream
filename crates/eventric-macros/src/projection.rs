@@ -69,14 +69,14 @@ impl Projection {
         let dispatch_trait = format_ident!("{ident}Dispatch");
 
         quote! {
-            pub trait #dispatch_trait: #(::eventric::model::projection::Project<#event>)+* {}
+            pub trait #dispatch_trait: #(::eventric_domain::projection::Project<#event>)+* {}
 
             #[automatically_derived]
             impl #dispatch_trait for #ident {}
 
             #[automatically_derived]
-            impl ::eventric::model::projection::Dispatch for #ident {
-                fn dispatch(&mut self, event: &::eventric::model::projection::DispatchEvent) {
+            impl ::eventric_domain::projection::Dispatch for #ident {
+                fn dispatch(&mut self, event: &::eventric_domain::projection::DispatchEvent) {
                     match event {
                       #(_ if let std::option::Option::Some(event) = event.as_projection_event::<#event>() => self.project(event),)*
                         _ => {}
@@ -90,7 +90,7 @@ impl Projection {
         let ident = &self.ident;
 
         quote! {
-            impl ::eventric::model::projection::Projection for #ident {}
+            impl ::eventric_domain::projection::Projection for #ident {}
         }
     }
 
@@ -102,13 +102,13 @@ impl Projection {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric::model::projection::Recognize for #ident {
+            impl ::eventric_domain::projection::Recognize for #ident {
                 fn recognize(
                     &self,
-                    event: &::eventric::stream::operate::select::EventAndMask
+                    event: &::eventric_stream::stream::operate::select::EventAndMask
                 ) -> ::std::result::Result<
-                    ::std::option::Option<::eventric::model::projection::DispatchEvent>,
-                    ::error_stack::Report<::eventric::error::Error>
+                    ::std::option::Option<::eventric_domain::projection::DispatchEvent>,
+                    ::error_stack::Report<::eventric_domain::error::Error>
                 > {
                     let event = match event {
                      #(#recognize_match_arm),*
@@ -131,12 +131,12 @@ impl Projection {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric::model::projection::Select for #ident {
+            impl ::eventric_domain::projection::Select for #ident {
                 fn select(&self) -> ::std::result::Result<
-                    ::eventric::stream::operate::Selection,
-                    ::error_stack::Report<::eventric::error::Error>
+                    ::eventric_stream::stream::operate::Selection,
+                    ::error_stack::Report<::eventric_domain::error::Error>
                 > {
-                    ::std::result::Result::Ok(::eventric::stream::operate::Selection::new([
+                    ::std::result::Result::Ok(::eventric_stream::stream::operate::Selection::new([
                      #(#selector_initialize),*
                     ]))
                 }
@@ -166,9 +166,9 @@ impl ToTokens for RecognizeMatchArm<'_> {
         let RecognizeMatchArm(event) = *self;
 
         tokens.append_all(quote! {
-            _ if event.event.facets().ty().name() == &<#event as ::eventric::model::event::Identifier>::type_name()? => {
+            _ if event.event.facets().ty().name() == &<#event as ::eventric_domain::event::Identifier>::type_name()? => {
                 ::std::option::Option::Some(
-                    ::eventric::model::projection::DispatchEvent::from_event::<#event>(event)?
+                    ::eventric_domain::projection::DispatchEvent::from_event::<#event>(event)?
                 )
             }
         });
@@ -199,15 +199,15 @@ impl ToTokens for SelectorInitialize<'_> {
 
         if tag.is_empty() {
             tokens.append_all(quote! {
-                ::eventric::stream::operate::select::Selector::types(
-                    [#(<#event as ::eventric::model::event::Specifier>::specifier()?),*]
+                ::eventric_stream::stream::operate::select::Selector::types(
+                    [#(<#event as ::eventric_domain::event::Specifier>::specifier()?),*]
                 )
             });
         } else {
             tokens.append_all(quote! {
-                ::eventric::stream::operate::select::Selector::types_and_tags(
-                    [#(<#event as ::eventric::model::event::Specifier>::specifier()?),*],
-                    [#(#tag?),*]
+                ::eventric_stream::stream::operate::select::Selector::types_and_tags(
+                    [#(<#event as ::eventric_domain::event::Specifier>::specifier()?),*],
+                    [#(::error_stack::ResultExt::change_context(#tag, ::eventric_domain::error::Error)?),*]
                 )
             });
         }

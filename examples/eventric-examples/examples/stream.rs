@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use eventric::{
+use eventric_stream::{
     event::{
         Data,
         Event,

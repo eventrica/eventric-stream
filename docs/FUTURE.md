@@ -3,15 +3,18 @@
 Known-but-unplanned items: things we are *aware* of but have not committed to a
 plan for. A living list — add to it as things surface, prune as they land.
 
-The structural work is **done**: the stream-core rewrite ([`REFACTOR.md`]) and
-the crate consolidation ([`CONSOLIDATION.md`]) are complete (one `eventric`
-library + one `eventric-macros` proc-macro crate, plus `eventric-examples` /
-`eventric-benches`), the error model is unified on `error-stack`, and the public
-surface carries no re-export lifts. Nothing below blocks that; these are the
-deferred design decisions and the smaller debt.
+The structural work is **done**: the stream-core rewrite ([`REFACTOR.md`]), the
+crate consolidation ([`CONSOLIDATION.md`]), and the content-seam split
+([`SPLIT.md`]) are complete — **three crates**: `eventric-stream` (content-agnostic
+substrate, no `revision`) + `eventric-domain` (event-sourcing layer, its own
+`Error`) + `eventric-macros`, plus `eventric-examples` / `eventric-benches`.
+`error-stack` throughout (one `Error` per runtime crate, `change_context`'d at the
+boundary), and the public surface carries no re-export lifts. Nothing below blocks
+that; these are the deferred design decisions and the smaller debt.
 
 [`REFACTOR.md`]: ./archived/REFACTOR.md
 [`CONSOLIDATION.md`]: ./archived/CONSOLIDATION.md
+[`SPLIT.md`]: ./archived/SPLIT.md
 
 ---
 
@@ -83,13 +86,12 @@ wants to think through before building.
 
 - **Whether to curate the public surface.** The strict de-lift means the public
   paths mirror the module tree exactly, including deep ones like
-  `eventric::stream::operate::select::TypeSelector`. Left deliberately structural
-  so the surface can be judged with full visibility; revisit whether to flatten
-  `operate`'s submodules, add a curated prelude, or leave as-is.
-- **Close the `missing_docs` gap.** The `model` and `stream::concurrent` modules
-  carry a local `#[allow(missing_docs)]` (preserving the old model-core /
-  multi-thread posture). Documenting their public items would let
-  `#![deny(missing_docs)]` hold uniformly across the crate.
+  `eventric_stream::stream::operate::select::TypeSelector`. Left deliberately
+  structural (now across two crates) so the surface can be judged with full
+  visibility; revisit whether to flatten `operate`'s submodules, add a curated
+  prelude/facade, or leave as-is. Also a cross-crate question: model-layer
+  consumers currently depend on **both** crates (strict, no re-export facade) —
+  decide whether that stays.
 
 ## 4. Storage / engine
 
@@ -119,4 +121,8 @@ retiring the hardcoded-0 / two-axes items and removing the dead `Version`
 `Default` + arithmetic; and a small-wins pass — dropping the unused `include-utils`
 dep, a friendlier (version-bearing) `revision`-decode error, and tests pinning
 `revision` evolution (old bytes → defaulted field) and the non-empty minimal
-payload.
+payload; and **the content-seam split** (`SPLIT.md`) — `eventric` → `eventric-stream`
+(content-agnostic, `revision`-free, compile-enforced) + `eventric-domain` (its own
+`Error`, `change_context`'d from the stream) + unified `eventric-macros`; and the
+**`missing_docs` closure** — every public item across both crates documented,
+`#![deny(missing_docs)]` now holding uniformly (no `allow` escapes).

@@ -422,7 +422,51 @@ dependencies = [
 ]
 
 [[package]]
-name = "eventric"
+name = "eventric-benches"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "eventric-stream",
+]
+
+[[package]]
+name = "eventric-domain"
+version = "0.1.0"
+dependencies = [
+ "assertables",
+ "derive_more",
+ "error-stack",
+ "eventric-macros",
+ "eventric-stream",
+ "fancy_constructor",
+ "revision",
+]
+
+[[package]]
+name = "eventric-examples"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "error-stack",
+ "eventric-domain",
+ "eventric-stream",
+ "fancy_constructor",
+ "revision",
+]
+
+[[package]]
+name = "eventric-macros"
+version = "0.1.0"
+dependencies = [
+ "darling",
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "eventric-stream"
 version = "0.1.0"
 dependencies = [
  "assertables",
@@ -438,38 +482,7 @@ dependencies = [
  "pastey",
  "rand",
  "rapidhash",
- "revision",
  "smallvec",
-]
-
-[[package]]
-name = "eventric-benches"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "eventric",
-]
-
-[[package]]
-name = "eventric-examples"
-version = "0.1.0"
-dependencies = [
- "derive_more",
- "error-stack",
- "eventric",
- "fancy_constructor",
- "revision",
-]
-
-[[package]]
-name = "eventric-macros"
-version = "0.1.0"
-dependencies = [
- "darling",
- "heck",
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
