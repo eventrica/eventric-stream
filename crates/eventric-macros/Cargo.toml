@@ -14,7 +14,7 @@ workspace = true
 [package]
 authors.workspace    = true
 categories.workspace = true
-description          = "Eventric procedural macros (tag! and the Event/Action/Projection derives)"
+description          = "Eventric Macros"
 edition.workspace    = true
 keywords.workspace   = true
 license.workspace    = true

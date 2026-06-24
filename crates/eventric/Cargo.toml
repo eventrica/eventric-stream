@@ -7,7 +7,7 @@ error-stack.workspace           = true
 eventric-macros.workspace       = true
 fancy_constructor.workspace     = true
 fjall.workspace                 = true
-oneshot                         = { workspace = true, features = ["std"] }
+oneshot.workspace               = true
 paste.workspace                 = true
 rand.workspace                  = true
 rapidhash.workspace             = true
@@ -15,11 +15,7 @@ revision.workspace              = true
 smallvec.workspace              = true
 
 [dev-dependencies]
-assertables.workspace       = true
-derive_more.workspace       = true
-error-stack.workspace       = true
-fancy_constructor.workspace = true
-revision.workspace          = true
+assertables.workspace = true
 
 [lints]
 workspace = true
@@ -27,7 +23,7 @@ workspace = true
 [package]
 authors.workspace    = true
 categories.workspace = true
-description          = "Eventric — a low-level event-stream abstraction and event-sourcing model"
+description          = "Eventric"
 edition.workspace    = true
 keywords.workspace   = true
 license.workspace    = true

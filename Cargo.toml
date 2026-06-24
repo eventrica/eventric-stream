@@ -23,7 +23,7 @@ fancy_constructor     = { version = "2" }
 fjall                 = { version = "3" }
 heck                  = { version = "0.5" }
 include-utils         = { version = "0.2" }
-oneshot               = { version = "0.2" }
+oneshot               = { version = "0.2", features = ["std"] }
 paste                 = { version = "1" }
 proc-macro2           = { version = "1" }
 quote                 = { version = "1" }
