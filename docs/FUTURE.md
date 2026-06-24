@@ -17,28 +17,22 @@ deferred design decisions and the smaller debt.
 
 ## 1. Versioning — the biggest open area (design-pending)
 
-Two orthogonal versioning axes exist; neither is fully realised or documented.
-The maintainer wants to think the overall story through before implementing. A
-full research-grounded exploration — the theory, the production-framework prior
-art, the DCB-specific picture, and how it could fit `eventric` (with a suggested
-order of work) — is in [`versioning.md`](./versioning.md).
+A full research-grounded exploration — the theory, the production-framework prior
+art, the DCB-specific picture, the conclusions of an adversarial review, and a
+suggested order of work — is in [`versioning.md`](./versioning.md).
 
-- **The model can't set the type `Version`.** `Events::append` hardcodes
-  `Version::default()` (= 0) for every event, and `#[derive(Event)]` has no
-  version attribute — so type-versioning is plumbed in the stream layer but
-  unreachable from the model UX, and every model query spans `MIN..MAX`. Decide
-  whether to expose it (e.g. `#[event(version = N)]` threaded through append +
-  the read-side `Specifier`/`TypeSelector`).
+**Landed (`versioning.md` §5):** the event `Version` is now sourced from the
+`revision` schema number, so the two cannot diverge and there is no separate
+version to declare. That retired the old "model hardcodes `Version` 0" and "two
+orthogonal axes" items — schema revision and stream `Version` are now one notion.
+The remaining open question is the *breaking-change* story, which the maintainer
+wants to think through before building.
+
 - **`revision` payload evolution is unexercised.** The in-place, lenient
   schema-evolution capability that is the entire reason `revision` was chosen is
   never tested or demonstrated — every `#[revisioned(...)]` in the repo is
   `revision = 1`. No test decodes `revision = 1` bytes with a `revision = 2`
   type, added/defaulted fields, or a `convert_fn`.
-- **The two axes are uncoupled and undocumented.** Type `Version` (indexable,
-  queryable via `with_versions`) vs `revision` (opaque payload bytes) are
-  orthogonal; the model uses the latter and pins the former to 0. Decide the
-  intended relationship and document it (they currently overlap conceptually in
-  the docs without the distinction being stated).
 - **Orphaned `Version`/`Range` comparison traits (a design decision, not dead
   code).** `impl PartialEq<Range<Self>>` / `impl PartialOrd<Range<Self>>` for
   `Version` (`event.rs`) were deliberately added (commit `7ce9c043`,
@@ -62,8 +56,8 @@ order of work) — is in [`versioning.md`](./versioning.md).
 - **The `MAX` (255) sentinel is unqueryable:** the half-open default range and
   all `VersionSelector` lowerings cap the upper bound at the exclusive
   `Version::MAX`, so version-255 events can be appended but never matched.
-- **Untested:** the `a..` / `..b` / `..` range lowerings, the 255 boundary,
-  multi-version OR-ing; and `Version`'s `Add`/`Sub` panic on overflow/underflow.
+- **Untested:** the `a..` / `..b` / `..` range lowerings, the 255 boundary, and
+  multi-version OR-ing.
 
 ## 2. Projection codegen ergonomics (design-pending)
 
@@ -130,4 +124,7 @@ Integration tests (model `enact`, multi-thread `concurrency`, facade
 `round_trip`); the `NoTrailingWhiteSpace` validator bug; folding `eventric-utils`
 into the crate; error unification + dropping `thiserror`; the multi-selector
 two-tools rule (documented + tested + exampled); the crate consolidation; the
-re-export de-lift; consolidating examples/benches to one crate each.
+re-export de-lift; consolidating examples/benches to one crate each; **the event
+`Version` now follows the `revision` schema number** (`versioning.md` §5, tested),
+retiring the hardcoded-0 / two-axes items and removing the dead `Version`
+`Default` + arithmetic.

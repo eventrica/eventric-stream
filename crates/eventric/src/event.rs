@@ -9,15 +9,7 @@ use std::{
     ops::Range,
 };
 
-use derive_more::{
-    AsRef,
-    with_trait::{
-        Add,
-        AddAssign,
-        Sub,
-        SubAssign,
-    },
-};
+use derive_more::AsRef;
 use error_stack::ResultExt;
 pub use eventric_macros::tag;
 use fancy_constructor::new;
@@ -257,28 +249,8 @@ pub struct Version(#[new(name(version))] pub(crate) u8);
 impl Version {
     /// The maximum version.
     pub const MAX: Self = Self::new(u8::MAX);
-    /// The minimum version (also the default).
+    /// The minimum version.
     pub const MIN: Self = Self::new(u8::MIN);
-}
-
-impl Add<u8> for Version {
-    type Output = Self;
-
-    fn add(self, rhs: u8) -> Self::Output {
-        Self::new(self.0 + rhs)
-    }
-}
-
-impl AddAssign<u8> for Version {
-    fn add_assign(&mut self, rhs: u8) {
-        self.0 += rhs;
-    }
-}
-
-impl Default for Version {
-    fn default() -> Self {
-        Self::MIN
-    }
 }
 
 impl PartialEq<Range<Self>> for Version {
@@ -294,19 +266,5 @@ impl PartialOrd<Range<Self>> for Version {
             _ if self >= &other.end => Some(Ordering::Greater),
             _ => Some(Ordering::Equal),
         }
-    }
-}
-
-impl Sub<u8> for Version {
-    type Output = Self;
-
-    fn sub(self, rhs: u8) -> Self::Output {
-        Self::new(self.0 - rhs)
-    }
-}
-
-impl SubAssign<u8> for Version {
-    fn sub_assign(&mut self, rhs: u8) {
-        self.0 -= rhs;
     }
 }

@@ -1,324 +1,273 @@
 # Event versioning — a design exploration
 
-**Status: EXPLORATION / decision-pending.** This is a research-grounded survey of
-the design space plus a worked analysis of how versioning could fit `eventric`. It
-does not describe anything implemented, and it does not commit to an approach. It
-exists so the eventual decision is made with the theory, the prior art, and the
-trade-offs in view. The parked work items live in [`FUTURE.md`](./FUTURE.md) §1;
-this is the depth behind them.
+**Status: EXPLORATION, partially landed.** This is a research-grounded survey of
+the design space plus the conclusions of an adversarial review of it. One piece
+(§5, "version follows revision") is **implemented**; the rest is deliberately
+*not* built, and some of it is argued *out*. The parked items live in
+[`FUTURE.md`](./FUTURE.md) §1.
+
+This document was rewritten after review. An earlier draft made two concrete
+errors (a broken index encoding, an overstated exhaustiveness guarantee) and
+oversold a "support everything" reconciliation; those are corrected **explicitly**
+below (§7) rather than quietly dropped.
 
 ---
 
-## 0. The problem, scoped
+## 0. The framing that actually matters
 
-Event sourcing distinguishes two fundamentally different kinds of schema change,
-and the literature treats them as separate problems:
+Event sourcing splits schema change into *non-breaking* (an old reader can read
+new data) and *breaking* (it can't). But that split is **not** the useful design
+axis here, for one verified reason: **the `revision` crate is itself a
+field-level upcaster.** With `convert_fn`/`default_fn` it runs explicit transform
+code across a struct's revisions — including renames and type changes, which are
+*breaking* in the tolerant-reader sense yet trivially transformable. So
+"breaking/non-breaking" cuts across "transformable/not."
 
-- **Non-breaking change** — adding an optional/defaulted field, removing an unused
-  one. An old reader can still read new data and vice versa. **`eventric` already
-  solves this**: the `revision` crate gives evolvable binary (de)serialisation —
-  you bump the revision, add/default/remove fields, and old bytes still decode
-  into the current struct. This is the "weak schema" / "tolerant reader" approach
-  (Young, Fowler/Verraes), and it has a hard boundary: **renaming a field or
-  changing the *semantic meaning* of a field is NOT absorbable** — those are
-  breaking changes. [Young/InfoQ]
-- **Breaking change** — a rename, a semantic shift, a structural reshape that the
-  tolerant reader cannot absorb. **This is the open problem.** Everything below is
-  about breaking changes.
+The axis that actually decides the design is:
 
-The maintainer's working hypothesis (the starting point for this exploration):
-when a change is breaking, you should *not* mint an unrelated new event; the event
-is *logically the same*, so it should keep the **same identifier** but carry a
-distinct **`Version`**, and you should be able to **select by version (or version
-range)** when reading the stream.
+> **Does an honest, total function from the old data to the new exist?**
+>
+> - **Yes** → transform it. Today that means a `revision` `convert_fn` (and, by
+>   §5, the schema revision *is* the event's `Version`). No new event.
+> - **No** → the information is genuinely absent, lossy, non-deterministic, or
+>   needs external context. **This is the only case that forces a new event**
+>   (a new identifier — a genuinely different fact).
 
----
-
-## 1. The research landscape
-
-### 1.1 The canonical taxonomy
-
-The one peer-reviewed treatment, Overeem, Spoor & Jansen, *"The Dark Side of Event
-Sourcing: Managing Data Conversion"* (SANER 2017) [SANER2017], names **five**
-breaking-change techniques and splits them into **run-time** and **batch**:
-
-| Technique | Kind | What it does |
-|---|---|---|
-| **Multiple versions** | run-time | Keep every version's bytes as-is; tag with a version; every consumer handles all versions. |
-| **Upcasting** | run-time | On read, transform each old event up to the latest version before any consumer sees it. |
-| **Lazy transformation** | run-time | Like upcasting, but the transformed result is written back to the store. |
-| **In-place transformation** | batch | Rewrite stored events to the new schema (mutates history). |
-| **Copy-and-transform** | batch | Write a new stream/store transformed from the old; switch over. |
-
-Their quality comparison (Table II) ranks **upcasting** the overall preferred
-technique (performance `+`, reliability `+`, functional suitability `±`,
-maintainability `±`). Crucially for our hypothesis, **"multiple versions" is rated
-the *least* maintainable** — the only flat `−` in the table — with the verbatim
-reason: *"the support of multiple versions is spread throughout the application
-code."* Upcasting wins on maintainability precisely because it **centralises**
-version knowledge: a consumer only ever handles the latest version. [SANER2017]
-
-One honest caveat from the same paper: **no run-time technique is "functionally
-complete"** — operations spanning multiple aggregate streams force you to read
-several streams, *"violat[ing] the independence of the streams."* (See §2 for why
-this particular objection does **not** apply to DCB.) [SANER2017]
-
-### 1.2 What the industry actually does: read-time upcasting
-
-The production frameworks converge, unanimously, on **read-time upcasting** and
-deliberately **do not** surface multi-version reads to consumers:
-
-- **Greg Young** endorses it: *"when old versions are read from the store, they
-  can first be converted, or upcasted, to the latest version"* so *"an event
-  handler only needs to know how to deal with the latest version."* [Young/InfoQ]
-- **Axon** — `@Revision` annotation on the payload; chained `x → x+1` upcasters
-  over an `IntermediateEventRepresentation`, applied **at read time**, leaving
-  stored history intact. No multi-version-read feature exists; the recommended
-  path is always the upcaster chain. [Axon]
-- **Marten** — lazy upcasting: *"transforming the old JSON schema into the new
-  one … performed on the fly each time the event is read,"* with an explicit N+1
-  read-cost caveat. [Marten]
-- **Commanded** — the `Upcaster` protocol transforms events at runtime *before any
-  consumer*; its documented example upcasts a `HistoricalEvent` into a **wholly
-  different `NewEvent` struct** — i.e. it sidesteps the type-vs-version debate by
-  collapsing to one current version at read time. [Commanded]
-
-The convergent pattern: **encode a per-event revision; apply read-time upcaster
-chains to the latest; consumers handle only the latest; multi-version reads are
-not a thing.** [Axon, Marten, Commanded, Young]
-
-### 1.3 The type-vs-version debate, as the field sees it
-
-The debate the maintainer is weighing — *new event TYPE* vs *same identifier, new
-VERSION* — is **largely sidestepped in practice**. Because everyone upcasts to a
-single current version, the question of exposing multiple live versions rarely
-arises; and when it does (Commanded), the favoured move is to upcast the old type
-into a new type, not to expose a version discriminator. The "multiple versions"
-approach (the one closest to a queryable `Version`) is the one the taxonomy rates
-worst. So: **the field's answer is "neither — upcast."** [SANER2017, Commanded]
-
-### 1.4 Schema-registry prior art
-
-Confluent's Schema Registry formalises the compatibility ordering that bounds the
-*non-breaking* envelope: **BACKWARD** (new-schema consumers read old data; upgrade
-consumers first), **FORWARD** (old-schema consumers read new data; upgrade
-producers first), **FULL** (both; add/remove optional fields only). [Confluent]
-The useful mapping: **`revision`-absorbable changes are the FULL-compatible
-subset; breaking changes are exactly what falls outside these modes.** Registries
-enforce compatibility at *registration time, at runtime* — not in a type system
-(this matters for §5.4).
+Everything else (breaking vs non-breaking, type vs version, upcast vs not) is
+downstream of that one question.
 
 ---
 
-## 2. DCB says nothing — so `Version` is our own extension
+## 1. Research landscape (cited)
 
-Verified against the DCB specification, its reference implementation, and the
-canonical Savić article: **DCB has no notion of event version.** A DCB `Event` is
-*only* `Type` + `Data` (opaque) + `Tags` (+ optional metadata); `Type` is *purely*
-a selection/filter key with no format or versioning guidance; the sole ordinal is
-the sequence position (for optimistic concurrency). A full-text search for
-version/schema/revision/discriminator across the spec, ref impl, and Savić's piece
-returns **zero hits**. [DCBspec, DCBimpl, Savic]
+The one peer-reviewed treatment, Overeem, Spoor & Jansen, *"The Dark Side of
+Event Sourcing"* (SANER 2017) [SANER2017], names five breaking-change techniques
+— *multiple versions, upcasting, lazy transformation, in-place transformation,
+copy-and-transform* — and rates **upcasting** the preferred run-time technique,
+while rating **"multiple versions"** (keep every version's bytes, discriminate by
+a version number — i.e. a queryable `Version` field) the **least maintainable**,
+because *"the support of multiple versions is spread throughout the application
+code."*
 
-Two consequences:
+Production frameworks converge, unanimously, on **read-time upcasting** and
+deliberately do **not** surface multi-version reads: Greg Young [Young/InfoQ],
+Axon (`@Revision` + chained upcasters) [Axon], Marten (lazy JSON upcast on read)
+[Marten], Commanded (upcast old type → new type) [Commanded]. Confluent's Schema
+Registry [Confluent] formalises the compatibility ordering (BACKWARD/FORWARD/FULL)
+that bounds the *non-breaking* envelope — i.e. what `revision` absorbs without an
+explicit `convert_fn`.
 
-1. **`eventric`'s `u8 Version` is a genuine extension of DCB with no native
-   precedent.** Whatever we do, we are charting — not following. Freedom and risk.
-2. **The SANER "upcasting isn't functionally complete (cross-stream)" objection
-   does not bite us.** That objection is about per-aggregate stream stores where
-   replays are per-stream. DCB has *no* per-aggregate streams — reads are global,
-   by type+tag selection — so there are no stream-independence boundaries to
-   violate. Upcasting is *more* complete in a DCB model than in a classical one.
-
-DCB selection today: query items combine with **OR**; within an item, the type
-must match one of the listed types **AND** the tags must all be present. Version
-would be a new dimension *within* the type match. [DCBspec]
-
----
-
-## 3. The tension, and the reconciliation
-
-**The tension.** The maintainer's instinct — same identifier, distinct version,
-select by version range — *is* the "multiple versions" technique, which the one
-rigorous study ranks least maintainable, and which zero production frameworks
-expose. Taken at face value, the research pushes back on the hypothesis.
-
-**Three reasons not to discard the instinct:**
-
-1. **Upcasting already honours the real goal.** The deeper intuition was *"a
-   breaking change is still logically the same event — don't make it an unrelated
-   new event."* Upcasting satisfies exactly that (it preserves one logical
-   identity by transforming old→new) *and* avoids the version-spread. The
-   maintainer and Young agree on the **principle**; they differ only on the
-   mechanism.
-2. **The capability upcasting discards is the one this library is built for.**
-   Upcasting collapses everything to "latest," destroying the ability to *select*
-   by version. But `eventric`'s entire grain is **DCB selection** — querying the
-   stream by type+tag. Extending that to type+tag+**version-range** is the natural
-   shape of *this* library. No framework offers it because none are
-   selection-first stores; they are aggregate-replay stores. Version-range
-   selection is not a worse upcasting — it is a *different capability*.
-3. **There is no precedent constraining either choice** (§2).
-
-**The reconciliation — they are layers, not alternatives.** They answer different
-questions, and a low-level mechanism library should provide both:
-
-- **Stream layer = mechanism.** Make `Version` a first-class **selection**
-  dimension: select `type A, versions 2..4, tagged X`. The library *offers* the
-  capability; it does not impose any maintainability cost by doing so.
-- **Model layer = policy.** Provide a **read-time upcasting** hook so the *default*
-  consumption path collapses to the latest version (the mainstream maintainability
-  win). Most projections register an upcaster chain and write one `Project<…V_n>`.
-
-A consumer who just wants the read-model uses upcasting and never sees a version.
-A consumer who genuinely needs per-version behaviour (audit, analytics, migration
-tooling, "the world as it looked at v1") selects a version range and handles
-versions explicitly. **The SANER critique only bites if you opt out of upcasting**
-— and you only do that when version-awareness is the actual point.
-
-This also yields a clean two-tier evolution story:
-
-> **`revision` absorbs the non-breaking deltas *within* a version; upcasters
-> bridge *across* versions.** (`revision`-handled changes are Confluent's
-> FULL-compatible subset; upcasters handle what falls outside it.)
+The two takeaways that bear on us: (a) the industry treats "transform to one
+current version" as the default and "expose multiple versions" as the
+anti-pattern; (b) but they upcast because they're aggregate-replay stores — none
+is a *selection-first* store, which is where our model differs (§3, §7).
 
 ---
 
-## 4. The four hard parts (concrete, with trade-offs)
+## 2. DCB is silent — `Version` is our own extension
 
-### 4.1 Encoding the version for efficient selection
-
-Today the `types` inverted index is `[2][name_hash][pos] → version` — the version
-sits in the **value**, so it can only be checked *after* materialising a candidate
-(which is what the in-memory `mask()` re-check does). To make a version range a
-real **index scan**, version moves into the **key**:
-
-```
-[2][name_hash][version][pos] → ∅
-```
-
-A version range is then a bounded prefix scan over `[2][name_hash]`, and
-big-endian key ordering keeps it numeric (as the rest of the index relies on).
-
-- **Pro:** efficient version-range selection; reuses the existing BE-key /
-  prefix-scan / sorted-combinator machinery; gives the orphaned
-  `PartialOrd<Range<Version>>` trait its purpose (the three-way *below / inside /
-  above* is exactly the scan-advance primitive — see [`FUTURE.md`](./FUTURE.md)
-  §1).
-- **Con:** a storage-format change to the `types` index; and it is **genuinely
-  novel** — no event store does range-queryable versions, so there is no prior art
-  to validate the design against.
-
-### 4.2 Disjoint version ranges
-
-Disjoint ranges of the *same* type are a **union (OR)**, not an AND — an event is
-v2 *or* v5, never both; AND would match nothing. (This corrects an initial
-framing.) And it is **already expressible** in the model: a `Selector`
-OR-combines its `TypeSelector`s, so `type A versions 1..3` ⊕ `type A versions 5..7`
-is two `TypeSelector`s in one `Selector`. The AND axis (type+tag) is untouched and
-orthogonal. So disjoint ranges need **no new combinator** — only the index change
-in §4.1 to turn each range from a post-materialisation filter into a scan.
-
-### 4.3 Multi-version consumption (the "extension")
-
-The frameworks' validated answer is an **upcaster chain**: register
-`(identifier, version) → (struct, fn(prev) -> next)`, and run it inside dispatch —
-right where `DispatchEvent::from_event` currently does `revision::from_slice` — so
-that `Project<E>` only ever sees the latest `E`.
-
-- The two-tier split is clean: **`revision` decodes the stored bytes into that
-  version's struct; the upcaster chain lifts that struct to the latest.**
-- For the rare consumer that genuinely wants per-version behaviour, the existing
-  type-keyed dispatch already allows `Project<AV1>` + `Project<AV2>` directly (the
-  "multiple versions" path) — available, but not the default.
-
-This is the smallest, most precedented, highest-value piece of the whole story.
-
-### 4.4 Exhaustiveness — the genuinely open problem
-
-The research is blunt: **the literature does not solve compile-time detection of
-an unhandled new version.** Frameworks dodge it (upcasting ⇒ only one version to
-handle); schema registries enforce compatibility at *registration/runtime*, not in
-a type system. [Confluent] For `eventric`:
-
-- **Closed ranges → compile-time, via a sum type.** Model "the handled versions of
-  A" as a generated `enum A { V1(AV1), V2(AV2) }`; consuming is a `match`, so
-  adding `V3` breaks every match site — the loud failure you want. A derive could
-  generate the enum. This is the Rust-idiomatic answer for a *closed* set.
-- **Open ranges (`2..`) → only a runtime registry.** And the deep point: **an open
-  range and compile-time exhaustiveness are fundamentally contradictory.** "Handle
-  everything from v2 onward" is a claim about versions that *do not yet exist*; no
-  type system can force you to handle a `v4` defined in another crate next year.
-  The best achievable is a runtime registration guard: *every registered version
-  in the requested range has a handler, else refuse to start.* The maintainer's
-  intuition that this *"needs an event registration mechanism which doesn't
-  currently exist"* is correct — and correct for a **fundamental** reason, not a
-  missing-feature one.
-
-Honest design stance: **compile-time safety for closed ranges (sum type), a
-runtime registry guard for open ranges, and documentation that open-range
-exhaustiveness is a runtime guarantee by nature.** An event registry is also the
-natural home for the version→struct→upcaster mappings of §4.3, so it earns its
-keep twice.
+Verified against the spec, the reference implementation, and Savić's canonical
+article: **DCB has no notion of event version.** An event is *only* type + opaque
+data + tags; type is *purely* a selection key; the sole ordinal is sequence
+position. [DCBspec, DCBimpl, Savic] So `eventric`'s `Version` is a genuine
+extension with no precedent — freedom and risk. (One bonus: SANER's "upcasting
+isn't cross-stream-complete" objection doesn't apply, because DCB has no
+per-aggregate streams to keep independent.)
 
 ---
 
-## 5. What the literature does *not* resolve (ours to own)
+## 3. What the review concluded
 
-- **Version-range reads as a first-class capability** — no prior art; first
-  principles only.
-- **Open-range consumer exhaustiveness** — *provably* not a compile-time problem;
-  best-effort runtime only.
-- **Whether version *selection* earns its storage-format cost at all** — if
-  read-time upcasting already covers the real use cases, the version-in-index
-  apparatus may be over-engineering.
+**`revision` already *is* the upcaster, so a separate upcaster/registry is
+largely redundant.** Walking the cases:
+
+- **Transformable** → `revision`'s `convert_fn` already turns old bytes into the
+  current struct inside `from_slice`; the projection's `Project<Current>` already
+  sees the latest. A *separate* cross-version upcaster would only be needed if you
+  modelled versions as *distinct* structs — which is the very "multiple versions"
+  path SANER ranks worst.
+- **Transform needs external context** → an anti-pattern (non-deterministic
+  upcasts break replay reproducibility); it's a signal to remodel, not to build a
+  context-aware upcaster.
+- **Untransformable** → a new event (new identifier). No upcaster.
+
+And the unknown-version *guard* is half-built already: `revision::from_slice`
+**already fails** on a future revision it can't decode. The only gap is that the
+error is opaque; making it informative ("saw revision N, this build knows ≤ M") is
+a small fix, not a registry.
+
+**Most "versioning needs" are modelling smells.** A large fraction are avoidable
+up front:
+
+| Change | Honest transform? | Tool | Avoidable by modelling? |
+|---|---|---|---|
+| Add optional/defaulted field | yes | `revision` | partly (fat, intentful events) |
+| Rename / change type of a field | yes (`convert_fn`) | `revision` | mostly (names are opaque IDs) |
+| Change unit (°F→°C) | yes (`convert_fn`) | `revision` | **yes** — capture the unit explicitly |
+| Split a conflated event | no | new event; cope with history | **yes** — one fact per event |
+| Add genuinely-new info (no honest default) | no | new event | **yes if foreseeable**, **no** if a real domain change |
+| Reinterpret the concept | no | new event | **yes** — it was mis-modelled |
+
+The residue that modelling **cannot** remove: foreseeable evolution (→ `revision`)
+and *genuine, unforeseeable* domain change (→ new event). You can't model away the
+future, but you can shrink the problem to those two.
+
+**The distribution framing is the real crux.** Every genuinely hard part of
+versioning is downstream of *"a reader can encounter an event written by a newer
+schema than it knows."* Remove that and the difficulty evaporates: one source of
+truth for types ⇒ no unknown versions ⇒ `revision` decodes everything and
+compile-time checks over your declared types suffice. The registry / runtime
+guard / version-index machinery are **"reader-lags-writer" machinery, not
+versioning machinery.** Note the dangerous invariant is narrower than
+"distributed": it's *"reader schema ≥ every writer schema, always,"* which is
+broken by **rollbacks, blue-green deploys, and mixed-version replicas** even in a
+single service. The first real decision is whether `eventric` must tolerate that.
 
 ---
 
-## 6. Recommendation: prove the need before building the index
+## 4. The cost `revision` still carries
 
-The last bullet of §5 is load-bearing. The entire version-in-index apparatus
-(§4.1) is justified *only if* something genuinely needs to **select** by version at
-the stream layer — not merely *consume the latest*. Upcasting alone is cheaper,
-precedented, and maintainable, and may cover the overwhelming majority of real
-need.
+`revision` being the upcaster means it **inherits upcasting's costs**: `convert_fn`
+chains grow without bound (you carry every historical conversion forever), each is
+read-path work and a testing obligation — the exact maintainability tax SANER pins
+on run-time techniques. So "revision handles it" is clean today and gets heavier
+over a long-lived stream. The cheapest long-term lever is therefore the modelling
+discipline in §3: every breaking change you model away is a `convert_fn` you never
+carry.
 
-So the cheapest decisive experiment is **not** to build the index change first.
-It is to take **one realistic breaking-change scenario for a target consumer and
-ask: does this need version *selection*, or just version *upcasting*?**
+---
 
-- If **upcasting suffices** → build the **model-layer upcaster hook** (§4.3):
-  small, precedented, high-value; `Version` can stay a value-side attribute. This
-  is almost certainly worth doing regardless.
-- If a real **"query v2-only events"** case appears → *that* justifies the
-  index change (§4.1), built in the knowledge that it is a deliberate DCB
-  extension, not a default.
+## 5. LANDED: the event `Version` follows the `revision` number
 
-Suggested order, then: **(1)** the upcaster hook + the event registry it needs
-(also unlocks the exhaustiveness guards of §4.4); **(2)** the sum-type derive for
-closed-range exhaustiveness; **(3)** the version-in-index change *iff* a selection
-use case is found; and **(4)** decide the fate of the orphaned `Version`/`Range`
-comparison traits as part of (3).
+`Events::append` no longer hardcodes `Version::default()`; it sources the version
+from `E::revision()` (the `revision` schema number, reachable via the
+`SerializeRevisioned` supertrait), capped into the `u8` `Version` (erroring rather
+than truncating past 255). Consequences:
+
+- **The divergence risk is gone** — there's no separate version to declare or
+  forget to bump; `Version` is a faithful function of the schema.
+- **The "two orthogonal axes" problem dissolves** — schema revision and stream
+  `Version` are now *one* notion. `Version` means exactly "the schema revision
+  this event was written at," and bumps on every revision change (breaking or
+  not). You lose the ability to set a "logical version" independent of the schema
+  — and that loss is the point.
+- The dead `Version::default()` and the unused `Version` arithmetic
+  (`Add`/`Sub`/…) were removed in the same change. (`MIN`/`MAX` stay; the
+  `PartialEq`/`PartialOrd<Range>` impls stay — their fate is the deferred
+  *selection* decision in §7.)
+
+This is the one piece worth having built ahead of the rest: small, divergence-
+proof, and it makes `Version` mean something real for free.
+
+---
+
+## 6. The serialisation seam, and a deferred strategic axis
+
+`revision` is currently named directly in the model (`to_vec`/`from_slice`, the
+trait bounds). The recommended boundary is a thin **eventric trait over
+serialisation** (serialise + deserialise + the revision number), with `revision`
+as the implementation behind it. That's the right altitude regardless (the model
+shouldn't know `revision`'s exact API), and it makes a future format swap a
+contained change rather than a rewrite.
+
+**Deferred strategic axis — owning the on-disk format.** A foundational event
+store arguably *should* own its wire format (stability, no external breakage, full
+control forever). That is a real but **big, deliberate, format-lock-in decision**,
+to be taken on its own merits if/when format control becomes a requirement — **not**
+pulled in by the divergence fix (§5, done with the external crate) or by a
+dependency worry. For the record, the worry that prompted this — that `revision`
+drags in an orphaned `bincode` — is **false**: `revision` 0.28 depends only on
+`revision-derive`; `bincode` is absent from the dependency tree entirely. The seam
+keeps the build-our-own option open without paying for it now.
+
+---
+
+## 7. The hard parts — corrected
+
+### 7.1 Version-in-index for selection — the earlier encoding was broken
+
+The earlier draft proposed a `types` key of `[name_hash][version][pos]` and a
+"prefix scan bounded by the version byte." **That is wrong:** it sorts
+version-major, so interleaved versions yield positions **out of order**, violating
+the ascending-position invariant the AND/OR combinators depend on. Concretely,
+positions written as (v1,5),(v2,6),(v1,7) would scan as 5,7,6.
+
+The salvage is a **union of per-version sub-scans**: each `[name_hash][v][pos…]`
+*is* position-ordered for a fixed `v`, so a version range becomes up to 255
+single-version scans merged by the existing `OrIter` (a sorted merge; an event has
+exactly one version, so it's a clean interleave with no dedup). It works, but it's
+an N-way merge, not a single scan — and it's only worth the cost when the version
+filter is **selective**; for "all/most versions" the current value-side filter is
+simpler *and already correct*. So version-in-index is **justify-on-demand**, and
+the orphaned `PartialOrd<Range<Version>>` trait would only find its purpose
+(the three-way scan-advance primitive) *if* this is built.
+
+### 7.2 Disjoint ranges
+
+Disjoint version ranges of one type are a **union (OR)**, not an AND. And they're
+already expressible: a `Selector` OR-combines its `TypeSelector`s, so
+`A versions 1..3` ⊕ `A versions 5..7` is two `TypeSelector`s in one `Selector`. No
+new combinator needed — only the §7.1 index change to make each range a scan.
+
+### 7.3 Exhaustiveness — the earlier guarantee was overstated
+
+The earlier draft said closed ranges give *compile-time* exhaustiveness via a sum
+type. That is **only half true**, and the missing half matters: a sum-type `match`
+is exhaustive over the variants **you declare**, not over what is **in the
+stream**. In any system where a reader's schema can lag a writer's, the stream can
+contain a version your binary never compiled against — detectable only at runtime.
+
+The selection model sharpens this into a *worse-than-a-crash* failure: a **closed**
+selection (`1..3`) doesn't decode-fail on a `v3` — it simply doesn't *select* it,
+so you silently compute a read-model on incomplete data. Detecting "there are
+versions outside my range" is about the stream's actual content vs your declared
+range — **irreducibly runtime**, and (since the version set is open under
+divergence) best-effort. And an **open** range (`2..`) is *fundamentally* at odds
+with compile-time exhaustiveness: it is a claim about versions that don't exist
+yet; no type system can force you to handle a `v4` defined elsewhere next year.
+
+Honest stance: the compile-time sum type is a useful *local* completeness aid (it
+catches *your* omissions); it is **not** a guarantee against the stream. Open-range
+or divergence-tolerant exhaustiveness is a **runtime guard**, by nature — and only
+needed once you accept reader-lags-writer (§3).
+
+---
+
+## 8. Recommendation / order of work
+
+1. **Done:** version follows revision (§5).
+2. **Cheap, high-value, do next when building:** the serialisation seam (§6) and
+   making `revision`'s unknown-revision failure informative (§3).
+3. **Modelling guidance, not code:** document the §3 "honest transform?" axis and
+   the fat-event / explicit-context / one-fact-per-event discipline — it's the
+   biggest lever and costs nothing to write down.
+4. **Decide consciously, don't drift into:** whether `eventric` must tolerate
+   **reader-lags-writer** (§3). This gates the runtime guard and everything in §7.
+5. **Justify-on-demand:** version-in-index *selection* (§7.1) — build only if a
+   concrete "query version N only" need appears; and only then does the
+   `Version`/`Range` trait question (§7's parenthetical, [`FUTURE.md`](./FUTURE.md)
+   §1) resolve.
+6. **Deferred strategic axis:** owning the serialisation format (§6).
+
+The through-line: with `revision` (transform) + new-events (untransformable) +
+modelling discipline, the *current* (no-divergence) reality needs almost no new
+versioning machinery. The hard parts are real but are all downstream of a
+divergence requirement we have not yet taken on.
 
 ---
 
 ## References
 
-- **[SANER2017]** Overeem, Spoor, Jansen, *"The Dark Side of Event Sourcing:
-  Managing Data Conversion,"* SANER 2017.
-  <https://www.movereem.nl/files/2017SANER-eventsourcing.pdf>
-- **[Young/InfoQ]** *"Versioning in an Event Sourced System"* (Greg Young), InfoQ
-  summary. <https://www.infoq.com/news/2017/07/versioning-event-sourcing/>
+- **[SANER2017]** Overeem, Spoor, Jansen, *"The Dark Side of Event Sourcing,"*
+  SANER 2017. <https://www.movereem.nl/files/2017SANER-eventsourcing.pdf>
+- **[Young/InfoQ]** *"Versioning in an Event Sourced System"* (Greg Young), InfoQ.
+  <https://www.infoq.com/news/2017/07/versioning-event-sourcing/>
 - **[Axon]** Axon Framework reference — Event Versioning.
   <https://docs.axoniq.io/axon-framework-reference/4.11/events/event-versioning/>
-- **[Marten]** Marten — Event Versioning.
-  <https://martendb.io/events/versioning.html>
-- **[Commanded]** Commanded — Upcasting events.
-  <https://github.com/commanded/commanded>
-- **[DCBspec]** Dynamic Consistency Boundaries — specification.
-  <https://dcb.events/specification/>
-- **[DCBimpl]** `bwaidelich/dcb-eventstore` (reference implementation).
-  <https://github.com/bwaidelich/dcb-eventstore>
+- **[Marten]** Marten — Event Versioning. <https://martendb.io/events/versioning.html>
+- **[Commanded]** Commanded — Upcasting events. <https://github.com/commanded/commanded>
+- **[DCBspec]** Dynamic Consistency Boundaries — specification. <https://dcb.events/specification/>
+- **[DCBimpl]** `bwaidelich/dcb-eventstore`. <https://github.com/bwaidelich/dcb-eventstore>
 - **[Savic]** Milan Savić, *"Dynamic Consistency Boundaries."*
   <https://milan.event-thinking.io/2025/05/dynamic-consistency-boundaries.html>
 - **[Confluent]** Confluent Schema Registry — Schema Evolution and Compatibility.

@@ -91,7 +91,15 @@ impl Events {
         let data = Data::new(data)?;
 
         let name = Name::new(E::identifier())?;
-        let ty = Type::new(name, Version::default());
+        // The event's stream `Version` is sourced directly from the `revision`
+        // schema number, so the two cannot diverge (there is no separate version
+        // to declare or forget to bump). `revision` is a `u16`; `Version` is a
+        // `u8` — 256+ revisions of one event type is implausible, but it errors
+        // rather than truncating silently.
+        let version = u8::try_from(E::revision())
+            .change_context(Error)
+            .attach("events/append/version: revision exceeds u8::MAX")?;
+        let ty = Type::new(name, Version::new(version));
         let tags = event.tags()?.into_iter().collect::<BTreeSet<_>>();
 
         self.events
