@@ -200,6 +200,16 @@ macro_rules! string_type {
 string_type!(Name);
 string_type!(Tag);
 
+impl Tag<String> {
+    /// Creates a tag from a `prefix` and a `value`, formatted as `prefix:value`
+    /// (e.g. `student:3242`) and then validated. The `prefix:value` shape is
+    /// the tag's own convention, owned here rather than by the callers that
+    /// build it.
+    pub fn prefixed(prefix: impl std::fmt::Display, value: impl std::fmt::Display) -> Result<Self> {
+        Self::new(format!("{prefix}:{value}"))
+    }
+}
+
 // -------------------------------------------------------------------------------------------------
 
 // Type

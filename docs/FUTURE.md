@@ -57,30 +57,31 @@ wants to think through before building.
 - **Untested:** the `a..` / `..b` / `..` range lowerings, the 255 boundary, and
   multi-version OR-ing.
 
-## 2. Projection codegen ergonomics (design-pending)
+## 2. Derive codegen ergonomics (in progress — Event done; Projection + Action pending)
 
-- **Keyed / named selectors** — a designed-but-deferred extension recorded in
-  [`docs/keyed-selectors.md`]: name each `select(..)` clause and generate a
-  per-projection module of per-selector payload enums + a per-selector-method
-  trait. It is a deliberate non-goal until there is a real need.
-- **The groundwork that would make it coherent** (rather than a one-off) is the
-  real prerequisite, and is independently valuable:
-  - make `{Name}Dispatch` carry the methods it implies instead of being a bare
-    marker trait;
-  - unify companion-name generation into shared, collision-safe codegen (the
-    Action `{Name}Context` currently does naive string concatenation with no
-    collision handling);
-  - give selectors a name/key and **de-positionalise the mask** — the Action
-    `update()` routes by `event.mask[i]` keyed purely to declaration order
-    (internally consistent today, but fragile to extend).
-- No `trybuild`/UI tests exist for any derive: a misuse only surfaces as a
-  downstream compile error, not a targeted macro test.
-- **The `Act::Err` indirection is untested.** An action may declare a custom
-  error type (`Act::Err: From<Report<Error>>`) that `Enactor::enact` returns
-  verbatim, but every test/example uses the default `Report<Error>` — the
-  custom-error path is plumbed but never exercised.
+The full redesign of the three derives — a **declarative attribute grammar**,
+**named projection selectors** (per-selection event enums + a per-selection method
+surface), and the supporting groundwork — is specced in
+[`derives.md`](./derives.md). **Event is implemented** (the new
+`#[event(identifier: X, tags: [prefix: value, ..])]` grammar, hand-parsed + unit-
+tested); **Projection and Action are pending** (the big ones). It folds in what
+were the deferred keyed-selectors and the codegen groundwork:
 
-[`docs/keyed-selectors.md`]: ./keyed-selectors.md
+- named selectors + a **de-positionalised mask** (model-layer routing by selection,
+  not by declaration-order index);
+- `{Name}Dispatch` carrying the methods it implies rather than a bare marker trait;
+- collision-safe companion-name generation (a per-projection module of enums).
+
+Still open, independent of that redesign:
+
+- No `trybuild`/UI tests exist for any derive — a misuse surfaces as a downstream
+  compile error, not a targeted macro test. The new hand-rolled parsers are the
+  point at which to add them.
+- **The `Act::Err` indirection is untested.** An action may declare a custom error
+  type (`Act::Err: From<Report<Error>>`) that `Enactor::enact` returns verbatim,
+  but every test/example uses the default `Report<Error>` — plumbed, never
+  exercised. (A `type Err = Report<Error>` default is a candidate ergonomic win,
+  noted in `derives.md`.)
 
 ## 3. Public surface & lints
 

@@ -9,8 +9,8 @@ use revision::revisioned;
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug)]
 #[event(
-    identifier(course_defined),
-    tags(course(&this.id))
+    identifier: course_defined,
+    tags: [course: id]
 )]
 pub struct CourseDefined {
     #[new(into)]
@@ -21,8 +21,8 @@ pub struct CourseDefined {
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug)]
 #[event(
-    identifier(course_capacity_changed),
-    tags(course(&this.id))
+    identifier: course_capacity_changed,
+    tags: [course: id]
 )]
 pub struct CourseCapacityChanged {
     #[new(into)]
@@ -33,8 +33,11 @@ pub struct CourseCapacityChanged {
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug)]
 #[event(
-    identifier(student_subscribed_to_course),
-    tags(course(&this.course_id), student(&this.student_id))
+    identifier: student_subscribed_to_course,
+    tags: [
+        course: course_id,
+        student: student_id
+    ]
 )]
 pub struct StudentSubscribedToCourse {
     #[new(into)]

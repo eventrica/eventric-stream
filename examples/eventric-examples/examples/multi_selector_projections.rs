@@ -53,8 +53,8 @@ use revision::revisioned;
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug)]
 #[event(
-    identifier(money_deposited),
-    tags(account(&this.account))
+    identifier: money_deposited,
+    tags: [account: account]
 )]
 pub struct MoneyDeposited {
     #[new(into)]
@@ -65,8 +65,8 @@ pub struct MoneyDeposited {
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug)]
 #[event(
-    identifier(money_withdrawn),
-    tags(account(&this.account))
+    identifier: money_withdrawn,
+    tags: [account: account]
 )]
 pub struct MoneyWithdrawn {
     #[new(into)]

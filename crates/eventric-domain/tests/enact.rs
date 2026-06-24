@@ -56,10 +56,7 @@ use revision::revisioned;
 
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug, PartialEq)]
-#[event(
-    identifier(item_registered),
-    tags(item(&this.sku))
-)]
+#[event(identifier: item_registered, tags: [item: sku])]
 struct ItemRegistered {
     #[new(into)]
     sku: String,
@@ -68,10 +65,7 @@ struct ItemRegistered {
 
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug, PartialEq)]
-#[event(
-    identifier(item_removed),
-    tags(item(&this.sku))
-)]
+#[event(identifier: item_removed, tags: [item: sku])]
 struct ItemRemoved {
     #[new(into)]
     sku: String,

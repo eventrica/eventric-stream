@@ -58,13 +58,7 @@ use revision::revisioned;
 
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug, PartialEq)]
-#[event(
-    identifier(deposit),
-    tags(
-        account(&this.account),
-        channel(&this.channel)
-    )
-)]
+#[event(identifier: deposit, tags: [account: account, channel: channel])]
 struct Deposit {
     #[new(into)]
     account: String,
@@ -75,10 +69,7 @@ struct Deposit {
 
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug, PartialEq)]
-#[event(
-    identifier(withdrawal),
-    tags(account(&this.account))
-)]
+#[event(identifier: withdrawal, tags: [account: account])]
 struct Withdrawal {
     #[new(into)]
     account: String,
@@ -150,7 +141,7 @@ impl Project<Withdrawal> for Balance {
         events(Deposit),
         filter(
             account(&this.account),
-            channel(|_this| "wire")
+            channel("wire")
         )
     )
 )]
@@ -159,7 +150,7 @@ impl Project<Withdrawal> for Balance {
         events(Deposit),
         filter(
             account(&this.account),
-            channel(|_this| "card")
+            channel("card")
         )
     )
 )]
@@ -197,7 +188,7 @@ impl Project<Deposit> for ChannelTotals {
         events(Deposit),
         filter(
             account(&this.account),
-            channel(|_this| "wire")
+            channel("wire")
         )
     )
 )]

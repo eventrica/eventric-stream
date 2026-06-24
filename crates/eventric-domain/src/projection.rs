@@ -44,9 +44,10 @@
 //! the payload **once** and shares the boxed [`DispatchEvent`] across every
 //! same-type slot in the action's context.
 //!
-//! A deliberately deferred extension (named/keyed selectors that would generate
-//! per-selector payload enums and a per-selector-method trait) is recorded in
-//! `docs/keyed-selectors.md`; it is intentionally *not* built today.
+//! A redesign that replaces this `Project<E>` surface with named selectors
+//! (per-selection event enums + a per-selection method trait), as part of a
+//! declarative derive-grammar overhaul, is designed in `docs/derives.md`; it is
+//! not yet built.
 //!
 //! [`Update`]: crate::action::Update
 

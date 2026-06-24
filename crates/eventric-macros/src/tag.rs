@@ -1,11 +1,16 @@
-use proc_macro2::{
-    TokenStream,
-    TokenTree,
-};
+use proc_macro2::TokenStream;
 use quote::{
     ToTokens,
     TokenStreamExt as _,
     quote,
+};
+use syn::{
+    Ident,
+    Token,
+    parse::{
+        Parse,
+        ParseStream,
+    },
 };
 
 // =================================================================================================
@@ -19,21 +24,18 @@ pub struct Tag {
 }
 
 impl Tag {
-    #[rustfmt::skip]
     pub fn new(input: TokenStream) -> darling::Result<Self> {
-        let tokens = input.into_iter().collect::<Vec<_>>();
+        syn::parse2(input).map_err(darling::Error::from)
+    }
+}
 
-        match &tokens[..] {
-            [TokenTree::Ident(ident), TokenTree::Punct(punct), tokens @ ..] if punct.as_char() == ',' => {
-                let prefix = ident.to_string();
-                let mut value = TokenStream::new();
+impl Parse for Tag {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let prefix = input.parse::<Ident>()?.to_string();
+        input.parse::<Token![,]>()?;
+        let value = input.parse::<TokenStream>()?;
 
-                value.append_all(tokens);
-
-                Ok(Self { prefix, value })
-            }
-            _ => Err(darling::Error::unsupported_shape("unexpected tag arguments")),
-        }
+        Ok(Self { prefix, value })
     }
 }
 
@@ -43,7 +45,7 @@ impl ToTokens for Tag {
         let value = &self.value;
 
         tokens.append_all(quote! {
-            ::eventric_stream::event::Tag::new(format!("{}:{}", #prefix, #value))
+            ::eventric_stream::event::Tag::prefixed(#prefix, #value)
         });
     }
 }

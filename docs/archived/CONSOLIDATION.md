@@ -3,8 +3,9 @@
 Plan + progress tracker for collapsing the workspace from **7 runtime/facade
 crates → 2** (`eventric` library + `eventric-macros` proc-macro). Purely
 structural: the macros emit the *same* code, repointed to the new crate name.
-No codegen-approach change (that is a separate, deferred design piece — see
-[`docs/keyed-selectors.md`](../keyed-selectors.md) and the groundwork notes).
+No codegen-approach change (that is a separate design piece — see
+[`keyed-selectors.md`](./keyed-selectors.md), since superseded by
+[`derives.md`](../derives.md)).
 
 ## Target
 

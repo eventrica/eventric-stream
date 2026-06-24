@@ -12,7 +12,7 @@ use revision::revisioned;
 
 #[revisioned(revision = 3)]
 #[derive(new, Event, Debug)]
-#[event(identifier(thing_happened), tags(thing(&this.id)))]
+#[event(identifier: thing_happened, tags: [thing: id])]
 struct ThingHappened {
     #[new(into)]
     id: String,
@@ -72,7 +72,7 @@ fn revision_evolution_decodes_old_bytes_with_a_default() {
 // and appends — i.e. the "empty payload" edge does not arise in practice.
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug)]
-#[event(identifier(ping))]
+#[event(identifier: ping)]
 struct Ping {
     #[new(into)]
     source: String,

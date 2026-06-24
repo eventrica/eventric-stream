@@ -1,5 +1,12 @@
 # Deferred design: keyed (named) projection selectors
 
+> **SUPERSEDED (2026-06-24) by [`derives.md`](../derives.md).** The named-selector
+> design here is folded into that broader declarative derive-grammar redesign and
+> agreed for building — the "coherent context" the deferral below was waiting for.
+> Kept as the historical record of the original analysis, especially the
+> "Coherence: why it is deferred, not built" section, which still reads true and
+> explains *why* this only became worth building as part of a wider redesign.
+
 **Status: DEFERRED — a deliberate non-goal until a real need appears, and even
 then worth building only if it becomes a *coherent* instance of the existing
 "generated companion type" codegen pattern (see "Coherence" below).** This note
