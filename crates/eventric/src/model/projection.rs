@@ -137,7 +137,14 @@ impl DispatchEvent {
     {
         let inner_event = revision::from_slice::<E>(event.event.data().as_ref())
             .change_context(Error)
-            .attach("dispatch_event/from_event/from_slice")?;
+            .attach_with(|| {
+                format!(
+                    "failed to decode event payload (stored version {:?}; this consumer handles \
+                     revision {})",
+                    event.event.facets().ty().version(),
+                    E::revision(),
+                )
+            })?;
 
         Ok(Self::new(
             Box::new(inner_event),

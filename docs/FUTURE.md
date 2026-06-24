@@ -28,11 +28,6 @@ orthogonal axes" items — schema revision and stream `Version` are now one noti
 The remaining open question is the *breaking-change* story, which the maintainer
 wants to think through before building.
 
-- **`revision` payload evolution is unexercised.** The in-place, lenient
-  schema-evolution capability that is the entire reason `revision` was chosen is
-  never tested or demonstrated — every `#[revisioned(...)]` in the repo is
-  `revision = 1`. No test decodes `revision = 1` bytes with a `revision = 2`
-  type, added/defaulted fields, or a `convert_fn`.
 - **Orphaned `Version`/`Range` comparison traits (a design decision, not dead
   code).** `impl PartialEq<Range<Self>>` / `impl PartialOrd<Range<Self>>` for
   `Version` (`event.rs`) were deliberately added (commit `7ce9c043`,
@@ -45,11 +40,11 @@ wants to think through before building.
   versioning design: keep it and **pin the semantics with a test + doc** (it has
   neither), or drop both. (`PartialEq<Range>` merely re-spells `Range::contains`,
   so it is hard to justify either way.)
-- **Edge of an empty payload:** a revisioned struct that serialises to zero
-  bytes would hit `Data::new`'s non-empty check and fail to append — untested.
-- **A `revision`-mismatch decode failure maps to the opaque `Error`** with only
-  a string attachment, so it is indistinguishable from any other error and would
-  surface mid-projection-replay.
+- **A `revision`-mismatch decode failure stays the opaque `Error` type.** It now
+  carries an informative attachment (the stored version + the revision this
+  consumer handles), so it is *diagnosable*; a distinct error *type/variant* is
+  intentionally out of scope (the opaque-`Error` design adds detail via
+  attachments, not variants).
 
 ### Stream-layer `Version` debt (cheaper, independent of the above)
 
@@ -110,12 +105,6 @@ wants to think through before building.
   `u64::MAX` positions are not practically reachable — but the same class of
   issue.
 
-## 5. Hygiene
-
-- **`include-utils` is an unused workspace dependency** — it was only used by the
-  old `eventric-stream` facade for a README `include_md!`; the consolidated crate
-  uses a plain crate doc. Drop it from `[workspace.dependencies]`.
-
 ---
 
 ## Done this cycle (for context — not outstanding)
@@ -127,4 +116,7 @@ two-tools rule (documented + tested + exampled); the crate consolidation; the
 re-export de-lift; consolidating examples/benches to one crate each; **the event
 `Version` now follows the `revision` schema number** (`versioning.md` §5, tested),
 retiring the hardcoded-0 / two-axes items and removing the dead `Version`
-`Default` + arithmetic.
+`Default` + arithmetic; and a small-wins pass — dropping the unused `include-utils`
+dep, a friendlier (version-bearing) `revision`-decode error, and tests pinning
+`revision` evolution (old bytes → defaulted field) and the non-empty minimal
+payload.
