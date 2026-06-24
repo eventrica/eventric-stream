@@ -5,38 +5,33 @@ debug = true
 debug = true
 
 [workspace]
-members = [
-    "benches/*",
-    "crates/eventric",
-    "crates/eventric-macros",
-    "examples/*",
-]
+members  = ["benches/*", "crates/*", "examples/*"]
 resolver = "2"
 
 [workspace.dependencies]
-assertables                  = { version = "10" }
-bytes                        = { version = "1" }
-criterion                    = { version = "0.8" }
-crossbeam                    = { version = "0.8" }
-darling                      = { version = "0.23" }
-derive_more                  = { version = "2", features = ["full"] }
-double-ended-peekable        = { version = "0.1" }
-error-stack                  = { version = "0.7" }
-eventric                     = { path = "crates/eventric" }
-eventric-macros              = { path = "crates/eventric-macros" }
-fancy_constructor            = { version = "2" }
-fjall                        = { version = "3" }
-heck                         = { version = "0.5" }
-include-utils                = { version = "0.2" }
-oneshot                      = { version = "0.2" }
-paste                        = { version = "1" }
-proc-macro2                  = { version = "1" }
-quote                        = { version = "1" }
-rand                         = { version = "0.10" }
-rapidhash                    = { version = "4" }
-revision                     = { version = "0.28" }
-smallvec                     = { version = "1", features = ["const_generics", "const_new", "union"] }
-syn                          = { version = "2" }
+assertables           = { version = "10" }
+bytes                 = { version = "1" }
+criterion             = { version = "0.8" }
+crossbeam             = { version = "0.8" }
+darling               = { version = "0.23" }
+derive_more           = { version = "2", features = ["full"] }
+double-ended-peekable = { version = "0.1" }
+error-stack           = { version = "0.7" }
+eventric              = { path = "crates/eventric" }
+eventric-macros       = { path = "crates/eventric-macros" }
+fancy_constructor     = { version = "2" }
+fjall                 = { version = "3" }
+heck                  = { version = "0.5" }
+include-utils         = { version = "0.2" }
+oneshot               = { version = "0.2" }
+paste                 = { version = "1" }
+proc-macro2           = { version = "1" }
+quote                 = { version = "1" }
+rand                  = { version = "0.10" }
+rapidhash             = { version = "4" }
+revision              = { version = "0.28" }
+smallvec              = { version = "1", features = ["const_generics", "const_new", "union"] }
+syn                   = { version = "2" }
 
 [workspace.lints.clippy]
 cargo       = "warn"

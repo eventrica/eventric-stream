@@ -443,18 +443,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "eventric-macros"
+name = "eventric-benches"
 version = "0.1.0"
 dependencies = [
- "darling",
- "heck",
- "proc-macro2",
- "quote",
- "syn",
+ "criterion",
+ "eventric",
 ]
 
 [[package]]
-name = "eventric-model-examples"
+name = "eventric-examples"
 version = "0.1.0"
 dependencies = [
  "derive_more",
@@ -465,25 +462,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "eventric-stream-benches"
+name = "eventric-macros"
 version = "0.1.0"
 dependencies = [
- "criterion",
- "eventric",
-]
-
-[[package]]
-name = "eventric-stream-examples"
-version = "0.1.0"
-dependencies = [
- "eventric",
-]
-
-[[package]]
-name = "eventric-stream-profiling-examples"
-version = "0.1.0"
-dependencies = [
- "eventric",
+ "darling",
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
