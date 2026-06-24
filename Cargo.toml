@@ -7,13 +7,8 @@ debug = true
 [workspace]
 members = [
     "benches/*",
-    "crates/eventric-stream-multi-thread",
-    "crates/model",
-    "crates/model/core",
-    "crates/model/macros",
-    "crates/stream",
-    "crates/stream/core",
-    "crates/stream/macros",
+    "crates/eventric",
+    "crates/eventric-macros",
     "examples/*",
 ]
 resolver = "2"
@@ -27,13 +22,8 @@ darling                      = { version = "0.23" }
 derive_more                  = { version = "2", features = ["full"] }
 double-ended-peekable        = { version = "0.1" }
 error-stack                  = { version = "0.7" }
-eventric-model               = { path = "crates/model" }
-eventric-model-core          = { path = "crates/model/core" }
-eventric-model-macros        = { path = "crates/model/macros" }
-eventric-stream              = { path = "crates/stream" }
-eventric-stream-core         = { path = "crates/stream/core" }
-eventric-stream-macros       = { path = "crates/stream/macros" }
-eventric-stream-multi-thread = { path = "crates/eventric-stream-multi-thread" }
+eventric                     = { path = "crates/eventric" }
+eventric-macros              = { path = "crates/eventric-macros" }
 fancy_constructor            = { version = "2" }
 fjall                        = { version = "3" }
 heck                         = { version = "0.5" }

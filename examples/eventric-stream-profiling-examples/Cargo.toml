@@ -1,5 +1,5 @@
 [dependencies]
-eventric-stream.workspace = true
+eventric.workspace = true
 
 [lints]
 workspace = true

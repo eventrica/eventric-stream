@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use eventric_stream::{
+use eventric::{
     event::{
         Data,
         Event,
@@ -11,16 +11,20 @@ use eventric_stream::{
         Version,
     },
     stream::{
-        Append as _,
-        Condition,
-        Owner,
-        Select as _,
-        Selection,
-        Selector,
         Stream,
-        TypeSelector,
+        concurrent::owner::Owner,
+        operate::{
+            Condition,
+            Selection,
+            append::Append as _,
+            select::{
+                Select as _,
+                Selector,
+                TypeSelector,
+            },
+        },
     },
-    temp_path,
+    utils::temp_path,
 };
 
 fn event(identifier: &str, data: &str, tags: &[&str], version: u8) -> Event<(), String> {

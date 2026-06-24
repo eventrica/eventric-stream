@@ -7,7 +7,7 @@ use criterion::{
     criterion_group,
     criterion_main,
 };
-use eventric_stream::{
+use eventric::{
     event::{
         Data,
         Event,
@@ -18,9 +18,11 @@ use eventric_stream::{
         Version,
     },
     stream::{
-        Append as _,
-        Condition,
         Stream,
+        operate::{
+            Condition,
+            append::Append as _,
+        },
     },
 };
 
@@ -48,7 +50,7 @@ pub fn single_append(c: &mut Criterion) {
     let mut group = c.benchmark_group("append");
 
     group.sample_size(10).bench_function("1000 x 1 event", |b| {
-        let mut stream = Stream::builder(eventric_stream::temp_path())
+        let mut stream = Stream::builder(eventric::utils::temp_path())
             .temporary(true)
             .open()
             .unwrap();
@@ -75,7 +77,7 @@ pub fn multiple_append(c: &mut Criterion) {
     group
         .sample_size(10)
         .bench_function("1000 x 10 events", |b| {
-            let mut stream = Stream::builder(eventric_stream::temp_path())
+            let mut stream = Stream::builder(eventric::utils::temp_path())
                 .temporary(true)
                 .open()
                 .unwrap();

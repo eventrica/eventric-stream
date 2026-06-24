@@ -422,27 +422,35 @@ dependencies = [
 ]
 
 [[package]]
-name = "eventric-model"
+name = "eventric"
 version = "0.1.0"
 dependencies = [
+ "assertables",
+ "bytes",
+ "crossbeam",
  "derive_more",
+ "double-ended-peekable",
  "error-stack",
- "eventric-model-core",
- "eventric-model-macros",
- "eventric-stream",
+ "eventric-macros",
  "fancy_constructor",
+ "fjall",
+ "oneshot",
+ "paste",
+ "rand",
+ "rapidhash",
  "revision",
+ "smallvec",
 ]
 
 [[package]]
-name = "eventric-model-core"
+name = "eventric-macros"
 version = "0.1.0"
 dependencies = [
- "derive_more",
- "error-stack",
- "eventric-stream",
- "fancy_constructor",
- "revision",
+ "darling",
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -451,34 +459,9 @@ version = "0.1.0"
 dependencies = [
  "derive_more",
  "error-stack",
- "eventric-model",
- "eventric-stream",
+ "eventric",
  "fancy_constructor",
  "revision",
-]
-
-[[package]]
-name = "eventric-model-macros"
-version = "0.1.0"
-dependencies = [
- "darling",
- "eventric-stream",
- "heck",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "eventric-stream"
-version = "0.1.0"
-dependencies = [
- "assertables",
- "error-stack",
- "eventric-stream-core",
- "eventric-stream-macros",
- "eventric-stream-multi-thread",
- "include-utils",
 ]
 
 [[package]]
@@ -486,60 +469,21 @@ name = "eventric-stream-benches"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "eventric-stream",
-]
-
-[[package]]
-name = "eventric-stream-core"
-version = "0.1.0"
-dependencies = [
- "assertables",
- "bytes",
- "derive_more",
- "double-ended-peekable",
- "error-stack",
- "fancy_constructor",
- "fjall",
- "paste",
- "rand",
- "rapidhash",
- "smallvec",
+ "eventric",
 ]
 
 [[package]]
 name = "eventric-stream-examples"
 version = "0.1.0"
 dependencies = [
- "eventric-stream",
-]
-
-[[package]]
-name = "eventric-stream-macros"
-version = "0.1.0"
-dependencies = [
- "darling",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "eventric-stream-multi-thread"
-version = "0.1.0"
-dependencies = [
- "crossbeam",
- "derive_more",
- "error-stack",
- "eventric-stream-core",
- "fancy_constructor",
- "oneshot",
+ "eventric",
 ]
 
 [[package]]
 name = "eventric-stream-profiling-examples"
 version = "0.1.0"
 dependencies = [
- "eventric-stream",
+ "eventric",
 ]
 
 [[package]]
@@ -662,28 +606,6 @@ name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
-
-[[package]]
-name = "include-utils"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "431d3c09de1082802cc229e78a515e4f46be80c7ac31eda029afa32e1518cebf"
-dependencies = [
- "include-utils-macro",
-]
-
-[[package]]
-name = "include-utils-macro"
-version = "0.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a2c76d2506581ed9ead2afacb6b8164e4cac323427fd67102b59225d35b49cb"
-dependencies = [
- "itertools",
- "manyhow",
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "interval-heap"
@@ -827,29 +749,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "manyhow"
-version = "0.11.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b33efb3ca6d3b07393750d4030418d594ab1139cee518f0dc88db70fec873587"
-dependencies = [
- "manyhow-macros",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "manyhow-macros"
-version = "0.11.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46fce34d199b78b6e6073abf984c9cf5fd3e9330145a93ee0738a7443e371495"
-dependencies = [
- "proc-macro-utils",
- "proc-macro2",
- "quote",
-]
-
-[[package]]
 name = "memchr"
 version = "2.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -943,17 +842,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51bae2ac328883f7acdfea3d66a7c35751187f870bc81f94563733a154d7a670"
 dependencies = [
  "plotters-backend",
-]
-
-[[package]]
-name = "proc-macro-utils"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eeaf08a13de400bc215877b5bdc088f241b12eb42f0a548d3390dc1c56bb7071"
-dependencies = [
- "proc-macro2",
- "quote",
- "smallvec",
 ]
 
 [[package]]

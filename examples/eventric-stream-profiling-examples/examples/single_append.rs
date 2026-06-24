@@ -3,7 +3,7 @@ use std::{
     time::Instant,
 };
 
-use eventric_stream::{
+use eventric::{
     event::{
         Data,
         Event,
@@ -14,9 +14,11 @@ use eventric_stream::{
         Version,
     },
     stream::{
-        Append as _,
-        Condition,
         Stream,
+        operate::{
+            Condition,
+            append::Append as _,
+        },
     },
 };
 
@@ -26,7 +28,7 @@ use eventric_stream::{
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 pub fn main() {
-    let mut stream = Stream::builder(eventric_stream::temp_path())
+    let mut stream = Stream::builder(eventric::utils::temp_path())
         .temporary(true)
         .open()
         .unwrap();

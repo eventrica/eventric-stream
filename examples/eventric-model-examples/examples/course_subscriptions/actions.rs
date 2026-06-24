@@ -1,10 +1,12 @@
 use derive_more::Debug;
 use error_stack::Report;
-use eventric_model::action::{
-    Act,
-    Action,
+use eventric::{
+    error::Error,
+    model::action::{
+        Act,
+        Action,
+    },
 };
-use eventric_stream::error::Error;
 use fancy_constructor::new;
 
 use crate::{

@@ -1,24 +1,26 @@
 use derive_more::Debug;
 use error_stack::Report;
-use eventric_model::{
-    Enactor as _,
-    action::{
-        Act,
-        Action,
-    },
-    event::Event,
-    projection::{
-        Project,
-        Projection,
-        ProjectionEvent,
-    },
-};
-use eventric_stream::{
+use eventric::{
     error::Error,
+    model::{
+        action::{
+            Act,
+            Action,
+        },
+        enactor::Enactor as _,
+        event::Event,
+        projection::{
+            Project,
+            Projection,
+            ProjectionEvent,
+        },
+    },
     stream::{
-        Condition,
-        Select as _,
         Stream,
+        operate::{
+            Condition,
+            select::Select as _,
+        },
     },
 };
 use fancy_constructor::new;
@@ -227,7 +229,7 @@ where
 // Example
 
 pub fn main() -> Result<(), Report<Error>> {
-    let mut stream = Stream::builder(eventric_stream::temp_path())
+    let mut stream = Stream::builder(eventric::utils::temp_path())
         .temporary(true)
         .open()?;
 

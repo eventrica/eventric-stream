@@ -1,0 +1,37 @@
+[dependencies]
+bytes.workspace                 = true
+crossbeam.workspace             = true
+derive_more.workspace           = true
+double-ended-peekable.workspace = true
+error-stack.workspace           = true
+eventric-macros.workspace       = true
+fancy_constructor.workspace     = true
+fjall.workspace                 = true
+oneshot                         = { workspace = true, features = ["std"] }
+paste.workspace                 = true
+rand.workspace                  = true
+rapidhash.workspace             = true
+revision.workspace              = true
+smallvec.workspace              = true
+
+[dev-dependencies]
+assertables.workspace       = true
+derive_more.workspace       = true
+error-stack.workspace       = true
+fancy_constructor.workspace = true
+revision.workspace          = true
+
+[lints]
+workspace = true
+
+[package]
+authors.workspace    = true
+categories.workspace = true
+description          = "Eventric — a low-level event-stream abstraction and event-sourcing model"
+edition.workspace    = true
+keywords.workspace   = true
+license.workspace    = true
+name                 = "eventric"
+readme.workspace     = true
+repository.workspace = true
+version.workspace    = true
