@@ -1,5 +1,6 @@
-//! See the `eventric-model` crate for full documentation, including
-//! module-level documentation.
+//! Commands: the [`Action`] trait (with its [`Act`]/[`Context`]/[`Select`]/
+//! [`Update`] components), run by the model
+//! [`Enactor`](super::enactor::Enactor).
 
 use std::ops::{
     Deref,

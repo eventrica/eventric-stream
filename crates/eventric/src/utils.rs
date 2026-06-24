@@ -1,5 +1,6 @@
-//! See the `eventric-stream` crate for full documentation, including
-//! module-level documentation.
+//! Crate utilities: a stable `hashing` function and a small `validation`
+//! framework (both internal), plus [`temp_path`] for creating temporary
+//! stream-storage paths.
 
 pub(crate) mod hashing;
 pub(crate) mod validation;

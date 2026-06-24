@@ -1,5 +1,5 @@
-//! See the `eventric-model` crate for full documentation, including
-//! module-level documentation.
+//! Events: the [`Event`] trait (with its [`Identifier`]/[`Specifier`]/[`Tags`]
+//! components) and the [`Events`] buffer.
 
 use std::collections::BTreeSet;
 

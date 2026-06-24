@@ -1,5 +1,5 @@
-//! See the `eventric-model` crate for full documentation, including
-//! module-level documentation.
+//! Projections: the [`Projection`] trait, which folds selected events into
+//! read-model state.
 //!
 //! # Multi-selector projections: the two-tools rule
 //!
@@ -46,8 +46,7 @@
 //!
 //! A deliberately deferred extension (named/keyed selectors that would generate
 //! per-selector payload enums and a per-selector-method trait) is recorded in
-//! `docs/keyed-selectors.md` at the repository root; it is intentionally *not*
-//! built today.
+//! `docs/keyed-selectors.md`; it is intentionally *not* built today.
 //!
 //! [`Update`]: crate::model::action::Update
 

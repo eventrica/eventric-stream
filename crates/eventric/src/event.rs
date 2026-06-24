@@ -21,7 +21,7 @@ use derive_more::{
 use error_stack::ResultExt;
 pub use eventric_macros::tag;
 use fancy_constructor::new;
-use paste::paste;
+use pastey::paste;
 
 use crate::{
     error::{
