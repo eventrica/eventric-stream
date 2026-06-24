@@ -18,7 +18,10 @@ deferred design decisions and the smaller debt.
 ## 1. Versioning — the biggest open area (design-pending)
 
 Two orthogonal versioning axes exist; neither is fully realised or documented.
-The maintainer wants to think the overall story through before implementing.
+The maintainer wants to think the overall story through before implementing. A
+full research-grounded exploration — the theory, the production-framework prior
+art, the DCB-specific picture, and how it could fit `eventric` (with a suggested
+order of work) — is in [`versioning.md`](./versioning.md).
 
 - **The model can't set the type `Version`.** `Events::append` hardcodes
   `Version::default()` (= 0) for every event, and `#[derive(Event)]` has no
@@ -36,6 +39,18 @@ The maintainer wants to think the overall story through before implementing.
   orthogonal; the model uses the latter and pins the former to 0. Decide the
   intended relationship and document it (they currently overlap conceptually in
   the docs without the distinction being stated).
+- **Orphaned `Version`/`Range` comparison traits (a design decision, not dead
+  code).** `impl PartialEq<Range<Self>>` / `impl PartialOrd<Range<Self>>` for
+  `Version` (`event.rs`) were deliberately added (commit `7ce9c043`,
+  "implementing comparison traits for version range") as a version-range
+  primitive, but the filtering that shipped uses stdlib `Range::contains` (the
+  in-memory mask re-check), which bypasses them, so they have no caller today.
+  The three-way `PartialOrd<Range>` (below / inside / above the range) is
+  plausibly the right primitive *if* versioning moves `Version` into the index
+  key (enabling a version-keyed range-scan). Decide its fate as part of the
+  versioning design: keep it and **pin the semantics with a test + doc** (it has
+  neither), or drop both. (`PartialEq<Range>` merely re-spells `Range::contains`,
+  so it is hard to justify either way.)
 - **Edge of an empty payload:** a revisioned struct that serialises to zero
   bytes would hit `Data::new`'s non-empty check and fail to append — untested.
 - **A `revision`-mismatch decode failure maps to the opaque `Error`** with only
@@ -44,12 +59,6 @@ The maintainer wants to think the overall story through before implementing.
 
 ### Stream-layer `Version` debt (cheaper, independent of the above)
 
-- **Dead code:** the hand-written `impl PartialEq<Range<Self>>` /
-  `impl PartialOrd<Range<Self>>` for `Version` (`event.rs`) are never called —
-  every range check uses stdlib `Range::contains`. The `PartialOrd` impl's
-  semantics differ from `contains` (it returns `Equal` for any in-range value);
-  the `PartialEq` impl merely duplicates `contains`. Remove both, or wire them
-  up (fixing + testing the `PartialOrd` semantics).
 - **The `MAX` (255) sentinel is unqueryable:** the half-open default range and
   all `VersionSelector` lowerings cap the upper bound at the exclusive
   `Version::MAX`, so version-255 events can be appended but never matched.
