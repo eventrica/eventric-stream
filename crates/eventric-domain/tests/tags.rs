@@ -28,7 +28,7 @@ use revision::revisioned;
 #[event(
     identifier: widget_made,
     tags: {
-        sku: sku,
+        sku,
         owner: &self.owner,
         count: |e| e.count.to_string()
     }
@@ -65,7 +65,7 @@ fn tag_value_forms_produce_expected_tags() {
 // accounts' queries.
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug)]
-#[event(identifier: transferred, tags: { account: [from, to], reference: reference })]
+#[event(identifier: transferred, tags: { account: [from, to], reference })]
 struct Transferred {
     #[new(into)]
     from: String,

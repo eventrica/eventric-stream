@@ -53,7 +53,7 @@ use revision::revisioned;
 #[derive(new, Event, Debug)]
 #[event(
     identifier: money_deposited,
-    tags: { account: account }
+    tags: { account }
 )]
 pub struct MoneyDeposited {
     #[new(into)]
@@ -65,7 +65,7 @@ pub struct MoneyDeposited {
 #[derive(new, Event, Debug)]
 #[event(
     identifier: money_withdrawn,
-    tags: { account: account }
+    tags: { account }
 )]
 pub struct MoneyWithdrawn {
     #[new(into)]
@@ -81,7 +81,7 @@ pub struct MoneyWithdrawn {
 
 #[derive(new, Projection, Debug)]
 #[projection(selections: {
-    balance: { events: [MoneyDeposited, MoneyWithdrawn], filter: { account: account } },
+    balance: { events: [MoneyDeposited, MoneyWithdrawn], filter: { account } },
 })]
 pub struct AccountBalance {
     #[new(into)]
@@ -111,7 +111,7 @@ impl Project<account_balance::Balance<'_>> for AccountBalance {
 
 #[derive(new, Projection, Debug)]
 #[projection(selections: {
-    deposited: { events: [MoneyDeposited], filter: { account: account } },
+    deposited: { events: [MoneyDeposited], filter: { account } },
 })]
 pub struct DepositTotal {
     #[new(into)]
@@ -129,7 +129,7 @@ impl Project<deposit_total::Deposited<'_>> for DepositTotal {
 
 #[derive(new, Projection, Debug)]
 #[projection(selections: {
-    withdrawn: { events: [MoneyWithdrawn], filter: { account: account } },
+    withdrawn: { events: [MoneyWithdrawn], filter: { account } },
 })]
 pub struct WithdrawalTotal {
     #[new(into)]

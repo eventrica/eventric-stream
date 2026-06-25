@@ -35,7 +35,7 @@ use revision::revisioned;
 // An event at the crate root, referenced below as the absolute `crate::Opened`.
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug)]
-#[event(identifier: opened, tags: { account: account })]
+#[event(identifier: opened, tags: { account })]
 struct Opened {
     #[new(into)]
     account: String,
@@ -47,7 +47,7 @@ mod events {
     // An event in a submodule, referenced below as the relative `events::Closed`.
     #[revisioned(revision = 1)]
     #[derive(new, Event, Debug)]
-    #[event(identifier: closed, tags: { account: account })]
+    #[event(identifier: closed, tags: { account })]
     pub struct Closed {
         #[new(into)]
         pub account: String,
@@ -58,7 +58,7 @@ mod events {
 // submodule-relative path, with distinct last segments (so distinct variants).
 #[derive(new, Projection, Debug)]
 #[projection(selections: {
-    status: { events: [crate::Opened, events::Closed], filter: { account: account } },
+    status: { events: [crate::Opened, events::Closed], filter: { account } },
 })]
 struct Status {
     #[new(default)]

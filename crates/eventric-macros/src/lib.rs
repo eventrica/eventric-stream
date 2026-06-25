@@ -141,7 +141,9 @@ pub fn action(input: TokenStream) -> TokenStream {
 ///   `<prefix>: <value>` entries. The prefix need not match the field (`course:
 ///   course_id` tags under `course` from the `course_id` field), and a value
 ///   may be a `[list]` to emit several tags under one prefix (e.g. a transfer
-///   tagged `account: [from, to]`).
+///   tagged `account: [from, to]`). When the prefix already names the field,
+///   the value may be omitted — a bare `account` is field-init shorthand for
+///   `account: account` (just like a Rust struct literal).
 ///
 /// ## Tag values
 ///
@@ -223,8 +225,11 @@ pub fn event(input: TokenStream) -> TokenStream {
 ///   *one* selection whose `match` discriminates.
 /// - **`events`** (required) lists the event types folded into this selection.
 /// - **`filter`** (optional) scopes the selection by tags, reusing the
-///   [`Event`] derive's value forms (bare ident / `self`-expression / closure /
-///   `[list]`) — a bare `account` is shorthand for `&self.account`.
+///   [`Event`] derive's tag forms — including the bare-`<prefix>` shorthand
+///   (`account` ≡ `account: account`). Here `self` is the **projection**, not
+///   the event (the filter is built in the projection's `select`, before any
+///   event is read), so a bare `account` reads `&self.account`, the
+///   projection's own field.
 ///
 /// # Example
 ///
@@ -237,7 +242,7 @@ pub fn event(input: TokenStream) -> TokenStream {
 ///             Deposited,
 ///             Withdrawn
 ///         ],
-///         filter: { account: account }
+///         filter: { account }
 ///     },
 /// })]
 /// struct AccountBalance {

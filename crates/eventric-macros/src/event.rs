@@ -131,7 +131,9 @@ impl Parse for EventArgs {
 
 // TagEntry — one `<prefix>: <value>` tag declaration, where `<value>` is a
 // single value or `[a, b, ..]` for several tags under the same prefix (e.g. a
-// transfer tagged `account: [from, to]`).
+// transfer tagged `account: [from, to]`). A bare `<prefix>` with no `: <value>`
+// is field-init shorthand for `<prefix>: <prefix>` (à la Rust struct literals)
+// — the tag from the field of the same name.
 
 #[derive(Debug)]
 pub(crate) struct TagEntry {
@@ -142,6 +144,19 @@ pub(crate) struct TagEntry {
 impl Parse for TagEntry {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let prefix = input.parse::<Ident>()?;
+
+        // Field-init shorthand: a bare `account` (no `: <value>`) means `account:
+        // account` — the tag from `&self.account`, the field of the same name. The
+        // only tokens that can follow a prefix are `:` (the full form), or the `,`
+        // / closing brace the surrounding map handles, so absence of `:` is
+        // unambiguous.
+        if !input.peek(Token![:]) {
+            return Ok(Self {
+                values: vec![Tag::Ident(prefix.clone())],
+                prefix,
+            });
+        }
+
         input.parse::<Token![:]>()?;
 
         let values = if input.peek(Bracket) {
@@ -354,6 +369,27 @@ mod tests {
         assert_eq!(args.tags.len(), 1);
         assert_eq!(args.tags[0].prefix.to_string(), "account");
         assert_eq!(args.tags[0].values.len(), 2);
+    }
+
+    // Field-init shorthand: a bare `account` means `account: account`, parsing to
+    // the same single `Tag::Ident(account)` the explicit form would. It mixes with
+    // explicit entries, both mid-map (followed by `,`) and at the end (before `}`).
+    #[test]
+    fn tag_field_shorthand_parses() {
+        let args = parse("identifier: x, tags: { account, region: &self.region, student }")
+            .expect("shorthand");
+
+        assert_eq!(args.tags.len(), 3);
+
+        match &args.tags[0].values[..] {
+            [Tag::Ident(field)] => assert_eq!(field.to_string(), "account"),
+            _ => panic!("`account` should be the bare-ident shorthand"),
+        }
+        assert!(matches!(args.tags[1].values[0], Tag::Expr(_)));
+        match &args.tags[2].values[..] {
+            [Tag::Ident(field)] => assert_eq!(field.to_string(), "student"),
+            _ => panic!("`student` should be the bare-ident shorthand"),
+        }
     }
 
     #[test]

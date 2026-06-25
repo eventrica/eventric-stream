@@ -58,7 +58,7 @@ use revision::revisioned;
 
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug, PartialEq)]
-#[event(identifier: deposit, tags: { account: account, channel: channel })]
+#[event(identifier: deposit, tags: { account, channel })]
 struct Deposit {
     #[new(into)]
     account: String,
@@ -69,7 +69,7 @@ struct Deposit {
 
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug, PartialEq)]
-#[event(identifier: withdrawal, tags: { account: account })]
+#[event(identifier: withdrawal, tags: { account })]
 struct Withdrawal {
     #[new(into)]
     account: String,
@@ -87,7 +87,7 @@ struct Withdrawal {
 /// in `net`.
 #[derive(new, Projection, Debug)]
 #[projection(selections: {
-    balance: { events: [Deposit, Withdrawal], filter: { account: account } },
+    balance: { events: [Deposit, Withdrawal], filter: { account } },
 })]
 struct Balance {
     #[new(default)]
@@ -125,8 +125,8 @@ impl Project<balance::Balance<'_>> for Balance {
 /// channel matches NEITHER selection and is not folded at all.
 #[derive(new, Projection, Debug)]
 #[projection(selections: {
-    wire: { events: [Deposit], filter: { account: account, channel: "wire" } },
-    card: { events: [Deposit], filter: { account: account, channel: "card" } },
+    wire: { events: [Deposit], filter: { account, channel: "wire" } },
+    card: { events: [Deposit], filter: { account, channel: "card" } },
 })]
 struct ChannelTotals {
     #[new(default)]
@@ -158,7 +158,7 @@ impl Project<channel_totals::Card<'_>> for ChannelTotals {
 /// Counts deposits arriving over the "wire" channel for an account.
 #[derive(new, Projection, Debug)]
 #[projection(selections: {
-    deposited: { events: [Deposit], filter: { account: account, channel: "wire" } },
+    deposited: { events: [Deposit], filter: { account, channel: "wire" } },
 })]
 struct WireDeposits {
     #[new(default)]
@@ -181,7 +181,7 @@ impl Project<wire_deposits::Deposited<'_>> for WireDeposits {
 /// channel. A single deposit can match BOTH this filter and `WireDeposits`'.
 #[derive(new, Projection, Debug)]
 #[projection(selections: {
-    deposited: { events: [Deposit], filter: { account: account } },
+    deposited: { events: [Deposit], filter: { account } },
 })]
 struct LargeDeposits {
     #[new(default)]

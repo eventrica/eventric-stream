@@ -57,9 +57,10 @@ Attribute bodies are a small declarative DSL:
 - A value in a `{ … }` map may itself be a `[list]` for the multi-valued case —
   `tags: { account: [from, to] }` declares two `account:` tags (a multi-entity
   event like a transfer), which replaced the earlier repeated-prefix form.
-- **Values** keep three forms, orthogonal to the container grammar — formatted by
-  `tag!` as `prefix:value` (the value need only be `Display`). Each expands inside
-  a generated `&self` method, so the event is in scope as `self`:
+- **Values** keep three forms (plus a field-init shorthand), orthogonal to the
+  container grammar — formatted by `tag!` as `prefix:value` (the value need only be
+  `Display`). Each expands inside a generated `&self` method, so the event is in
+  scope as `self`:
   - **bare ident** — `course: id` ⇒ `&self.id` (the terse common case).
   - **expression** — `course: &self.id` — any expression; `self` is the event (the
     escape hatch).
@@ -67,6 +68,9 @@ Attribute bodies are a small declarative DSL:
     block binding the event to the closure's own parameter name, for when you want a
     different name (or `|_| …` to ignore it) or a multi-statement body. No closure is
     actually generated, so there is no higher-ranked-lifetime coercion (and no `Cow`).
+  - **field-init shorthand** — a bare `account` (no `: value`) ≡ `account: account`
+    ⇒ `&self.account`, when the prefix already names the field (à la Rust struct
+    literals). Applies to `tags` and projection `filter` alike.
 
 > **Receiver name — `self`.** The event (in `tags`/`filter` values) or the action
 > (in `projections:` constructors) is named `self`, uniformly across all three
@@ -98,7 +102,8 @@ pub struct StudentSubscribedToCourse { /* … */ }
 
 - **Impl burden: none** — just the struct.
 - `identifier:` mandatory and explicit (see principles).
-- `tags:` optional, a map; each entry `prefix: value` (or `prefix: [values]`).
+- `tags:` optional, a map; each entry `prefix: value`, `prefix: [values]`, or a
+  bare `prefix` (field-init shorthand for `prefix: prefix`).
 - Still requires `#[revisioned(revision = N)]` (serialisation — a separate crate's
   macro that must wrap) and a constructor (`#[derive(new)]`) as today.
 

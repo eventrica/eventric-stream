@@ -35,7 +35,7 @@
 //! #[derive(Event)]
 //! #[event(
 //!     identifier: money_deposited,
-//!     tags: { account: account }
+//!     tags: { account }
 //! )]
 //! struct MoneyDeposited {
 //!     account: String,
@@ -46,7 +46,7 @@
 //! #[derive(new, Event)]
 //! #[event(
 //!     identifier: money_withdrawn,
-//!     tags: { account: account }
+//!     tags: { account }
 //! )]
 //! struct MoneyWithdrawn {
 //!     #[new(into)]
@@ -61,7 +61,7 @@
 //!             MoneyDeposited,
 //!             MoneyWithdrawn
 //!         ],
-//!         filter: { account: account }
+//!         filter: { account }
 //!     },
 //! })]
 //! struct AccountBalance {
