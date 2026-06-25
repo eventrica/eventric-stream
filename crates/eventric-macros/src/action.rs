@@ -135,9 +135,16 @@ impl Action {
                     ::std::vec::Vec<::eventric_stream::stream::operate::Selection>,
                     ::error_stack::Report<::eventric_domain::error::Error>
                 > {
-                    ::std::result::Result::Ok(::std::vec![
-                      #(::eventric_domain::projection::Select::select(&context.#context_field_name)?),*
-                    ])
+                    // Each projection contributes one `Selection` per named
+                    // selection; flattened in projection order, they are the mask
+                    // layout `update` slices against.
+                    let mut selections = ::std::vec::Vec::new();
+
+                  #(selections.extend(
+                        ::eventric_domain::projection::Select::select(&context.#context_field_name)?
+                    );)*
+
+                    ::std::result::Result::Ok(selections)
                 }
             }
         }
@@ -148,7 +155,7 @@ impl Action {
         let projections = &self.projections;
 
         let context_field_name = projections.iter().map(|p| &p.field_name);
-        let context_field_index = 0..projections.len();
+        let context_field_type = projections.iter().map(|p| &p.field_type);
 
         quote! {
             #[automatically_derived]
@@ -158,20 +165,35 @@ impl Action {
                     context: &mut Self::Context,
                     event: &::eventric_stream::stream::operate::select::EventAndMask
                 ) -> ::std::result::Result<(), ::error_stack::Report<::eventric_domain::error::Error>> {
-                    let mut dispatch_event = None;
+                    // Walk the mask one projection-block at a time: each projection
+                    // owns `SELECTIONS` consecutive bits. Decode once (shared across
+                    // projections of the same event type) and hand each projection
+                    // just its own slice of the mask.
+                    let mut dispatch_event = ::std::option::Option::None;
+                    let mut base = 0usize;
 
-                  #(if event.mask[#context_field_index] && dispatch_event.is_none() {
-                        dispatch_event = ::eventric_domain::projection::Recognize::recognize(
-                            &context.#context_field_name,
-                            event,
-                        )?;
-                    }
+                  #({
+                        let count = <#context_field_type as ::eventric_domain::projection::Select>::SELECTIONS;
+                        let mask = &::std::convert::AsRef::<[bool]>::as_ref(&event.mask)[base..base + count];
 
-                    if event.mask[#context_field_index] && let Some(dispatch_event) = dispatch_event.as_ref() {
-                        ::eventric_domain::projection::Dispatch::dispatch(
-                            &mut context.#context_field_name,
-                            dispatch_event,
-                        );
+                        if mask.contains(&true) {
+                            if dispatch_event.is_none() {
+                                dispatch_event = ::eventric_domain::projection::Recognize::recognize(
+                                    &context.#context_field_name,
+                                    event,
+                                )?;
+                            }
+
+                            if let ::std::option::Option::Some(dispatch_event) = dispatch_event.as_ref() {
+                                ::eventric_domain::projection::Dispatch::dispatch(
+                                    &mut context.#context_field_name,
+                                    mask,
+                                    dispatch_event,
+                                );
+                            }
+                        }
+
+                        base += count;
                     })*
 
                     ::std::result::Result::Ok(())

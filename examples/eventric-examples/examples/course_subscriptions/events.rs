@@ -10,7 +10,7 @@ use revision::revisioned;
 #[derive(new, Event, Debug)]
 #[event(
     identifier: course_defined,
-    tags: [course: id]
+    tags: { course: id }
 )]
 pub struct CourseDefined {
     #[new(into)]
@@ -22,7 +22,7 @@ pub struct CourseDefined {
 #[derive(new, Event, Debug)]
 #[event(
     identifier: course_capacity_changed,
-    tags: [course: id]
+    tags: { course: id }
 )]
 pub struct CourseCapacityChanged {
     #[new(into)]
@@ -34,10 +34,10 @@ pub struct CourseCapacityChanged {
 #[derive(new, Event, Debug)]
 #[event(
     identifier: student_subscribed_to_course,
-    tags: [
+    tags: {
         course: course_id,
         student: student_id
-    ]
+    }
 )]
 pub struct StudentSubscribedToCourse {
     #[new(into)]

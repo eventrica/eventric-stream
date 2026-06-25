@@ -1,28 +1,25 @@
-//! Integration tests for *multi-selector* projection behaviour: a single
-//! `#[derive(Projection)]` carrying more than one `select(...)` clause, and the
+//! Integration tests for projection **named selections**: a single
+//! `#[derive(Projection)]` carrying more than one named selection, and the
 //! complementary "separate projections" idiom where two projections range over
 //! the same event type with different filters.
 //!
-//! These tests exercise three distinct shapes, all built on the same tiny
-//! "wallet" domain (deposits and withdrawals, each tagged by account):
+//! Three shapes over a tiny "wallet" domain (deposits and withdrawals, tagged
+//! by account; deposits additionally by channel):
 //!
-//! 1. ONE projection, multiple `select(...)` clauses over DISTINCT event types.
-//!    The clauses OR-union into a single `Selection`; each matched event is
-//!    routed to the `Project` impl for its own type. (Same mechanism as
-//!    `enact.rs`'s `ItemPresent`, but here we additionally fold a numeric value
-//!    from each type's payload to prove the union folds correctly.)
+//! 1. ONE selection naming SEVERAL event types. The selection's method matches
+//!    an enum (a variant per type), folding both into one state — `Balance`.
 //!
-//! 2. ONE projection, two `select(...)` clauses on the SAME type but DIFFERENT
-//!    tag filters. The two clauses OR-union, so the projection replays events
-//!    matching EITHER filter — but because both clauses target the same event
-//!    type (one `Project` impl), the projection cannot tell which clause
-//!    matched from the type alone. Discrimination is therefore done from the
-//!    PAYLOAD inside `project`.
+//! 2. TWO named selections on the SAME type with DIFFERENT tag filters. Each
+//!    has its own method, so the *filter* (not a payload re-check) is what
+//!    distinguishes them — `ChannelTotals` (wire vs card). An event matching no
+//!    selection is simply not folded.
 //!
 //! 3. The SEPARATE-PROJECTIONS idiom: two projections over the same event type
 //!    with different filters, driven by one action. They fold INDEPENDENTLY
-//!    (each gets its own mask bit), and a single event matching BOTH filters is
-//!    folded into BOTH projections (multi-match).
+//!    (each gets its own mask bit), and a single event matching BOTH folds into
+//!    BOTH (multi-match). Discrimination that is NOT expressible as a tag
+//!    filter (`LargeDeposits`' amount threshold) stays a payload check in the
+//!    method.
 //!
 //! Storage is always a fresh temporary stream, isolated per test.
 
@@ -37,7 +34,6 @@ use eventric_domain::{
     error::Error,
     event::Event,
     projection::{
-        Project,
         Projection,
         ProjectionEvent,
     },
@@ -54,11 +50,11 @@ use revision::revisioned;
 //
 // Two distinct event types over a "wallet" domain. Both are tagged by account,
 // and `Deposit` is *additionally* tagged by `channel` (e.g. "wire" / "card") so
-// that test 2 can build two same-type selectors with different tag filters.
+// that test 2 can build two same-type selections with different tag filters.
 
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug, PartialEq)]
-#[event(identifier: deposit, tags: [account: account, channel: channel])]
+#[event(identifier: deposit, tags: { account: account, channel: channel })]
 struct Deposit {
     #[new(into)]
     account: String,
@@ -69,7 +65,7 @@ struct Deposit {
 
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug, PartialEq)]
-#[event(identifier: withdrawal, tags: [account: account])]
+#[event(identifier: withdrawal, tags: { account: account })]
 struct Withdrawal {
     #[new(into)]
     account: String,
@@ -77,28 +73,18 @@ struct Withdrawal {
 }
 
 // =================================================================================================
-// 1. ONE projection, multiple `select` clauses over DISTINCT event types.
+// 1. ONE selection naming SEVERAL event types.
 // =================================================================================================
 
-/// Folds the running balance for an account from BOTH event types. The two
-/// `select(...)` clauses (one per type) OR-union into a single `Selection`;
-/// each matched event is dispatched to the `Project` impl for its own type, so
-/// deposits add and withdrawals subtract. Proving the union folds correctly
-/// means a value derived from each *distinct* type's payload lands in
-/// `balance`.
+/// Folds the running balance for an account from BOTH event types. The one
+/// `balance` selection names both types (filtered to the account); its method
+/// matches the enum, so deposits add and withdrawals subtract. Proving the fold
+/// is correct means a value derived from each *distinct* type's payload lands
+/// in `net`.
 #[derive(new, Projection, Debug)]
-#[projection(
-    select(
-        events(Deposit),
-        filter(account(&this.account))
-    )
-)]
-#[projection(
-    select(
-        events(Withdrawal),
-        filter(account(&this.account))
-    )
-)]
+#[projection(selections: {
+    balance: { events: [Deposit, Withdrawal], filter: { account: account } },
+})]
 struct Balance {
     #[new(default)]
     net: i64,
@@ -110,70 +96,52 @@ struct Balance {
     account: String,
 }
 
-impl Project<Deposit> for Balance {
-    fn project(&mut self, event: ProjectionEvent<'_, Deposit>) {
-        self.net += i64::try_from(event.amount).expect("deposit fits i64");
-        self.deposits += 1;
-    }
-}
-
-impl Project<Withdrawal> for Balance {
-    fn project(&mut self, event: ProjectionEvent<'_, Withdrawal>) {
-        self.net -= i64::try_from(event.amount).expect("withdrawal fits i64");
-        self.withdrawals += 1;
+impl balance::Project for Balance {
+    fn balance(&mut self, event: ProjectionEvent<balance::Balance<'_>>) {
+        match event.event() {
+            balance::Balance::Deposit(event) => {
+                self.net += i64::try_from(event.amount).expect("deposit fits i64");
+                self.deposits += 1;
+            }
+            balance::Balance::Withdrawal(event) => {
+                self.net -= i64::try_from(event.amount).expect("withdrawal fits i64");
+                self.withdrawals += 1;
+            }
+        }
     }
 }
 
 // =================================================================================================
-// 2. ONE projection, two `select` clauses on the SAME type, DIFFERENT tag
-//    filters.
+// 2. TWO named selections on the SAME type, DIFFERENT tag filters.
 // =================================================================================================
 
-/// Two `select(...)` clauses, BOTH on `Deposit`, but filtered by different
-/// channels ("wire" and "card"). The clauses OR-union, so the projection
-/// replays deposits matching EITHER channel. Both clauses dispatch to the
-/// single `Project<Deposit>` impl, which therefore cannot know *which* clause
-/// matched from the type alone — it must discriminate from the PAYLOAD
-/// (`event.channel`) to bucket the amount.
+/// Two named selections, BOTH on `Deposit`, filtered by different channels
+/// ("wire" and "card"). Each has its own method, so the filter — not a payload
+/// re-check — routes the amount to the right bucket. A deposit on some other
+/// channel matches NEITHER selection and is not folded at all.
 #[derive(new, Projection, Debug)]
-#[projection(
-    select(
-        events(Deposit),
-        filter(
-            account(&this.account),
-            channel("wire")
-        )
-    )
-)]
-#[projection(
-    select(
-        events(Deposit),
-        filter(
-            account(&this.account),
-            channel("card")
-        )
-    )
-)]
+#[projection(selections: {
+    wire: { events: [Deposit], filter: { account: account, channel: "wire" } },
+    card: { events: [Deposit], filter: { account: account, channel: "card" } },
+})]
 struct ChannelTotals {
     #[new(default)]
     wire: u64,
     #[new(default)]
     card: u64,
-    #[new(default)]
-    other: u64,
     #[new(into)]
     account: String,
 }
 
-impl Project<Deposit> for ChannelTotals {
-    fn project(&mut self, event: ProjectionEvent<'_, Deposit>) {
-        // Discrimination is from the PAYLOAD, not the selector: both clauses
-        // dispatch here, so the channel is read off the decoded event.
-        match event.channel.as_str() {
-            "wire" => self.wire += event.amount,
-            "card" => self.card += event.amount,
-            _ => self.other += event.amount,
-        }
+impl channel_totals::Project for ChannelTotals {
+    fn wire(&mut self, event: ProjectionEvent<channel_totals::Wire<'_>>) {
+        let channel_totals::Wire::Deposit(event) = event.event();
+        self.wire += event.amount;
+    }
+
+    fn card(&mut self, event: ProjectionEvent<channel_totals::Card<'_>>) {
+        let channel_totals::Card::Deposit(event) = event.event();
+        self.card += event.amount;
     }
 }
 
@@ -183,15 +151,9 @@ impl Project<Deposit> for ChannelTotals {
 
 /// Counts deposits arriving over the "wire" channel for an account.
 #[derive(new, Projection, Debug)]
-#[projection(
-    select(
-        events(Deposit),
-        filter(
-            account(&this.account),
-            channel("wire")
-        )
-    )
-)]
+#[projection(selections: {
+    deposited: { events: [Deposit], filter: { account: account, channel: "wire" } },
+})]
 struct WireDeposits {
     #[new(default)]
     count: u32,
@@ -201,8 +163,9 @@ struct WireDeposits {
     account: String,
 }
 
-impl Project<Deposit> for WireDeposits {
-    fn project(&mut self, event: ProjectionEvent<'_, Deposit>) {
+impl wire_deposits::Project for WireDeposits {
+    fn deposited(&mut self, event: ProjectionEvent<wire_deposits::Deposited<'_>>) {
+        let wire_deposits::Deposited::Deposit(event) = event.event();
         self.count += 1;
         self.total += event.amount;
     }
@@ -211,12 +174,9 @@ impl Project<Deposit> for WireDeposits {
 /// Counts LARGE deposits (amount >= threshold) for an account, regardless of
 /// channel. A single deposit can match BOTH this filter and `WireDeposits`'.
 #[derive(new, Projection, Debug)]
-#[projection(
-    select(
-        events(Deposit),
-        filter(account(&this.account))
-    )
-)]
+#[projection(selections: {
+    deposited: { events: [Deposit], filter: { account: account } },
+})]
 struct LargeDeposits {
     #[new(default)]
     count: u32,
@@ -226,9 +186,11 @@ struct LargeDeposits {
     account: String,
 }
 
-impl Project<Deposit> for LargeDeposits {
-    fn project(&mut self, event: ProjectionEvent<'_, Deposit>) {
-        // Only large deposits are counted; discrimination is from the payload.
+impl large_deposits::Project for LargeDeposits {
+    fn deposited(&mut self, event: ProjectionEvent<large_deposits::Deposited<'_>>) {
+        let large_deposits::Deposited::Deposit(event) = event.event();
+
+        // The amount threshold is not a tag, so it stays a payload check.
         if event.amount >= 100 {
             self.count += 1;
             self.total += event.amount;
@@ -266,8 +228,8 @@ impl Act for MakeDeposit {
 
 /// Append a withdrawal, but only if the folded `Balance` (deposits MINUS
 /// withdrawals, across both event types) can cover it. This is what proves the
-/// multi-selector union folded correctly: the rule reads `balance`, which only
-/// holds the right value if both `Deposit` and `Withdrawal` clauses replayed.
+/// selection folded correctly: the rule reads `net`, which only holds the right
+/// value if both `Deposit` and `Withdrawal` events replayed.
 #[derive(new, Action, Debug)]
 #[action(
     projection(Balance: Balance::new(&this.account))
@@ -317,8 +279,8 @@ impl Act for ReadBalance {
     }
 }
 
-/// Read-only: returns the folded `ChannelTotals` (test 2 — same-type, two tag
-/// filters, payload discrimination).
+/// Read-only: returns the folded `ChannelTotals` (test 2 — same type, two named
+/// selections distinguished by filter). Returns `(wire, card)`.
 #[derive(new, Action, Debug)]
 #[action(
     projection(ChannelTotals: ChannelTotals::new(&this.account))
@@ -330,12 +292,12 @@ struct ReadChannelTotals {
 
 impl Act for ReadChannelTotals {
     type Err = Report<Error>;
-    type Ok = (u64, u64, u64);
+    type Ok = (u64, u64);
 
     fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
         let totals = &context.channel_totals;
 
-        Ok((totals.wire, totals.card, totals.other))
+        Ok((totals.wire, totals.card))
     }
 }
 
@@ -394,10 +356,10 @@ fn total_events(stream: &Stream) -> usize {
 // Tests
 // =================================================================================================
 
-// 1. ONE projection, multiple `select` clauses over DISTINCT event types: the
-//    OR-union folds correctly, each type via its own `Project` impl.
+// 1. ONE selection naming both event types: the enum-matching method folds
+//    both, deposits adding and withdrawals subtracting.
 #[test]
-fn single_projection_distinct_type_clauses_union_folds() {
+fn one_selection_folds_several_event_types() {
     let mut stream = stream();
 
     // Two deposits and one withdrawal for the same account.
@@ -407,8 +369,8 @@ fn single_projection_distinct_type_clauses_union_folds() {
 
     assert_eq!(total_events(&stream), 3);
 
-    // The `Balance` projection folded BOTH deposit clauses AND the withdrawal
-    // clause: 100 + 50 - 30 = 120, from 2 deposits and 1 withdrawal.
+    // The `Balance` selection folded BOTH deposits AND the withdrawal:
+    // 100 + 50 - 30 = 120, from 2 deposits and 1 withdrawal.
     let balance = stream
         .enact(ReadBalance::new("alice"))
         .expect("read balance");
@@ -417,7 +379,7 @@ fn single_projection_distinct_type_clauses_union_folds() {
     assert_eq!(balance.withdrawals, 1);
     assert_eq!(balance.net, 120);
 
-    // The business rule depends on the union: a withdrawal of 120 is exactly
+    // The business rule depends on the fold: a withdrawal of 120 is exactly
     // covered (succeeds), but 121 is not (rejected, nothing appended).
     assert!(stream.enact(MakeWithdrawal::new("alice", 121)).is_err());
     assert_eq!(total_events(&stream), 3);
@@ -435,10 +397,10 @@ fn single_projection_distinct_type_clauses_union_folds() {
     assert_eq!(balance.withdrawals, 2);
 }
 
-// 1b. Account isolation: the account tag filter scopes the union. A different
-//     account's events must not fold into `alice`'s balance.
+// 1b. Account isolation: the account tag filter scopes the selection. A
+// different     account's events must not fold into `alice`'s balance.
 #[test]
-fn single_projection_union_respects_tag_filter() {
+fn selection_respects_tag_filter() {
     let mut stream = stream();
 
     assert!(stream.enact(MakeDeposit::new("alice", "wire", 100)).is_ok());
@@ -460,16 +422,15 @@ fn single_projection_union_respects_tag_filter() {
     assert_eq!(bob.withdrawals, 0);
 }
 
-// 2. ONE projection, two `select` clauses on the SAME type with DIFFERENT tag
-//    filters: the OR-union is replayed, and the projection discriminates the
-//    matched clause from the PAYLOAD (not the selector).
+// 2. TWO named selections on the SAME type with different filters: each event
+//    is routed to its selection's method by the filter, and an event matching
+//    no selection is not folded.
 #[test]
-fn single_projection_same_type_clauses_discriminate_by_payload() {
+fn named_selections_route_same_type_by_filter() {
     let mut stream = stream();
 
     // Deposits across three channels for the same account. Only "wire" and
-    // "card" are selected by the two clauses; "cash" is NOT selected, so it
-    // must never reach the projection.
+    // "card" have selections; "cash" matches neither, so it must never fold.
     assert!(stream.enact(MakeDeposit::new("carol", "wire", 10)).is_ok());
     assert!(stream.enact(MakeDeposit::new("carol", "wire", 5)).is_ok());
     assert!(stream.enact(MakeDeposit::new("carol", "card", 20)).is_ok());
@@ -477,24 +438,21 @@ fn single_projection_same_type_clauses_discriminate_by_payload() {
 
     assert_eq!(total_events(&stream), 4);
 
-    let (wire, card, other) = stream
+    let (wire, card) = stream
         .enact(ReadChannelTotals::new("carol"))
         .expect("read channel totals");
 
-    // Wire: 10 + 5 = 15. Card: 20. The two clauses OR-unioned, both dispatched
-    // to the single Project<Deposit>, which bucketed by payload channel.
+    // Wire: 10 + 5 = 15, routed by the `wire` selection. Card: 20, by `card`.
     assert_eq!(wire, 15);
     assert_eq!(card, 20);
 
-    // The "cash" deposit was outside BOTH clauses' tag filters, so it never
-    // reached `project`: `other` stays zero even though it carries the largest
-    // amount.
-    assert_eq!(other, 0);
+    // The "cash" deposit (99) matched neither selection, so it folded into
+    // nothing — wire + card account for 35, not 134.
 }
 
 // 3. SEPARATE-PROJECTIONS idiom: two projections over the same event type with
-//    different filters fold INDEPENDENTLY, and one event matching BOTH filters
-//    folds into BOTH (multi-match).
+//    different filters fold INDEPENDENTLY, and one event matching BOTH folds
+//    into BOTH (multi-match).
 #[test]
 fn separate_projections_fold_independently_and_multi_match() {
     let mut stream = stream();

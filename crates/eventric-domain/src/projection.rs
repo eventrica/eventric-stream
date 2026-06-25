@@ -1,59 +1,57 @@
 //! Projections: the [`Projection`] trait, which folds selected events into
-//! read-model state.
+//! read-model state via **named selections**.
 //!
-//! # Multi-selector projections: the two-tools rule
+//! # Named selections
 //!
-//! A `#[derive(Projection)]` may declare more than one `select(..)` clause, and
-//! a single `select(..)` may name more than one event type. There are exactly
-//! two tools for shaping what a projection consumes, and they mean different
-//! things:
+//! A `#[derive(Projection)]` declares one or more *named* selections — each a
+//! set of event types plus an optional tag filter:
 //!
-//! 1. **Many `select(..)` clauses in one projection** — "these events are all
-//!    inputs to *one* piece of derived state; I do not care which clause
-//!    matched." The clauses OR together into a single [`Selection`], i.e. one
-//!    mask bit. The projection then discriminates finer than the OR (and finer
-//!    than type) *inside* its [`Project`] impls, by reading the decoded
-//!    payload.
+//! ```text
+//! #[projection(selections: {
+//!     capacity: { events: [CourseDefined, CourseCapacityChanged], filter: { course: id } },
+//! })]
+//! ```
 //!
-//! 2. **One projection per filter** — "these are *distinct* read-models over
-//!    overlapping events." Each projection gets its own mask bit, its own
-//!    [`Selection`], and its own [`Project`] impls. (Live example, in the
-//!    `course_subscriptions` example: `NumberOfCourseSubscriptions` and
-//!    `NumberOfStudentSubscriptions` fold the same `StudentSubscribedToCourse`
-//!    event under different tag filters — so they are two projections, not two
-//!    selectors on one.)
+//! For each selection the derive generates, in a module named after the
+//! projection (`snake_case`), a **borrowed enum** with one variant per event
+//! type, and a `Project` trait with **one method per selection** taking that
+//! enum wrapped in a [`ProjectionEvent`] (so position/timestamp come along).
+//! The user implements that trait — one method per selection:
 //!
-//! ## Routing is by type; discrimination is by payload
+//! ```text
+//! impl course_capacity::Project for CourseCapacity {
+//!     fn capacity(&mut self, e: ProjectionEvent<course_capacity::Capacity<'_>>) {
+//!         match e.event() {
+//!             Capacity::CourseDefined(ev)         => self.capacity = ev.capacity,
+//!             Capacity::CourseCapacityChanged(ev) => self.capacity = ev.new_capacity,
+//!         }
+//!     }
+//! }
+//! ```
 //!
-//! An event is routed to a projection **by its event type** via `Project<E>`,
-//! and that routing is enforced by Rust's coherence rules: you cannot write two
-//! `impl Project<Transfer>` for the same projection, so each type lands in
-//! exactly one handler. Any discrimination *finer than type* is the
-//! projection's own business and is done from the **payload** — and that is the
-//! right place for it, because the tags were derived from the payload fields in
-//! the first place. The payload is therefore the canonical, type-checked, and
-//! more expressive source; re-deriving a distinction from tags would be a
-//! lossy, stringly-typed detour around data you already hold.
+//! Adding or removing an event type in a selection changes the enum, so every
+//! `match` over it must be updated — a **compile-time** prompt, not a silent
+//! drop.
 //!
-//! ## Multi-match is set-valued and cheap
+//! ## Shaping inputs
 //!
-//! Matching is set-valued and free: an event that satisfies several projections
-//! sets several mask bits, and every matching projection folds it — there is no
-//! "which selector won" arbitration. Nor is there a decode penalty for
-//! splitting state across separate projections: [`Update`] recognises (decodes)
-//! the payload **once** and shares the boxed [`DispatchEvent`] across every
-//! same-type slot in the action's context.
+//! Each named selection is its own input channel: distinct read-models over the
+//! same event type are *separate named selections* (each its own method), while
+//! a single derived state folded from several event types is *one selection*
+//! whose method matches the enum. There is no "which selector won" arbitration
+//! — matching is set-valued, and the payload is decoded once and shared across
+//! every selection (and every same-type projection slot) that matched.
 //!
-//! A redesign that replaces this `Project<E>` surface with named selectors
-//! (per-selection event enums + a per-selection method trait), as part of a
-//! declarative derive-grammar overhaul, is designed in `docs/derives.md`; it is
-//! not yet built.
+//! ## Dispatch + the mask
 //!
-//! [`Update`]: crate::action::Update
+//! Each named selection is a separate [`Selection`] in the query, so it has its
+//! own positional bit in the stream's mask. The model layer de-positionalises
+//! that: [`Dispatch::dispatch`] receives just *this projection's* slice of the
+//! mask, and routes each set bit straight to its selection's method — no
+//! per-event re-test of the filters. [`Select::SELECTIONS`] is the slice width.
 
 use std::any::Any;
 
-use derive_more::Deref;
 use error_stack::{
     Report,
     ResultExt as _,
@@ -81,56 +79,53 @@ use crate::{
 // Projection
 
 /// A read-model built by folding selected events: the composite of [`Select`]
-/// (what events), [`Recognize`] (type-match + decode), and [`Dispatch`] (fold).
-/// Derived by `#[derive(Projection)]`.
+/// (what events, as named selections), [`Recognize`] (type-match + decode), and
+/// [`Dispatch`] (fold into the matching selection's method). Derived by
+/// `#[derive(Projection)]`.
 pub trait Projection: Dispatch + Recognize + Select {}
 
-// Dispatch
+// Select
 
-/// Folds a recognised event into the projection's state, routing by payload
-/// type to the matching [`Project`] impl.
-pub trait Dispatch {
-    /// Dispatch a decoded [`DispatchEvent`] into this projection's fold.
-    fn dispatch(&mut self, event: &DispatchEvent);
-}
+/// Builds the [`Selection`]s this projection folds — one per named selection,
+/// in declaration order.
+pub trait Select {
+    /// The number of named selections, i.e. the width of this projection's
+    /// slice of the query mask.
+    const SELECTIONS: usize;
 
-// Project
-
-/// Folds a single event type `E` into the projection. One impl per event type
-/// the projection consumes — coherence makes the routing exhaustive.
-pub trait Project<E>
-where
-    E: Event,
-{
-    /// Fold one `E` (with its position/timestamp) into the projection's state.
-    fn project(&mut self, event: ProjectionEvent<'_, E>);
+    /// One [`Selection`] per named selection, in declaration order.
+    fn select(&self) -> Result<Vec<Selection>, Report<Error>>;
 }
 
 // Recognize
 
-/// Matches a persisted event to this projection by hashed name and, if it
-/// matches, decodes it into a [`DispatchEvent`].
+/// Matches a persisted event to this projection by hashed name and, if its type
+/// is one this projection folds, decodes it into a [`DispatchEvent`].
 pub trait Recognize {
     /// Decode `event` into a [`DispatchEvent`] if its type is one this
     /// projection folds, else `None`.
     fn recognize(&self, event: &EventAndMask) -> Result<Option<DispatchEvent>, Report<Error>>;
 }
 
-// Select
+// Dispatch
 
-/// Builds the [`Selection`] of events this projection folds.
-pub trait Select {
-    /// The selection — the OR of the projection's `select(..)` clauses.
-    fn select(&self) -> Result<Selection, Report<Error>>;
+/// Folds a recognised event into the projection, routing by `mask` — this
+/// projection's per-selection bit slice — to the matching selection method(s).
+pub trait Dispatch {
+    /// Fold `event` into every selection whose bit is set in `mask` (the slice
+    /// of the query mask owned by this projection, one bit per named
+    /// selection).
+    fn dispatch(&mut self, mask: &[bool], event: &DispatchEvent);
 }
 
 // -------------------------------------------------------------------------------------------------
 
 // Dispatch Event
 
-/// A decoded event ready to fold: its boxed payload (downcast per [`Project`]
-/// impl) plus the persisted position and timestamp. Decoded once per recognised
-/// event and shared across every same-type projection slot.
+/// A decoded event ready to fold: its boxed payload (downcast into the matching
+/// selection's enum) plus the persisted position and timestamp. Decoded once
+/// per recognised event and shared across every selection and same-type
+/// projection slot that matched.
 #[derive(new, Debug)]
 #[new(const_fn, vis(pub(crate)))]
 pub struct DispatchEvent {
@@ -143,17 +138,6 @@ pub struct DispatchEvent {
 }
 
 impl DispatchEvent {
-    /// View the boxed payload as a [`ProjectionEvent`] of `E`, if it is an `E`.
-    #[must_use]
-    pub fn as_projection_event<E>(&self) -> Option<ProjectionEvent<'_, E>>
-    where
-        E: Event + 'static,
-    {
-        self.event
-            .downcast_ref()
-            .map(|inner_event| ProjectionEvent::new(inner_event, self.position, self.timestamp))
-    }
-
     /// Decode a persisted `event`'s payload into an `E` (via `revision`),
     /// paired with its position and timestamp. A decode failure carries the
     /// stored version and the revision this consumer handles.
@@ -184,24 +168,24 @@ impl DispatchEvent {
 
 // Projection Event
 
-/// A decoded event handed to a [`Project`] impl: derefs to the payload `&E`,
-/// with the persisted position and timestamp available alongside.
-#[derive(new, Debug, Deref)]
-#[new(const_fn, vis(pub(crate)))]
-pub struct ProjectionEvent<'a, E>
-where
-    E: Event,
-{
-    #[deref]
-    event: &'a E,
+/// A matched event handed to a selection method: the selection's borrowed enum
+/// (accessed via [`event`](Self::event)), with the persisted position and
+/// timestamp available alongside.
+#[derive(new, Debug)]
+#[new(vis(pub))]
+pub struct ProjectionEvent<T> {
+    event: T,
     position: Position,
     timestamp: Timestamp,
 }
 
-impl<E> ProjectionEvent<'_, E>
-where
-    E: Event,
-{
+impl<T> ProjectionEvent<T> {
+    /// The matched event — the selection's enum (a variant per event type).
+    #[must_use]
+    pub fn event(&self) -> &T {
+        &self.event
+    }
+
     /// The event's position in the stream.
     #[must_use]
     pub fn position(&self) -> Position {

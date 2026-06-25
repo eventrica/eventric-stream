@@ -25,11 +25,11 @@ use revision::revisioned;
 #[derive(new, Event, Debug)]
 #[event(
     identifier: widget_made,
-    tags: [
+    tags: {
         sku: sku,
         owner: &this.owner,
         count: |e| e.count.to_string()
-    ]
+    }
 )]
 struct WidgetMade {
     #[new(into)]
@@ -50,5 +50,41 @@ fn tag_value_forms_produce_expected_tags() {
         Tag::new("sku:widget").unwrap(),
         Tag::new("owner:alice").unwrap(),
         Tag::new("count:3").unwrap(),
+    ]);
+}
+
+// =================================================================================================
+// List-valued tags
+// =================================================================================================
+
+// A `[..]` value declares several tags under one prefix — the canonical DCB
+// case of an event relating to two entities of the same kind: a transfer
+// touches two accounts, so it carries two `account:` tags and surfaces in both
+// accounts' queries.
+#[revisioned(revision = 1)]
+#[derive(new, Event, Debug)]
+#[event(identifier: transferred, tags: { account: [from, to], reference: reference })]
+struct Transferred {
+    #[new(into)]
+    from: String,
+    #[new(into)]
+    to: String,
+    #[new(into)]
+    reference: String,
+    amount: u64,
+}
+
+#[test]
+fn list_valued_tag_produces_one_tag_per_value() {
+    let event = Transferred::new("alice", "bob", "ref-1", 100);
+
+    let tags = event.tags().expect("tags build");
+
+    // `account: [from, to]` expands to two `account:` tags in place; then the
+    // single `reference` tag.
+    assert_eq!(tags, vec![
+        Tag::new("account:alice").unwrap(),
+        Tag::new("account:bob").unwrap(),
+        Tag::new("reference:ref-1").unwrap(),
     ]);
 }

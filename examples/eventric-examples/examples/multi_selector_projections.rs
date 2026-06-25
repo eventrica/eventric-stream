@@ -12,7 +12,6 @@ use eventric_domain::{
     error::Error,
     event::Event,
     projection::{
-        Project,
         Projection,
         ProjectionEvent,
     },
@@ -31,22 +30,18 @@ use revision::revisioned;
 // Multi-Selector Projections
 // =================================================================================================
 
-// This example demonstrates the two tools the model layer gives you for folding
-// more than one kind of event into read-model state.
+// This example demonstrates how named selections shape what a projection folds.
 //
-// (a) ONE projection with MULTIPLE `select(..)` clauses: the selections are
-// OR-unioned, and every matched event is folded into a SINGLE derived state.
-// `AccountBalance` folds both deposits and withdrawals into one number.
+// (a) ONE named selection naming SEVERAL event types: every matched event folds
+// into a SINGLE derived state, and the selection's method discriminates by enum
+// variant. `AccountBalance` folds both deposits and withdrawals into one
+// number.
 //
 // (b) TWO SEPARATE projections over the same (overlapping) events: each folds
 // the events it cares about into its OWN state, kept apart on purpose.
-// `DepositTotal` and `WithdrawalTotal` each sum just their own side.
-//
-// `#[derive(Projection)]` allowing repeated `select(..)` is the same "generated
-// companion type" mechanism `#[derive(Action)]` uses for its `{Name}Context`:
-// the macro reads a declarative attribute and emits the wiring (here:
-// `Selection` + `Dispatch`/`Recognize`) so the hand-written code only states
-// the fold.
+// `DepositTotal` and `WithdrawalTotal` each sum just their own side. (The same
+// split could live in one projection as two named selections — see
+// `multi_selector` in the tests.)
 
 // Events
 
@@ -54,7 +49,7 @@ use revision::revisioned;
 #[derive(new, Event, Debug)]
 #[event(
     identifier: money_deposited,
-    tags: [account: account]
+    tags: { account: account }
 )]
 pub struct MoneyDeposited {
     #[new(into)]
@@ -66,7 +61,7 @@ pub struct MoneyDeposited {
 #[derive(new, Event, Debug)]
 #[event(
     identifier: money_withdrawn,
-    tags: [account: account]
+    tags: { account: account }
 )]
 pub struct MoneyWithdrawn {
     #[new(into)]
@@ -74,24 +69,16 @@ pub struct MoneyWithdrawn {
     pub amount: u64,
 }
 
-// (a) One projection, multiple `select(..)` clauses, one derived state.
+// (a) One named selection over two event types, folded into one derived state.
 //
-// The two `select(..)` clauses are OR-unioned into the projection's
-// `Selection`; both `MoneyDeposited` and `MoneyWithdrawn` events for the
-// account are replayed into the SAME `AccountBalance`, where the two `Project`
-// impls move the single `balance` field in opposite directions.
+// `balance` names both `MoneyDeposited` and `MoneyWithdrawn` (filtered to the
+// account); both fold into the SAME `AccountBalance`, where the one `balance`
+// method moves the single field in opposite directions per variant.
 
 #[derive(new, Projection, Debug)]
-#[projection(
-    select(
-        events(MoneyDeposited),
-        filter(account(&this.account))
-    ),
-    select(
-        events(MoneyWithdrawn),
-        filter(account(&this.account))
-    )
-)]
+#[projection(selections: {
+    balance: { events: [MoneyDeposited, MoneyWithdrawn], filter: { account: account } },
+})]
 pub struct AccountBalance {
     #[new(into)]
     pub account: String,
@@ -99,31 +86,29 @@ pub struct AccountBalance {
     pub balance: i64,
 }
 
-impl Project<MoneyDeposited> for AccountBalance {
-    fn project(&mut self, event: ProjectionEvent<'_, MoneyDeposited>) {
-        self.balance += i64::try_from(event.amount).unwrap_or(i64::MAX);
-    }
-}
-
-impl Project<MoneyWithdrawn> for AccountBalance {
-    fn project(&mut self, event: ProjectionEvent<'_, MoneyWithdrawn>) {
-        self.balance -= i64::try_from(event.amount).unwrap_or(i64::MAX);
+impl account_balance::Project for AccountBalance {
+    fn balance(&mut self, event: ProjectionEvent<account_balance::Balance<'_>>) {
+        match event.event() {
+            account_balance::Balance::MoneyDeposited(event) => {
+                self.balance += i64::try_from(event.amount).unwrap_or(i64::MAX);
+            }
+            account_balance::Balance::MoneyWithdrawn(event) => {
+                self.balance -= i64::try_from(event.amount).unwrap_or(i64::MAX);
+            }
+        }
     }
 }
 
 // (b) Two separate projections over the same overlapping events, folded apart.
 //
-// Both projections look at the same account, but each selects only its own
-// event type and keeps its own running total. This is how you fold overlapping
-// events SEPARATELY (versus the union in (a)).
+// Both look at the same account, but each selects only its own event type and
+// keeps its own running total — overlapping events folded SEPARATELY (versus
+// the union in (a)).
 
 #[derive(new, Projection, Debug)]
-#[projection(
-    select(
-        events(MoneyDeposited),
-        filter(account(&this.account))
-    )
-)]
+#[projection(selections: {
+    deposited: { events: [MoneyDeposited], filter: { account: account } },
+})]
 pub struct DepositTotal {
     #[new(into)]
     pub account: String,
@@ -131,19 +116,17 @@ pub struct DepositTotal {
     pub total: u64,
 }
 
-impl Project<MoneyDeposited> for DepositTotal {
-    fn project(&mut self, event: ProjectionEvent<'_, MoneyDeposited>) {
+impl deposit_total::Project for DepositTotal {
+    fn deposited(&mut self, event: ProjectionEvent<deposit_total::Deposited<'_>>) {
+        let deposit_total::Deposited::MoneyDeposited(event) = event.event();
         self.total += event.amount;
     }
 }
 
 #[derive(new, Projection, Debug)]
-#[projection(
-    select(
-        events(MoneyWithdrawn),
-        filter(account(&this.account))
-    )
-)]
+#[projection(selections: {
+    withdrawn: { events: [MoneyWithdrawn], filter: { account: account } },
+})]
 pub struct WithdrawalTotal {
     #[new(into)]
     pub account: String,
@@ -151,8 +134,9 @@ pub struct WithdrawalTotal {
     pub total: u64,
 }
 
-impl Project<MoneyWithdrawn> for WithdrawalTotal {
-    fn project(&mut self, event: ProjectionEvent<'_, MoneyWithdrawn>) {
+impl withdrawal_total::Project for WithdrawalTotal {
+    fn withdrawn(&mut self, event: ProjectionEvent<withdrawal_total::Withdrawn<'_>>) {
+        let withdrawal_total::Withdrawn::MoneyWithdrawn(event) = event.event();
         self.total += event.amount;
     }
 }
@@ -205,22 +189,22 @@ impl Act for Withdraw {
 // Fold a projection directly from the stream and return its derived state.
 //
 // This is exactly what the `Enactor` does internally for an action's
-// projections: query the stream with the projection's own `Selection`, then for
+// projections: query the stream with the projection's own selections, then for
 // each event the projection `recognize`s, `dispatch` it into the projection's
-// fold. We do it by hand here so the example can fold and print read models on
-// demand.
+// fold (handing it the event's mask, which — standalone — is the projection's
+// own slice).
 
 fn project<P>(stream: &Stream, mut projection: P) -> Result<P, Report<Error>>
 where
     P: Projection,
 {
-    let condition = Condition::new().selections([projection.select()?]);
+    let condition = Condition::new().selections(projection.select()?);
 
     for event in stream.select(condition) {
         let event = event.change_context(Error)?;
 
         if let Some(dispatch) = projection.recognize(&event)? {
-            projection.dispatch(&dispatch);
+            projection.dispatch(event.mask.as_ref(), &dispatch);
         }
     }
 
@@ -245,10 +229,10 @@ pub fn main() -> Result<(), Report<Error>> {
     println!("Seeded 5 events (3 deposits, 2 withdrawals) for account \"alice\".");
     println!();
 
-    // (a) One projection, multiple selectors -> a single unioned derived state.
+    // (a) One projection, one selection over two event types -> a single state.
     let balance = project(&stream, AccountBalance::new("alice"))?;
 
-    println!("(a) ONE projection, MULTIPLE select(..) clauses -> ONE derived state:");
+    println!("(a) ONE projection, ONE selection over two event types -> ONE derived state:");
     println!("    {balance:?}");
     println!(
         "    (deposits + withdrawals folded into a single balance: 100 + 50 - 30 + 25 - 40 = 105)"

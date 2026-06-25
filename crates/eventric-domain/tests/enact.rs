@@ -22,7 +22,6 @@ use eventric_domain::{
         Identifier as _,
     },
     projection::{
-        Project,
         Projection,
         ProjectionEvent,
     },
@@ -56,7 +55,7 @@ use revision::revisioned;
 
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug, PartialEq)]
-#[event(identifier: item_registered, tags: [item: sku])]
+#[event(identifier: item_registered, tags: { item: sku })]
 struct ItemRegistered {
     #[new(into)]
     sku: String,
@@ -65,7 +64,7 @@ struct ItemRegistered {
 
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug, PartialEq)]
-#[event(identifier: item_removed, tags: [item: sku])]
+#[event(identifier: item_removed, tags: { item: sku })]
 struct ItemRemoved {
     #[new(into)]
     sku: String,
@@ -76,12 +75,9 @@ struct ItemRemoved {
 /// Folds both event types: whether the SKU is currently present in the
 /// registry. Registering sets it present, removing clears it.
 #[derive(new, Projection, Debug)]
-#[projection(
-    select(
-        events(ItemRegistered, ItemRemoved),
-        filter(item(&this.sku))
-    )
-)]
+#[projection(selections: {
+    present: { events: [ItemRegistered, ItemRemoved], filter: { item: sku } },
+})]
 struct ItemPresent {
     #[new(default)]
     present: bool,
@@ -89,15 +85,12 @@ struct ItemPresent {
     sku: String,
 }
 
-impl Project<ItemRegistered> for ItemPresent {
-    fn project(&mut self, _: ProjectionEvent<'_, ItemRegistered>) {
-        self.present = true;
-    }
-}
-
-impl Project<ItemRemoved> for ItemPresent {
-    fn project(&mut self, _: ProjectionEvent<'_, ItemRemoved>) {
-        self.present = false;
+impl item_present::Project for ItemPresent {
+    fn present(&mut self, event: ProjectionEvent<item_present::Present<'_>>) {
+        self.present = match event.event() {
+            item_present::Present::ItemRegistered(_) => true,
+            item_present::Present::ItemRemoved(_) => false,
+        };
     }
 }
 
@@ -105,12 +98,9 @@ impl Project<ItemRemoved> for ItemPresent {
 /// `item(sku)` tag, so this projection is what proves recognise-by-hash: a
 /// removal must never be counted here even though it matches the tag filter.
 #[derive(new, Projection, Debug)]
-#[projection(
-    select(
-        events(ItemRegistered),
-        filter(item(&this.sku))
-    )
-)]
+#[projection(selections: {
+    registered: { events: [ItemRegistered], filter: { item: sku } },
+})]
 struct RegistrationCount {
     #[new(default)]
     count: u8,
@@ -118,8 +108,8 @@ struct RegistrationCount {
     sku: String,
 }
 
-impl Project<ItemRegistered> for RegistrationCount {
-    fn project(&mut self, _: ProjectionEvent<'_, ItemRegistered>) {
+impl registration_count::Project for RegistrationCount {
+    fn registered(&mut self, _: ProjectionEvent<registration_count::Registered<'_>>) {
         self.count += 1;
     }
 }

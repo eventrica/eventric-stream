@@ -1,6 +1,5 @@
 use derive_more::Debug;
 use eventric_domain::projection::{
-    Project,
     Projection,
     ProjectionEvent,
 };
@@ -19,12 +18,12 @@ use crate::events::{
 // Projections
 
 #[derive(new, Projection, Debug)]
-#[projection(
-    select(
-        events(CourseDefined),
-        filter(course(&this.id))
-    )
-)]
+#[projection(selections: {
+    defined: { 
+        events: [CourseDefined],
+        filter: { course: id }
+    },
+})]
 pub struct CourseExists {
     #[new(default)]
     pub exists: bool,
@@ -32,19 +31,22 @@ pub struct CourseExists {
     pub id: String,
 }
 
-impl Project<CourseDefined> for CourseExists {
-    fn project(&mut self, _: ProjectionEvent<'_, CourseDefined>) {
+impl course_exists::Project for CourseExists {
+    fn defined(&mut self, _: ProjectionEvent<course_exists::Defined<'_>>) {
         self.exists = true;
     }
 }
 
 #[derive(new, Projection, Debug)]
-#[projection(
-    select(
-        events(CourseDefined, CourseCapacityChanged),
-        filter(course(&this.id))
-    )
-)]
+#[projection(selections: {
+    capacity: {
+        events: [
+            CourseDefined,
+            CourseCapacityChanged
+        ],
+        filter: { course: id }
+    },
+})]
 pub struct CourseCapacity {
     #[new(default)]
     pub capacity: u8,
@@ -52,25 +54,27 @@ pub struct CourseCapacity {
     pub id: String,
 }
 
-impl Project<CourseDefined> for CourseCapacity {
-    fn project(&mut self, event: ProjectionEvent<'_, CourseDefined>) {
-        self.capacity = event.capacity;
-    }
-}
-
-impl Project<CourseCapacityChanged> for CourseCapacity {
-    fn project(&mut self, event: ProjectionEvent<'_, CourseCapacityChanged>) {
-        self.capacity = event.new_capacity;
+impl course_capacity::Project for CourseCapacity {
+    fn capacity(&mut self, event: ProjectionEvent<course_capacity::Capacity<'_>>) {
+        match event.event() {
+            course_capacity::Capacity::CourseDefined(event) => self.capacity = event.capacity,
+            course_capacity::Capacity::CourseCapacityChanged(event) => {
+                self.capacity = event.new_capacity;
+            }
+        }
     }
 }
 
 #[derive(new, Projection, Debug)]
-#[projection(
-    select(
-        events(StudentSubscribedToCourse),
-        filter(course(&this.course_id), student(&this.student_id))
-    )
-)]
+#[projection(selections: {
+    subscribed: {
+        events: [StudentSubscribedToCourse],
+        filter: {
+            course: course_id,
+            student: student_id
+        }
+    },
+})]
 pub struct StudentAlreadySubscribed {
     #[new(default)]
     pub subscribed: bool,
@@ -80,19 +84,19 @@ pub struct StudentAlreadySubscribed {
     pub student_id: String,
 }
 
-impl Project<StudentSubscribedToCourse> for StudentAlreadySubscribed {
-    fn project(&mut self, _: ProjectionEvent<'_, StudentSubscribedToCourse>) {
+impl student_already_subscribed::Project for StudentAlreadySubscribed {
+    fn subscribed(&mut self, _: ProjectionEvent<student_already_subscribed::Subscribed<'_>>) {
         self.subscribed = true;
     }
 }
 
 #[derive(new, Projection, Debug)]
-#[projection(
-    select(
-        events(StudentSubscribedToCourse),
-        filter(course(&this.course_id))
-    )
-)]
+#[projection(selections: {
+    subscribed: {
+        events: [StudentSubscribedToCourse],
+        filter: { course: course_id }
+    },
+})]
 pub struct NumberOfCourseSubscriptions {
     #[new(into)]
     pub course_id: String,
@@ -100,19 +104,19 @@ pub struct NumberOfCourseSubscriptions {
     pub count: u8,
 }
 
-impl Project<StudentSubscribedToCourse> for NumberOfCourseSubscriptions {
-    fn project(&mut self, _: ProjectionEvent<'_, StudentSubscribedToCourse>) {
+impl number_of_course_subscriptions::Project for NumberOfCourseSubscriptions {
+    fn subscribed(&mut self, _: ProjectionEvent<number_of_course_subscriptions::Subscribed<'_>>) {
         self.count += 1;
     }
 }
 
 #[derive(new, Projection, Debug)]
-#[projection(
-    select(
-        events(StudentSubscribedToCourse),
-        filter(student(&this.student_id))
-    )
-)]
+#[projection(selections: {
+    subscribed: {
+        events: [StudentSubscribedToCourse],
+        filter: { student: student_id }
+    },
+})]
 pub struct NumberOfStudentSubscriptions {
     #[new(into)]
     pub student_id: String,
@@ -120,8 +124,8 @@ pub struct NumberOfStudentSubscriptions {
     pub count: u8,
 }
 
-impl Project<StudentSubscribedToCourse> for NumberOfStudentSubscriptions {
-    fn project(&mut self, _: ProjectionEvent<'_, StudentSubscribedToCourse>) {
+impl number_of_student_subscriptions::Project for NumberOfStudentSubscriptions {
+    fn subscribed(&mut self, _: ProjectionEvent<number_of_student_subscriptions::Subscribed<'_>>) {
         self.count += 1;
     }
 }

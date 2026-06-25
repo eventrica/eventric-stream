@@ -12,7 +12,7 @@ use revision::revisioned;
 
 #[revisioned(revision = 3)]
 #[derive(new, Event, Debug)]
-#[event(identifier: thing_happened, tags: [thing: id])]
+#[event(identifier: thing_happened, tags: { thing: id })]
 struct ThingHappened {
     #[new(into)]
     id: String,

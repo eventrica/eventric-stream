@@ -12,7 +12,6 @@ pub(crate) mod action;
 pub(crate) mod event;
 pub(crate) mod projection;
 pub(crate) mod tag;
-pub(crate) mod util;
 
 use proc_macro::TokenStream;
 use quote::ToTokens;
@@ -73,8 +72,8 @@ pub fn action(input: TokenStream) -> TokenStream {
 ///
 /// ```text
 /// #[event(
-///     identifier: <ident>,                          // required
-///     tags: [<prefix>: <value>, <prefix>: <value>], // optional
+///     identifier: <ident>,                              // required
+///     tags: { <prefix>: <value>, <prefix>: [<v>, ..] }, // optional
 /// )]
 /// ```
 ///
@@ -82,28 +81,31 @@ pub fn action(input: TokenStream) -> TokenStream {
 ///   it is hashed into the stream's type index. It is deliberately explicit and
 ///   decoupled from the Rust type name, so renaming the `struct` never silently
 ///   re-identifies already-stored events.
-/// - **`tags`** (optional; omit entirely if there are none) is a list of
+/// - **`tags`** (optional; omit entirely if there are none) is a map of
 ///   `<prefix>: <value>` entries. The prefix need not match the field (`course:
-///   course_id` tags under `course` from the `course_id` field), and a prefix
-///   may repeat to emit several tags of the same kind.
+///   course_id` tags under `course` from the `course_id` field), and a value
+///   may be a `[list]` to emit several tags under one prefix (e.g. a transfer
+///   tagged `account: [from, to]`).
 ///
 /// ## Tag values
 ///
 /// Each `<value>` is one of:
 ///
 /// ```text
-/// tags: [
+/// tags: {
 ///     course:  id,                    // bare ident — the field, i.e. `&self.id`
 ///     student: &this.student_id,      // expression — `this` is the event (`&Self`)
 ///     region:  |this| this.region(),  // closure    — as the expression, but you
 ///                                     //              name (or `_`-ignore) the receiver
-/// ]
+///     account: [from, to],            // list       — one tag per element, same prefix
+/// }
 /// ```
 ///
 /// The bare ident is shorthand for a plain field. Otherwise the value is an
 /// expression evaluated with the event bound as `this` (`&Self`); the closure
 /// form is the same, but lets you name the receiver (e.g. `|_| "literal"` to
-/// ignore it). Whatever the form, the value becomes the tag's text — formatted
+/// ignore it); and a `[list]` of any of these emits one tag per element under
+/// the prefix. Whatever the form, each value becomes the tag's text — formatted
 /// as `prefix:value`, so it must be `Display` — in practice a string field like
 /// `&self.id`.
 ///
@@ -114,10 +116,10 @@ pub fn action(input: TokenStream) -> TokenStream {
 /// #[derive(Event)]
 /// #[event(
 ///     identifier: student_subscribed_to_course,
-///     tags: [
+///     tags: {
 ///         course: course_id,
-///         student: student_id
-///     ],
+///         student: student_id,
+///     },
 /// )]
 /// struct StudentSubscribedToCourse {
 ///     course_id: String,
@@ -134,8 +136,19 @@ pub fn event(input: TokenStream) -> TokenStream {
 // Projection
 
 /// Derives the domain `Projection` trait family
-/// (`Dispatch`/`Recognize`/`Select`) from `#[projection(select(..))]`. See
-/// `eventric_domain::projection`.
+/// (`Dispatch`/`Recognize`/`Select`) from a declarative `#[projection(..)]`
+/// attribute of **named selections**:
+///
+/// ```text
+/// #[projection(selections: {
+///     <name>: { events: [<Type>, ..], filter: { <prefix>: <value>, .. } }, // filter optional
+/// })]
+/// ```
+///
+/// For each selection it generates, in a module named after the projection
+/// (`snake_case`), a borrowed enum (one variant per event type) and a `Project`
+/// trait method taking it wrapped in a `ProjectionEvent`; the user implements
+/// that trait, one method per selection. See `eventric_domain::projection`.
 #[proc_macro_derive(Projection, attributes(projection))]
 pub fn projection(input: TokenStream) -> TokenStream {
     emit_impl_or_error!(Projection::new(&parse_macro_input!(input))).into()

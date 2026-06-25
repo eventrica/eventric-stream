@@ -1,6 +1,6 @@
 # Derive grammar + codegen — design
 
-**Status: in progress — `Event` implemented; `Projection` + `Action` pending.**
+**Status: in progress — `Event` + `Projection` implemented; `Action` pending.**
 This is the agreed target for a redesign of the three model-layer derives
 (`Event`, `Projection`, `Action`) and the `tag!` macro: a single *declarative*
 attribute grammar across all three, and — for projections — **named selections**
@@ -9,11 +9,15 @@ supersedes [`keyed-selectors.md`](./archived/keyed-selectors.md) (the deferred
 keyed-selectors note, now folded in) and subsumes the codegen-groundwork items in
 [`FUTURE.md`](./FUTURE.md) §2.
 
-The **Event** derive is built: `crates/eventric-macros/src/event.rs` hand-parses
-`#[event(identifier: X, tags: [prefix: value, ..])]`, all call sites are migrated,
-and `EventArgs::parse` is unit-tested (valid forms incl. the `this`-expr escape
-hatch, plus unknown-key/duplicate/missing-identifier error paths).
-`Projection` and `Action` below are still on the old `darling` grammar.
+The **Event** and **Projection** derives are built. `event.rs` hand-parses
+`#[event(identifier: X, tags: { prefix: value, .. })]`; `projection.rs` hand-parses
+`#[projection(selections: { name: { events: [..], filter: { .. } }, .. })]` and generates the
+per-projection module (a borrowed enum per selection + a `Project` trait of
+per-selection methods) plus the de-positionalised-mask `Select`/`Recognize`/`Dispatch`
+impls. All call sites are migrated. **`Action`** is still on the old `darling`
+grammar — its `select`/`update` wiring was updated for the new per-selection mask
+layout, but its `#[action(projection(Name: Ctor))]` attribute grammar (and the
+`identity::<fn(&Self)>` constructor codegen) are unchanged.
 
 **Today, for contrast:** the attributes use `darling`'s `FromMeta` conventions
 (`identifier(..)`, `tags(course(&this.id))`, `select(events(..), filter(..))`,
@@ -30,11 +34,14 @@ user hand-writes beyond the attribute. Agreed principles:
 - **Explicit over implicit.** Write field names, identifiers, selection names —
   don't infer. (Simplify with defaults later if one proves safe; easier to relax
   than to tighten.)
-- **Declarative, uniform syntax.** `key: value` entries and `[ … ]` for every
-  multiple, the same across all three derives; `{ … }` only where a clause needs
-  an extensible body.
-- **Always-list.** Multiples are always a `[ … ]`, even of one — no single-value
-  sugar (add it later only if the noise bites).
+- **Declarative, uniform syntax.** `key: value` entries, the same across all three
+  derives; **`{ … }` for keyed collections** (maps with field-like keys — `tags`,
+  `select`, `project`, the per-selection body) and **`[ … ]` for plain element
+  lists** (`events`), so the bracket mirrors Rust's struct-vs-array intuition.
+  (Originally `[ … ]` for every multiple; revised once the keyed collections were
+  recognised as maps — braces read more honestly.)
+- **No single-value sugar for plain lists** — `events: [One]` is a list of one. A
+  keyed value, by contrast, is a single value or a `[list]` (`account: [from, to]`).
 - **Explicit identifiers are a feature, not boilerplate.** The event identifier
   is the durable, hashed **on-disk identity**; it must *not* default from the Rust
   type name, because then a type rename would silently re-identify the event and
@@ -46,8 +53,13 @@ user hand-writes beyond the attribute. Agreed principles:
 Attribute bodies are a small declarative DSL:
 
 - `key: value` entries (not `darling`'s `key(..)` / `key = ..`).
-- `[ … ]` comma-separated lists for multiples.
-- `{ … }` for an extensible per-entry body.
+- `{ … }` for **keyed** collections — maps with unique, field-like keys (`tags`,
+  `select`, `project`, and the per-selection `{ events, filter }` body), reading
+  like struct literals.
+- `[ … ]` for **plain** element lists (`select`'s `events`).
+- A value in a `{ … }` map may itself be a `[list]` for the multi-valued case —
+  `tags: { account: [from, to] }` declares two `account:` tags (a multi-entity
+  event like a transfer), which replaced the earlier repeated-prefix form.
 - **Values** keep three forms, orthogonal to the container grammar — all
   desugaring to one `{ let <recv> = self; <body> }` block (no closure is
   generated, so no higher-ranked-lifetime coercion and no `Cow`), then formatted
@@ -61,7 +73,7 @@ Attribute bodies are a small declarative DSL:
 > **Receiver name — `this`, not `self` (decided to keep `this`).** The receiver is
 > named `this` uniformly across all three derives. `self` *does* resolve in tag and
 > filter expressions (they expand inside generated `&self` methods, so call-site
-> hygiene binds it), but **not** in action `project:` constructors — those are
+> hygiene binds it), but **not** in action `projections:` constructors — those are
 > emitted in an associated `Context::new(action)` with no `self` receiver, so `self`
 > reads as the module path (`expected value, found module self`). `this` is the one
 > name that works in all three positions, so it stays the documented form. Switching
@@ -83,14 +95,14 @@ readability. The grammars are small.
 #[derive(new, Event, Debug)]
 #[event(
     identifier: course_defined,
-    tags: [course: id, student: student_id],   // optional — omit entirely if none
+    tags: { course: id, student: student_id },   // optional — omit entirely if none
 )]
 pub struct StudentSubscribedToCourse { /* … */ }
 ```
 
 - **Impl burden: none** — just the struct.
 - `identifier:` mandatory and explicit (see principles).
-- `tags:` optional, always a list; each entry `prefix: value`.
+- `tags:` optional, a map; each entry `prefix: value` (or `prefix: [values]`).
 - Still requires `#[revisioned(revision = N)]` (serialisation — a separate crate's
   macro that must wrap) and a constructor (`#[derive(new)]`) as today.
 
@@ -98,15 +110,15 @@ pub struct StudentSubscribedToCourse { /* … */ }
 
 ```rust
 #[projection(
-    select: [
-        capacity: { events: [CourseDefined, CourseCapacityChanged], filter: [course: id] },
+    selections: {
+        capacity: { events: [CourseDefined, CourseCapacityChanged], filter: { course: id } },
         // … more named selections …
-    ],
+    },
 )]
 pub struct CourseCapacity { /* … */ }
 ```
 
-- `select:` is a list of **named selections**: each `name: { events: [ … ], filter: [ … ] }`,
+- `selections:` is a map of **named selections**: each `name: { events: [ … ], filter: { … } }`,
   `filter` optional.
 - The **name is the selection's identity** — it keys the generated impl surface and
   de-positionalises the mask (below).
@@ -117,25 +129,28 @@ pub struct CourseCapacity { /* … */ }
 position/timestamp come along):
 
 ```rust
-mod course_capacity {
+pub mod course_capacity {
     pub enum Capacity<'a> {
-        CourseDefined(&'a CourseDefined),
-        CourseCapacityChanged(&'a CourseCapacityChanged),
+        CourseDefined(&'a super::CourseDefined),
+        CourseCapacityChanged(&'a super::CourseCapacityChanged),
+    }
+
+    pub trait Project {
+        // one method per selection:
+        fn capacity(&mut self, e: ProjectionEvent<Capacity<'_>>);
     }
 }
-
-// trait method (one per selection):
-fn capacity(&mut self, e: ProjectionEvent<'_, course_capacity::Capacity<'_>>);
 ```
 
-**User impl** — one method per selection, matching the enum (exact deref/borrow
-ergonomics are part of the borrowed-enum risk below; shown illustratively):
+**User impl** — implement the generated `Project` trait, one method per selection:
 
 ```rust
-fn capacity(&mut self, e: ProjectionEvent<'_, course_capacity::Capacity<'_>>) {
-    match e.event() {
-        Capacity::CourseDefined(ev)         => self.capacity = ev.capacity,
-        Capacity::CourseCapacityChanged(ev) => self.capacity = ev.new_capacity,
+impl course_capacity::Project for CourseCapacity {
+    fn capacity(&mut self, e: ProjectionEvent<course_capacity::Capacity<'_>>) {
+        match e.event() {
+            Capacity::CourseDefined(ev)         => self.capacity = ev.capacity,
+            Capacity::CourseCapacityChanged(ev) => self.capacity = ev.new_capacity,
+        }
     }
 }
 ```
@@ -164,15 +179,15 @@ Decisions:
 
 ```rust
 #[action(
-    project: [
+    projections: {
         course_exists:   CourseExists::new(&this.id),
         course_capacity: CourseCapacity::new(&this.id),
-    ],
+    },
 )]
 pub struct ChangeCourseCapacity { /* … */ }
 ```
 
-- `project:` is a list of **explicit `field_name: constructor`** entries. The field
+- `projections:` is a map of **explicit `field_name: constructor`** entries. The field
   name is what you access on the generated context (`context.course_exists`),
   written explicitly — no inference from the type, which lets two slots of the same
   projection type coexist.
@@ -180,10 +195,11 @@ pub struct ChangeCourseCapacity { /* … */ }
   `type Err = Report<Error>` is a plausible separate ergonomic win, **out of scope
   here** (noted in open questions).
 
-Naming: `select:` / `project:` chosen for brevity (both verbs). `select` reads
-true; `project` for the action is slightly off (an action *uses* projections, it
-doesn't project) — accepted for the parallelism over the accurate-but-longer
-`selections:` / `projections:`.
+Naming: `selections:` / `projections:` — **nouns naming what the derive *has***
+(the selections a projection declares; the projections an action uses). Chosen
+over the shorter verbs `select:` / `project:`: those read less obviously, and
+`project:` is inaccurate (an action *uses* projections, it doesn't project). The
+extra length buys clarity — explicit over implicit.
 
 ## Dispatch + the mask (model-layer only)
 
@@ -212,21 +228,31 @@ the codegen pattern rather than the one-off the archived note rightly deferred.
    a `syn::Parse` and now emits a `Tag::prefixed(prefix, value)` constructor that
    owns the `prefix:value` format (previously inlined in the macro). Unit-tested,
    plus an end-to-end `tests/tags.rs` over all three value forms.
-2. **Projection** — the big one: named-selection parsing + the per-projection enum
-   module + the method-bearing trait + mask de-positionalisation + the
-   borrowed-enum lifetimes. *Also relocate the now Projection-only `tags_map` /
-   `tags_fold` helpers out of `event.rs`* (they were left there when Event moved to
-   `Vec<TagEntry>`; this step rewrites them anyway). Reuse the shared `key: value`
-   / bracketed-list / value-form primitives from the Event parser (extract them here,
-   now that there's a second consumer).
-3. **Action** — the same grammar with an explicit field-name list; the context
-   generation is the existing precedent to build on.
+2. **Projection** — ✅ **done.** Hand-rolled `ProjectionArgs`/`NamedSelection`
+   `syn::Parse` (reusing the Event parser's `TagEntry`/value-forms for `filter`);
+   generates the per-projection module (a borrowed enum per selection + a `Project`
+   trait of per-selection methods) and the `Select` (`Vec<Selection>` + `const
+   SELECTIONS`)/`Recognize`/`Dispatch` impls. The mask is de-positionalised: each
+   selection is its own `Selection`, the action flattens them and hands each
+   projection its `mask[base..base+SELECTIONS]` slice. The **borrowed enum worked**
+   (no owned-clone fallback). `ProjectionEvent` now holds the enum by value
+   (`event()` accessor); `Project<E>` is gone. The obsolete `tags_map`/`tags_fold`
+   (and the dead `util::List`) were deleted rather than relocated — the new filter
+   parse reuses `TagEntry`/`TagInitialize` directly. All call sites migrated;
+   covered by the existing `enact`/`multi_selector` integration tests + examples.
+3. **Action** — the same declarative grammar with an explicit field-name list; the
+   context generation is the existing precedent to build on. (Its `select`/`update`
+   already produce/consume the per-selection mask layout; this step is the
+   `#[action(..)]` *grammar* + replacing the `identity::<fn(&Self)>` constructor
+   coercion — at which point `self` could become the receiver name, per the note
+   above.)
 
 ## Known risks / open at build time
 
-- **Borrowed-enum lifetimes** for `ProjectionEvent<'_, SelectionEnum<'_>>` — the one
-  genuinely fiddly spot (the enum wraps `&E` downcast from the decoded box;
-  `ProjectionEvent` currently holds `&'a E` and derefs). Owned-clone is the fallback.
+- **Borrowed-enum lifetimes** — **resolved.** The enum wraps `&E` downcast from the
+  decoded box and `ProjectionEvent<T>` holds it by value; the borrow is valid for
+  the duration of the dispatch call (the `&DispatchEvent` box outlives it), so no
+  owned-clone fallback was needed.
 - **Error-message quality** — hand-rolled `syn` parsing means owning spans and
   messages that `darling` provided for free; budget for good diagnostics.
 - **`type Err` defaulting** on `Act` — a separate, deferred ergonomic question.

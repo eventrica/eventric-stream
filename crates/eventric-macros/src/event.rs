@@ -1,10 +1,7 @@
-use std::collections::HashMap;
-
 use proc_macro2::TokenStream;
 use quote::{
     ToTokens,
     TokenStreamExt as _,
-    format_ident,
     quote,
 };
 use syn::{
@@ -12,6 +9,7 @@ use syn::{
     Expr,
     Ident,
     Token,
+    braced,
     bracketed,
     parse::{
         Parse,
@@ -19,10 +17,11 @@ use syn::{
         discouraged::Speculative as _,
     },
     punctuated::Punctuated,
-    token::Comma,
+    token::{
+        Bracket,
+        Comma,
+    },
 };
-
-use crate::util::List;
 
 // =================================================================================================
 // Event
@@ -45,8 +44,8 @@ impl Event {
                 darling::Error::custom("missing `#[event(..)]` attribute").with_span(&input.ident)
             })?;
 
-        // The body is the declarative grammar `identifier: <ident>, tags:
-        // [<prefix>: <value>, ..]` (see `EventArgs`), hand-parsed. The identifier
+        // The body is the declarative grammar `identifier: <ident>, tags: {
+        // <prefix>: <value>, .. }` (see `EventArgs`), hand-parsed. The identifier
         // is a single ident, so it is already a valid Rust identifier; the
         // generated `Identifier::type_name` calls `Name::new` at runtime as the
         // (effectively unreachable) backstop.
@@ -73,7 +72,7 @@ impl Event {
 }
 
 // EventArgs — the `#[event(..)]` body grammar: `identifier: <ident>` plus an
-// optional `tags: [<prefix>: <value>, ..]`, as comma-separated `key: value`
+// optional `tags: { <prefix>: <value>, .. }`, as comma-separated `key: value`
 // entries.
 
 #[derive(Debug)]
@@ -99,7 +98,7 @@ impl Parse for EventArgs {
                 }
                 "tags" => {
                     let content;
-                    bracketed!(content in input);
+                    braced!(content in input);
                     let entries = Punctuated::<TagEntry, Comma>::parse_terminated(&content)?
                         .into_iter()
                         .collect();
@@ -130,21 +129,41 @@ impl Parse for EventArgs {
     }
 }
 
-// TagEntry — one `<prefix>: <value>` tag declaration.
+// TagEntry — one `<prefix>: <value>` tag declaration, where `<value>` is a
+// single value or `[a, b, ..]` for several tags under the same prefix (e.g. a
+// transfer tagged `account: [from, to]`).
 
 #[derive(Debug)]
-struct TagEntry {
-    prefix: Ident,
-    value: Tag,
+pub(crate) struct TagEntry {
+    pub(crate) prefix: Ident,
+    pub(crate) values: Vec<Tag>,
 }
 
 impl Parse for TagEntry {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let prefix = input.parse::<Ident>()?;
         input.parse::<Token![:]>()?;
-        let value = input.parse::<Tag>()?;
 
-        Ok(Self { prefix, value })
+        let values = if input.peek(Bracket) {
+            let content;
+            bracketed!(content in input);
+            let values = Punctuated::<Tag, Comma>::parse_terminated(&content)?
+                .into_iter()
+                .collect::<Vec<_>>();
+
+            if values.is_empty() {
+                return Err(syn::Error::new(
+                    prefix.span(),
+                    format!("tag `{prefix}` has an empty value list"),
+                ));
+            }
+
+            values
+        } else {
+            vec![input.parse::<Tag>()?]
+        };
+
+        Ok(Self { prefix, values })
     }
 }
 
@@ -178,7 +197,12 @@ impl Event {
         let tag = self
             .tags
             .iter()
-            .map(|entry| TagInitialize(&entry.prefix, &entry.value))
+            .flat_map(|entry| {
+                entry
+                    .values
+                    .iter()
+                    .map(move |value| TagInitialize(&entry.prefix, value))
+            })
             .collect::<Vec<_>>();
         let tag_count = tag.len();
 
@@ -277,36 +301,6 @@ impl ToTokens for TagInitialize<'_> {
     }
 }
 
-// Functions
-
-pub fn tags_map(tags: Option<HashMap<String, List<Tag>>>) -> Option<HashMap<Ident, List<Tag>>> {
-    tags.map(|tags| {
-        tags.into_iter()
-            .map(|(prefix, tags)| (format_ident!("{prefix}"), tags))
-            .collect()
-    })
-}
-
-// `_ident` is retained only for the (still-darling) Projection caller; the
-// value codegen no longer needs the owning type's name. It goes when the
-// Projection derive is migrated.
-pub fn tags_fold<'a>(
-    _ident: &'a Ident,
-    tags: Option<&'a HashMap<Ident, List<Tag>>>,
-) -> Vec<TagInitialize<'a>> {
-    tags.as_ref()
-        .map(|tags| {
-            tags.iter().fold(Vec::new(), |mut acc, (prefix, tags)| {
-                for tag in tags.as_ref() {
-                    acc.push(TagInitialize(prefix, tag));
-                }
-
-                acc
-            })
-        })
-        .unwrap_or_default()
-}
-
 // =================================================================================================
 // Tests
 // =================================================================================================
@@ -335,24 +329,37 @@ mod tests {
     #[test]
     fn tag_value_forms_all_parse() {
         let args = parse(
-            "identifier: x, tags: [bare: field, borrowed: &this.field, call: this.compute(), \
-             path: foo::BAR, closure: |e| e.compute()]",
+            "identifier: x, tags: { bare: field, borrowed: &this.field, call: this.compute(), \
+             path: foo::BAR, closure: |e| e.compute() }",
         )
         .expect("value forms");
 
         assert_eq!(args.tags.len(), 5);
-        assert!(matches!(args.tags[0].value, Tag::Ident(_)));
-        assert!(matches!(args.tags[1].value, Tag::Expr(_)));
-        assert!(matches!(args.tags[2].value, Tag::Expr(_)));
-        assert!(matches!(args.tags[3].value, Tag::Expr(_)));
-        assert!(matches!(args.tags[4].value, Tag::Expr(Expr::Closure(_))));
+        assert!(matches!(args.tags[0].values[0], Tag::Ident(_)));
+        assert!(matches!(args.tags[1].values[0], Tag::Expr(_)));
+        assert!(matches!(args.tags[2].values[0], Tag::Expr(_)));
+        assert!(matches!(args.tags[3].values[0], Tag::Expr(_)));
+        assert!(matches!(
+            args.tags[4].values[0],
+            Tag::Expr(Expr::Closure(_))
+        ));
+    }
+
+    // A `[..]` value declares several tags under one prefix.
+    #[test]
+    fn list_valued_tag_parses() {
+        let args = parse("identifier: x, tags: { account: [from, to] }").expect("list value");
+
+        assert_eq!(args.tags.len(), 1);
+        assert_eq!(args.tags[0].prefix.to_string(), "account");
+        assert_eq!(args.tags[0].values.len(), 2);
     }
 
     #[test]
     fn trailing_commas_and_empty_tags_ok() {
         parse("identifier: x,").expect("trailing comma after identifier");
-        parse("identifier: x, tags: [a: b,]").expect("trailing comma in tags");
-        parse("identifier: x, tags: []").expect("empty tags");
+        parse("identifier: x, tags: { a: b, }").expect("trailing comma in tags");
+        parse("identifier: x, tags: {}").expect("empty tags");
     }
 
     #[test]
@@ -373,8 +380,8 @@ mod tests {
     // not by `EventArgs::parse`.
     #[test]
     fn missing_identifier_errors_from_new() {
-        let input: DeriveInput =
-            syn::parse_str("#[event(tags: [a: x])] struct S { a: String }").expect("derive input");
+        let input: DeriveInput = syn::parse_str("#[event(tags: { a: x })] struct S { a: String }")
+            .expect("derive input");
 
         let error = Event::new(&input).expect_err("missing identifier");
 

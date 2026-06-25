@@ -57,20 +57,24 @@ wants to think through before building.
 - **Untested:** the `a..` / `..b` / `..` range lowerings, the 255 boundary, and
   multi-version OR-ing.
 
-## 2. Derive codegen ergonomics (in progress — Event done; Projection + Action pending)
+## 2. Derive codegen ergonomics (in progress — Event + Projection done; Action pending)
 
 The full redesign of the three derives — a **declarative attribute grammar**,
 **named projection selectors** (per-selection event enums + a per-selection method
 surface), and the supporting groundwork — is specced in
-[`derives.md`](./derives.md). **Event is implemented** (the new
-`#[event(identifier: X, tags: [prefix: value, ..])]` grammar, hand-parsed + unit-
-tested); **Projection and Action are pending** (the big ones). It folds in what
-were the deferred keyed-selectors and the codegen groundwork:
+[`derives.md`](./derives.md). **Event and Projection are implemented**: the new
+`#[event(..)]` and `#[projection(selections: { .. })]` grammars (hand-parsed), with
+Projection generating per-selection borrowed enums + a `Project` trait and
+de-positionalising the mask. **Action is pending** — only its `#[action(..)]`
+grammar and `identity::<fn(&Self)>` constructor codegen remain; its `select`/`update`
+mask wiring was already updated. The redesign folded in (now realised for Projection)
+what were the deferred keyed-selectors and the codegen groundwork:
 
 - named selectors + a **de-positionalised mask** (model-layer routing by selection,
-  not by declaration-order index);
-- `{Name}Dispatch` carrying the methods it implies rather than a bare marker trait;
-- collision-safe companion-name generation (a per-projection module of enums).
+  not by declaration-order index) — **done**;
+- a per-projection `Project` trait carrying the methods it implies rather than a bare
+  marker trait — **done**;
+- collision-safe companion-name generation (a per-projection module of enums) — **done**.
 
 Still open, independent of that redesign:
 
