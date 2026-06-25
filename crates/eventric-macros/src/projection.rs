@@ -265,8 +265,9 @@ impl Projection {
         }
     }
 
-    // The companion module: one borrowed enum per selection + the `Project` trait
-    // (one method per selection) the user implements.
+    // The companion module: one borrowed enum per selection (a variant per event
+    // type). The user folds each via `impl Project<Enum> for Self`; the standard
+    // `Project<T>` trait lives in `eventric_domain::projection`, not here.
     fn companion(&self) -> TokenStream {
         let module = self.module();
 
@@ -285,25 +286,11 @@ impl Projection {
             }
         });
 
-        let methods = self.selections.iter().map(|selection| {
-            let method = &selection.name;
-            let enum_ident = enum_ident(&selection.name);
-
-            quote! {
-                fn #method(
-                    &mut self,
-                    event: ::eventric_domain::projection::Event<#enum_ident<'_>>,
-                );
-            }
-        });
-
         quote! {
+            // Generated machinery — not the user's to document.
+            #[allow(missing_docs)]
             pub mod #module {
                 #(#enums)*
-
-                pub trait Project {
-                    #(#methods)*
-                }
             }
         }
     }
@@ -503,7 +490,6 @@ impl ToTokens for DispatchArm<'_> {
         } = *self;
 
         let enum_ident = enum_ident(&selection.name);
-        let method = &selection.name;
 
         let branch = selection.events.iter().map(|event| {
             let variant = variant(event);
@@ -522,7 +508,7 @@ impl ToTokens for DispatchArm<'_> {
                 };
 
                 if let ::std::option::Option::Some(matched) = matched {
-                    <Self as #module::Project>::#method(
+                    <Self as ::eventric_domain::projection::Project<#module::#enum_ident<'_>>>::project(
                         self,
                         ::eventric_domain::projection::Event::new(
                             matched,

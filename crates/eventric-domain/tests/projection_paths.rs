@@ -15,6 +15,7 @@ use eventric_domain::{
     projection::{
         self,
         Dispatch as _,
+        Project,
         Projection,
         Recognize as _,
         Select as _,
@@ -66,8 +67,8 @@ struct Status {
     account: String,
 }
 
-impl status::Project for Status {
-    fn status(&mut self, event: projection::Event<status::Status<'_>>) {
+impl Project<status::Status<'_>> for Status {
+    fn project(&mut self, event: projection::Event<status::Status<'_>>) {
         self.open = match event.event() {
             status::Status::Opened(_) => true,
             status::Status::Closed(_) => false,

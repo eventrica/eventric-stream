@@ -1,6 +1,7 @@
 use derive_more::Debug;
 use eventric_domain::projection::{
     Event,
+    Project,
     Projection,
 };
 use fancy_constructor::new;
@@ -31,8 +32,8 @@ pub struct CourseExists {
     pub id: String,
 }
 
-impl course_exists::Project for CourseExists {
-    fn defined(&mut self, _: Event<course_exists::Defined<'_>>) {
+impl Project<course_exists::Defined<'_>> for CourseExists {
+    fn project(&mut self, _: Event<course_exists::Defined<'_>>) {
         self.exists = true;
     }
 }
@@ -54,8 +55,8 @@ pub struct CourseCapacity {
     pub id: String,
 }
 
-impl course_capacity::Project for CourseCapacity {
-    fn capacity(&mut self, event: Event<course_capacity::Capacity<'_>>) {
+impl Project<course_capacity::Capacity<'_>> for CourseCapacity {
+    fn project(&mut self, event: Event<course_capacity::Capacity<'_>>) {
         match event.event() {
             course_capacity::Capacity::CourseDefined(event) => self.capacity = event.capacity,
             course_capacity::Capacity::CourseCapacityChanged(event) => {
@@ -84,8 +85,8 @@ pub struct StudentAlreadySubscribed {
     pub student_id: String,
 }
 
-impl student_already_subscribed::Project for StudentAlreadySubscribed {
-    fn subscribed(&mut self, _: Event<student_already_subscribed::Subscribed<'_>>) {
+impl Project<student_already_subscribed::Subscribed<'_>> for StudentAlreadySubscribed {
+    fn project(&mut self, _: Event<student_already_subscribed::Subscribed<'_>>) {
         self.subscribed = true;
     }
 }
@@ -104,8 +105,8 @@ pub struct NumberOfCourseSubscriptions {
     pub count: u8,
 }
 
-impl number_of_course_subscriptions::Project for NumberOfCourseSubscriptions {
-    fn subscribed(&mut self, _: Event<number_of_course_subscriptions::Subscribed<'_>>) {
+impl Project<number_of_course_subscriptions::Subscribed<'_>> for NumberOfCourseSubscriptions {
+    fn project(&mut self, _: Event<number_of_course_subscriptions::Subscribed<'_>>) {
         self.count += 1;
     }
 }
@@ -124,8 +125,8 @@ pub struct NumberOfStudentSubscriptions {
     pub count: u8,
 }
 
-impl number_of_student_subscriptions::Project for NumberOfStudentSubscriptions {
-    fn subscribed(&mut self, _: Event<number_of_student_subscriptions::Subscribed<'_>>) {
+impl Project<number_of_student_subscriptions::Subscribed<'_>> for NumberOfStudentSubscriptions {
+    fn project(&mut self, _: Event<number_of_student_subscriptions::Subscribed<'_>>) {
         self.count += 1;
     }
 }

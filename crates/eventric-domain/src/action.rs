@@ -2,11 +2,6 @@
 //! [`Update`] components), run by the model
 //! [`Enactor`](super::enactor::Enactor).
 
-use std::ops::{
-    Deref,
-    DerefMut,
-};
-
 use error_stack::Report;
 pub use eventric_macros::Action;
 use eventric_stream::stream::operate::{
@@ -29,13 +24,18 @@ use crate::{
 /// [`Context`] (its projections), [`Select`] (what to replay), and [`Update`]
 /// (folding replayed events). Derived by `#[derive(Action)]` and run by an
 /// [`Enactor`](crate::enactor::Enactor).
-pub trait Action: Act + Context + Select + Update {}
+pub trait Action: Context + Act<Self::Projections> + Select + Update {}
 
 // Act
 
-/// The business logic of an [`Action`]: decide, from the folded [`Context`],
-/// what events (if any) to append.
-pub trait Act: Context
+/// The business logic of an [`Action`]: decide, from its folded projections,
+/// what events (if any) to append. Implemented with the action's generated
+/// `Projections` struct as the type argument (e.g.
+/// `impl Act<make_deposit::Projections> for MakeDeposit`), mirroring how a
+/// projection implements `Project<Enum>` — the
+/// [`Enactor`](crate::enactor::Enactor) supplies the argument from
+/// [`Context::Projections`].
+pub trait Act<P>
 where
     Self::Err: From<Report<Error>>,
 {
@@ -45,46 +45,48 @@ where
     /// The success value (`()` by default).
     type Ok = ();
 
-    /// Run the command against its folded `context`, buffering any events to
-    /// append (through the context) and returning the success value.
-    fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err>;
+    /// Run the command against its folded `projections`, staging any events to
+    /// append into `events`, and returning the success value.
+    fn act(&self, events: &mut Events, projections: &P) -> Result<Self::Ok, Self::Err>;
 }
 
 // Context
 
-/// Supplies an [`Action`]'s context: a generated struct holding the action's
-/// projections that derefs to the [`Events`] buffer the action appends into.
-pub trait Context
-where
-    Self::Context: Deref<Target = Events> + DerefMut + Into<Events>,
-{
-    /// The generated per-action context type.
-    type Context;
+/// Supplies an [`Action`]'s projections: a generated struct (in a module named
+/// after the action) holding each of its projections — what the replay folds
+/// into and the business logic reads. Separate from the [`Events`] the action
+/// appends.
+pub trait Context {
+    /// The generated per-action projections struct.
+    type Projections;
 
-    /// Build a fresh context, with each projection at its initial state.
-    fn context(&self) -> Self::Context;
+    /// Build the projections, each at its initial (pre-replay) state.
+    fn projections(&self) -> Self::Projections;
 }
 
 // Select
 
 /// Builds the [`Selection`]s an [`Action`] replays before running — one per
-/// projection in its context.
+/// *named selection* across its projections (a projection with N named
+/// selections contributes N), flattened in projection order to form the mask
+/// layout.
 pub trait Select: Context {
-    /// The selections to replay (and to guard the append against), derived from
-    /// the action's projections.
-    fn select(&self, context: &Self::Context) -> Result<Vec<Selection>, Report<Error>>;
+    /// The selections to replay (and to guard the append against) — one per
+    /// named selection across the action's projections, in projection
+    /// order.
+    fn select(&self, projections: &Self::Projections) -> Result<Vec<Selection>, Report<Error>>;
 }
 
 // Update
 
-/// Folds a replayed event into an [`Action`]'s context, routing it (by mask) to
-/// the projections that selected it.
+/// Folds a replayed event into an [`Action`]'s projections, routing it (by
+/// mask) to the projections that selected it.
 pub trait Update: Context {
-    /// Fold `event` into `context`, dispatching it to each projection whose
+    /// Fold `event` into `projections`, dispatching it to each projection whose
     /// mask bit it matched.
     fn update(
         &self,
-        context: &mut Self::Context,
+        projections: &mut Self::Projections,
         event: &EventAndMask,
     ) -> Result<(), Report<Error>>;
 }

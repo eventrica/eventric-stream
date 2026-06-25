@@ -1,6 +1,7 @@
-//! Procedural macros for the `eventric` crate: the `tag!` function-like macro
-//! and the `Event`/`Action`/`Projection` derives. These are re-exported from
-//! `eventric`, so consumers never name this crate directly.
+//! Procedural macros for the eventric workspace: the `tag!` function-like macro
+//! and the `Event`/`Action`/`Projection` derives. `tag!` is re-exported from
+//! `eventric-stream` and the three derives from `eventric-domain`, so consumers
+//! never name this crate directly.
 
 #![allow(clippy::multiple_crate_versions)]
 #![deny(clippy::missing_errors_doc)]
@@ -49,9 +50,20 @@ pub fn tag(input: TokenStream) -> TokenStream {
 
 // Action
 
-/// Derives the domain `Action` trait family — generates the action's context
-/// type and its select/update wiring from `#[action(..)]`. See
-/// `eventric_domain::action`.
+/// Derives the domain `Action` trait family from a declarative `#[action(..)]`
+/// attribute — generates the action's projections type (a struct in a
+/// `snake_case` submodule) and its select/update wiring.
+///
+/// ```text
+/// #[action(projections: {
+///     <field_name>: <Type>::new(..),   // field name is the projection-field key;
+/// })]                                  // the type is read from the constructor
+/// ```
+///
+/// Each entry names a projection field and its constructor (run with `self`
+/// bound to the action). `Act::act(&self, events, projections)` then stages
+/// output into the events buffer, reading the folded projections. Omit
+/// `projections` for an action with none. See `eventric_domain::action`.
 #[proc_macro_derive(Action, attributes(action))]
 pub fn action(input: TokenStream) -> TokenStream {
     emit_impl_or_error!(Action::new(&parse_macro_input!(input))).into()
@@ -94,20 +106,20 @@ pub fn action(input: TokenStream) -> TokenStream {
 /// ```text
 /// tags: {
 ///     course:  id,                    // bare ident — the field, i.e. `&self.id`
-///     student: &this.student_id,      // expression — `this` is the event (`&Self`)
-///     region:  |this| this.region(),  // closure    — as the expression, but you
+///     student: &self.student_id,      // expression — `self` is the event
+///     region:  |e| e.region(),        // closure    — as the expression, but you
 ///                                     //              name (or `_`-ignore) the receiver
 ///     account: [from, to],            // list       — one tag per element, same prefix
 /// }
 /// ```
 ///
 /// The bare ident is shorthand for a plain field. Otherwise the value is an
-/// expression evaluated with the event bound as `this` (`&Self`); the closure
-/// form is the same, but lets you name the receiver (e.g. `|_| "literal"` to
-/// ignore it); and a `[list]` of any of these emits one tag per element under
-/// the prefix. Whatever the form, each value becomes the tag's text — formatted
-/// as `prefix:value`, so it must be `Display` — in practice a string field like
-/// `&self.id`.
+/// expression evaluated with the event in scope as `self`; the closure form is
+/// the same, but lets you bind a different receiver name (e.g. `|_| "literal"`
+/// to ignore it, or a multi-statement body); and a `[list]` of any of these
+/// emits one tag per element under the prefix. Whatever the form, each value
+/// becomes the tag's text — formatted as `prefix:value`, so it must be
+/// `Display` — in practice a string field like `&self.id`.
 ///
 /// # Example
 ///
@@ -146,9 +158,10 @@ pub fn event(input: TokenStream) -> TokenStream {
 /// ```
 ///
 /// For each selection it generates, in a module named after the projection
-/// (`snake_case`), a borrowed enum (one variant per event type) and a `Project`
-/// trait method taking it wrapped in a `projection::Event`; the user implements
-/// that trait, one method per selection. See `eventric_domain::projection`.
+/// (`snake_case`), a borrowed enum (one variant per event type). The user folds
+/// each selection by implementing the standard `Project<Enum>` trait (in
+/// `eventric_domain::projection`) — one impl per selection, with that
+/// selection's enum as the type argument. See `eventric_domain::projection`.
 #[proc_macro_derive(Projection, attributes(projection))]
 pub fn projection(input: TokenStream) -> TokenStream {
     emit_impl_or_error!(Projection::new(&parse_macro_input!(input))).into()

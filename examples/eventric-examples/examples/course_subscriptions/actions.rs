@@ -6,6 +6,7 @@ use eventric_domain::{
         Action,
     },
     error::Error,
+    event::Events,
 };
 use fancy_constructor::new;
 
@@ -31,66 +32,74 @@ use crate::{
 // Actions
 
 #[derive(new, Action, Debug)]
-#[action(
-    projection(CourseExists: CourseExists::new(&this.id))
-)]
+#[action(projections: {
+    course_exists: CourseExists::new(&self.id),
+})]
 pub struct DefineCourse {
     #[new(into)]
     pub id: String,
     pub capacity: u8,
 }
 
-impl Act for DefineCourse {
+impl Act<define_course::Projections> for DefineCourse {
     type Err = Report<Error>;
 
-    fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
-        if context.course_exists.exists {
+    fn act(
+        &self,
+        events: &mut Events,
+        projections: &define_course::Projections,
+    ) -> Result<Self::Ok, Self::Err> {
+        if projections.course_exists.exists {
             return Err(Report::new(Error).attach("Course Already Exists"));
         }
 
-        context.append(&CourseDefined::new(&self.id, self.capacity))?;
+        events.append(&CourseDefined::new(&self.id, self.capacity))?;
 
         Ok(())
     }
 }
 
 #[derive(new, Action, Debug)]
-#[action(
-    projection(CourseExists: CourseExists::new(&this.id)),
-    projection(CourseCapacity: CourseCapacity::new(&this.id))
-)]
+#[action(projections: {
+    course_exists: CourseExists::new(&self.id),
+    course_capacity: CourseCapacity::new(&self.id),
+})]
 pub struct ChangeCourseCapacity {
     #[new(into)]
     id: String,
     new_capacity: u8,
 }
 
-impl Act for ChangeCourseCapacity {
+impl Act<change_course_capacity::Projections> for ChangeCourseCapacity {
     type Err = Report<Error>;
 
-    fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
-        if !context.course_exists.exists {
+    fn act(
+        &self,
+        events: &mut Events,
+        projections: &change_course_capacity::Projections,
+    ) -> Result<Self::Ok, Self::Err> {
+        if !projections.course_exists.exists {
             return Err(Report::new(Error).attach("Course Does Not Exist"));
         }
 
-        if context.course_capacity.capacity == self.new_capacity {
+        if projections.course_capacity.capacity == self.new_capacity {
             return Err(Report::new(Error).attach("Current Course Capacity Equals New Capacity"));
         }
 
-        context.append(&CourseCapacityChanged::new(&self.id, self.new_capacity))?;
+        events.append(&CourseCapacityChanged::new(&self.id, self.new_capacity))?;
 
         Ok(())
     }
 }
 
 #[derive(new, Action, Debug)]
-#[action(
-    projection(CourseExists: CourseExists::new(&this.course_id)),
-    projection(CourseCapacity: CourseCapacity::new(&this.course_id)),
-    projection(NumberOfCourseSubscriptions: NumberOfCourseSubscriptions::new(&this.course_id)),
-    projection(NumberOfStudentSubscriptions: NumberOfStudentSubscriptions::new(&this.student_id)),
-    projection(StudentAlreadySubscribed: StudentAlreadySubscribed::new(&this.course_id, &this.student_id))
-)]
+#[action(projections: {
+    course_exists: CourseExists::new(&self.course_id),
+    course_capacity: CourseCapacity::new(&self.course_id),
+    course_subscriptions: NumberOfCourseSubscriptions::new(&self.course_id),
+    student_subscriptions: NumberOfStudentSubscriptions::new(&self.student_id),
+    student_subscribed: StudentAlreadySubscribed::new(&self.course_id, &self.student_id),
+})]
 pub struct SubscribeStudentToCourse {
     #[new(into)]
     course_id: String,
@@ -98,27 +107,31 @@ pub struct SubscribeStudentToCourse {
     student_id: String,
 }
 
-impl Act for SubscribeStudentToCourse {
+impl Act<subscribe_student_to_course::Projections> for SubscribeStudentToCourse {
     type Err = Report<Error>;
 
-    fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
-        if !context.course_exists.exists {
+    fn act(
+        &self,
+        events: &mut Events,
+        projections: &subscribe_student_to_course::Projections,
+    ) -> Result<Self::Ok, Self::Err> {
+        if !projections.course_exists.exists {
             return Err(Report::new(Error).attach("Course Does Not Exist"));
         }
 
-        if context.number_of_course_subscriptions.count >= context.course_capacity.capacity {
+        if projections.course_subscriptions.count >= projections.course_capacity.capacity {
             return Err(Report::new(Error).attach("Course Fully Booked"));
         }
 
-        if context.student_already_subscribed.subscribed {
+        if projections.student_subscribed.subscribed {
             return Err(Report::new(Error).attach("Student Already Subscribed"));
         }
 
-        if context.number_of_student_subscriptions.count >= 5 {
+        if projections.student_subscriptions.count >= 5 {
             return Err(Report::new(Error).attach("Student Reached Course Limit"));
         }
 
-        context.append(&StudentSubscribedToCourse::new(
+        events.append(&StudentSubscribedToCourse::new(
             &self.course_id,
             &self.student_id,
         ))?;

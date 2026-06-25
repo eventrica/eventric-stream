@@ -10,9 +10,13 @@ use eventric_domain::{
     },
     enactor::Enactor as _,
     error::Error,
-    event::Event,
+    event::{
+        Event,
+        Events,
+    },
     projection::{
         self,
+        Project,
         Projection,
     },
 };
@@ -86,8 +90,8 @@ pub struct AccountBalance {
     pub balance: i64,
 }
 
-impl account_balance::Project for AccountBalance {
-    fn balance(&mut self, event: projection::Event<account_balance::Balance<'_>>) {
+impl Project<account_balance::Balance<'_>> for AccountBalance {
+    fn project(&mut self, event: projection::Event<account_balance::Balance<'_>>) {
         match event.event() {
             account_balance::Balance::MoneyDeposited(event) => {
                 self.balance += i64::try_from(event.amount).unwrap_or(i64::MAX);
@@ -116,8 +120,8 @@ pub struct DepositTotal {
     pub total: u64,
 }
 
-impl deposit_total::Project for DepositTotal {
-    fn deposited(&mut self, event: projection::Event<deposit_total::Deposited<'_>>) {
+impl Project<deposit_total::Deposited<'_>> for DepositTotal {
+    fn project(&mut self, event: projection::Event<deposit_total::Deposited<'_>>) {
         let deposit_total::Deposited::MoneyDeposited(event) = event.event();
         self.total += event.amount;
     }
@@ -134,8 +138,8 @@ pub struct WithdrawalTotal {
     pub total: u64,
 }
 
-impl withdrawal_total::Project for WithdrawalTotal {
-    fn withdrawn(&mut self, event: projection::Event<withdrawal_total::Withdrawn<'_>>) {
+impl Project<withdrawal_total::Withdrawn<'_>> for WithdrawalTotal {
+    fn project(&mut self, event: projection::Event<withdrawal_total::Withdrawn<'_>>) {
         let withdrawal_total::Withdrawn::MoneyWithdrawn(event) = event.event();
         self.total += event.amount;
     }
@@ -144,43 +148,55 @@ impl withdrawal_total::Project for WithdrawalTotal {
 // Actions (used only to seed the stream the normal way)
 
 #[derive(new, Action, Debug)]
-#[action(projection(AccountBalance: AccountBalance::new(&this.account)))]
+#[action(projections: {
+    account_balance: AccountBalance::new(&self.account),
+})]
 pub struct Deposit {
     #[new(into)]
     pub account: String,
     pub amount: u64,
 }
 
-impl Act for Deposit {
+impl Act<deposit::Projections> for Deposit {
     type Err = Report<Error>;
 
-    fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
-        context.append(&MoneyDeposited::new(&self.account, self.amount))?;
+    fn act(
+        &self,
+        events: &mut Events,
+        _projections: &deposit::Projections,
+    ) -> Result<Self::Ok, Self::Err> {
+        events.append(&MoneyDeposited::new(&self.account, self.amount))?;
 
         Ok(())
     }
 }
 
 #[derive(new, Action, Debug)]
-#[action(projection(AccountBalance: AccountBalance::new(&this.account)))]
+#[action(projections: {
+    account_balance: AccountBalance::new(&self.account),
+})]
 pub struct Withdraw {
     #[new(into)]
     pub account: String,
     pub amount: u64,
 }
 
-impl Act for Withdraw {
+impl Act<withdraw::Projections> for Withdraw {
     type Err = Report<Error>;
 
-    fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
-        let balance = context.account_balance.balance;
+    fn act(
+        &self,
+        events: &mut Events,
+        projections: &withdraw::Projections,
+    ) -> Result<Self::Ok, Self::Err> {
+        let balance = projections.account_balance.balance;
         let amount = i64::try_from(self.amount).unwrap_or(i64::MAX);
 
         if balance < amount {
             return Err(Report::new(Error).attach("Insufficient Funds"));
         }
 
-        context.append(&MoneyWithdrawn::new(&self.account, self.amount))?;
+        events.append(&MoneyWithdrawn::new(&self.account, self.amount))?;
 
         Ok(())
     }

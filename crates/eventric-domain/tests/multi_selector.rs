@@ -32,9 +32,13 @@ use eventric_domain::{
     },
     enactor::Enactor as _,
     error::Error,
-    event::Event,
+    event::{
+        Event,
+        Events,
+    },
     projection::{
         self,
+        Project,
         Projection,
     },
 };
@@ -96,8 +100,8 @@ struct Balance {
     account: String,
 }
 
-impl balance::Project for Balance {
-    fn balance(&mut self, event: projection::Event<balance::Balance<'_>>) {
+impl Project<balance::Balance<'_>> for Balance {
+    fn project(&mut self, event: projection::Event<balance::Balance<'_>>) {
         match event.event() {
             balance::Balance::Deposit(event) => {
                 self.net += i64::try_from(event.amount).expect("deposit fits i64");
@@ -133,13 +137,15 @@ struct ChannelTotals {
     account: String,
 }
 
-impl channel_totals::Project for ChannelTotals {
-    fn wire(&mut self, event: projection::Event<channel_totals::Wire<'_>>) {
+impl Project<channel_totals::Wire<'_>> for ChannelTotals {
+    fn project(&mut self, event: projection::Event<channel_totals::Wire<'_>>) {
         let channel_totals::Wire::Deposit(event) = event.event();
         self.wire += event.amount;
     }
+}
 
-    fn card(&mut self, event: projection::Event<channel_totals::Card<'_>>) {
+impl Project<channel_totals::Card<'_>> for ChannelTotals {
+    fn project(&mut self, event: projection::Event<channel_totals::Card<'_>>) {
         let channel_totals::Card::Deposit(event) = event.event();
         self.card += event.amount;
     }
@@ -163,8 +169,8 @@ struct WireDeposits {
     account: String,
 }
 
-impl wire_deposits::Project for WireDeposits {
-    fn deposited(&mut self, event: projection::Event<wire_deposits::Deposited<'_>>) {
+impl Project<wire_deposits::Deposited<'_>> for WireDeposits {
+    fn project(&mut self, event: projection::Event<wire_deposits::Deposited<'_>>) {
         let wire_deposits::Deposited::Deposit(event) = event.event();
         self.count += 1;
         self.total += event.amount;
@@ -186,8 +192,8 @@ struct LargeDeposits {
     account: String,
 }
 
-impl large_deposits::Project for LargeDeposits {
-    fn deposited(&mut self, event: projection::Event<large_deposits::Deposited<'_>>) {
+impl Project<large_deposits::Deposited<'_>> for LargeDeposits {
+    fn project(&mut self, event: projection::Event<large_deposits::Deposited<'_>>) {
         let large_deposits::Deposited::Deposit(event) = event.event();
 
         // The amount threshold is not a tag, so it stays a payload check.
@@ -205,9 +211,9 @@ impl large_deposits::Project for LargeDeposits {
 /// Append a deposit (unconditionally — no business rule). Tags by account and
 /// channel.
 #[derive(new, Action, Debug)]
-#[action(
-    projection(Balance: Balance::new(&this.account))
-)]
+#[action(projections: {
+    balance: Balance::new(&self.account),
+})]
 struct MakeDeposit {
     #[new(into)]
     account: String,
@@ -216,11 +222,15 @@ struct MakeDeposit {
     amount: u64,
 }
 
-impl Act for MakeDeposit {
+impl Act<make_deposit::Projections> for MakeDeposit {
     type Err = Report<Error>;
 
-    fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
-        context.append(&Deposit::new(&self.account, &self.channel, self.amount))?;
+    fn act(
+        &self,
+        events: &mut Events,
+        _projections: &make_deposit::Projections,
+    ) -> Result<Self::Ok, Self::Err> {
+        events.append(&Deposit::new(&self.account, &self.channel, self.amount))?;
 
         Ok(())
     }
@@ -231,24 +241,28 @@ impl Act for MakeDeposit {
 /// selection folded correctly: the rule reads `net`, which only holds the right
 /// value if both `Deposit` and `Withdrawal` events replayed.
 #[derive(new, Action, Debug)]
-#[action(
-    projection(Balance: Balance::new(&this.account))
-)]
+#[action(projections: {
+    balance: Balance::new(&self.account),
+})]
 struct MakeWithdrawal {
     #[new(into)]
     account: String,
     amount: u64,
 }
 
-impl Act for MakeWithdrawal {
+impl Act<make_withdrawal::Projections> for MakeWithdrawal {
     type Err = Report<Error>;
 
-    fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
-        if context.balance.net < i64::try_from(self.amount).expect("amount fits i64") {
+    fn act(
+        &self,
+        events: &mut Events,
+        projections: &make_withdrawal::Projections,
+    ) -> Result<Self::Ok, Self::Err> {
+        if projections.balance.net < i64::try_from(self.amount).expect("amount fits i64") {
             return Err(Report::new(Error).attach("Insufficient Funds"));
         }
 
-        context.append(&Withdrawal::new(&self.account, self.amount))?;
+        events.append(&Withdrawal::new(&self.account, self.amount))?;
 
         Ok(())
     }
@@ -256,25 +270,29 @@ impl Act for MakeWithdrawal {
 
 /// Read-only: returns the folded `Balance` projection for an account.
 #[derive(new, Action, Debug)]
-#[action(
-    projection(Balance: Balance::new(&this.account))
-)]
+#[action(projections: {
+    balance: Balance::new(&self.account),
+})]
 struct ReadBalance {
     #[new(into)]
     account: String,
 }
 
-impl Act for ReadBalance {
+impl Act<read_balance::Projections> for ReadBalance {
     type Err = Report<Error>;
     type Ok = Balance;
 
-    fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
-        // Clone the folded projection out of the context for inspection.
+    fn act(
+        &self,
+        _events: &mut Events,
+        projections: &read_balance::Projections,
+    ) -> Result<Self::Ok, Self::Err> {
+        // Clone the folded projection out for inspection.
         Ok(Balance {
-            net: context.balance.net,
-            deposits: context.balance.deposits,
-            withdrawals: context.balance.withdrawals,
-            account: context.balance.account.clone(),
+            net: projections.balance.net,
+            deposits: projections.balance.deposits,
+            withdrawals: projections.balance.withdrawals,
+            account: projections.balance.account.clone(),
         })
     }
 }
@@ -282,20 +300,24 @@ impl Act for ReadBalance {
 /// Read-only: returns the folded `ChannelTotals` (test 2 — same type, two named
 /// selections distinguished by filter). Returns `(wire, card)`.
 #[derive(new, Action, Debug)]
-#[action(
-    projection(ChannelTotals: ChannelTotals::new(&this.account))
-)]
+#[action(projections: {
+    channel_totals: ChannelTotals::new(&self.account),
+})]
 struct ReadChannelTotals {
     #[new(into)]
     account: String,
 }
 
-impl Act for ReadChannelTotals {
+impl Act<read_channel_totals::Projections> for ReadChannelTotals {
     type Err = Report<Error>;
     type Ok = (u64, u64);
 
-    fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
-        let totals = &context.channel_totals;
+    fn act(
+        &self,
+        _events: &mut Events,
+        projections: &read_channel_totals::Projections,
+    ) -> Result<Self::Ok, Self::Err> {
+        let totals = &projections.channel_totals;
 
         Ok((totals.wire, totals.card))
     }
@@ -305,25 +327,29 @@ impl Act for ReadChannelTotals {
 /// (test 3 — separate projections, same type, different filters, independent
 /// folds). Returns `(wire_count, wire_total, large_count, large_total)`.
 #[derive(new, Action, Debug)]
-#[action(
-    projection(WireDeposits: WireDeposits::new(&this.account)),
-    projection(LargeDeposits: LargeDeposits::new(&this.account))
-)]
+#[action(projections: {
+    wire_deposits: WireDeposits::new(&self.account),
+    large_deposits: LargeDeposits::new(&self.account),
+})]
 struct ReadDepositStats {
     #[new(into)]
     account: String,
 }
 
-impl Act for ReadDepositStats {
+impl Act<read_deposit_stats::Projections> for ReadDepositStats {
     type Err = Report<Error>;
     type Ok = (u32, u64, u32, u64);
 
-    fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
+    fn act(
+        &self,
+        _events: &mut Events,
+        projections: &read_deposit_stats::Projections,
+    ) -> Result<Self::Ok, Self::Err> {
         Ok((
-            context.wire_deposits.count,
-            context.wire_deposits.total,
-            context.large_deposits.count,
-            context.large_deposits.total,
+            projections.wire_deposits.count,
+            projections.wire_deposits.total,
+            projections.large_deposits.count,
+            projections.large_deposits.total,
         ))
     }
 }

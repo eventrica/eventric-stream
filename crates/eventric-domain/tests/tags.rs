@@ -13,13 +13,15 @@ use revision::revisioned;
 // One event exercising all three `#[event(tags: ..)]` value forms end-to-end:
 //
 //   - bare ident  -> the field, `&self.sku`
-//   - expression  -> evaluated with the event bound as `this` (`&Self`)
-//   - closure     -> the same, but naming the receiver; here it also computes
-//     the value from a non-string field (`u32`), which the bare/expr forms
-//     can't express
+//   - expression  -> a plain expression with the event in scope as `self` (the
+//     `&self` tag method); here `&self.owner`
+//   - closure     -> names the receiver (`|e| ..`) and desugars to `{ let e =
+//     self; <body> }`; here it computes the value from a non-string field
+//     (`u32`), which the bare/expr forms can't express
 //
-// All three desugar to the same `let <name> = self; <body>` block and are
-// formatted by `tag!` as `prefix:value`.
+// The value is formatted inline by `tag!` as `prefix:value`; only the closure
+// form introduces a `let`-binding (no closure is generated, so no
+// higher-ranked-lifetime coercion).
 
 #[revisioned(revision = 1)]
 #[derive(new, Event, Debug)]
@@ -27,7 +29,7 @@ use revision::revisioned;
     identifier: widget_made,
     tags: {
         sku: sku,
-        owner: &this.owner,
+        owner: &self.owner,
         count: |e| e.count.to_string()
     }
 )]

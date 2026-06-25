@@ -19,10 +19,12 @@ use eventric_domain::{
     error::Error,
     event::{
         Event,
+        Events,
         Identifier as _,
     },
     projection::{
         self,
+        Project,
         Projection,
     },
 };
@@ -85,8 +87,8 @@ struct ItemPresent {
     sku: String,
 }
 
-impl item_present::Project for ItemPresent {
-    fn present(&mut self, event: projection::Event<item_present::Present<'_>>) {
+impl Project<item_present::Present<'_>> for ItemPresent {
+    fn project(&mut self, event: projection::Event<item_present::Present<'_>>) {
         self.present = match event.event() {
             item_present::Present::ItemRegistered(_) => true,
             item_present::Present::ItemRemoved(_) => false,
@@ -108,8 +110,8 @@ struct RegistrationCount {
     sku: String,
 }
 
-impl registration_count::Project for RegistrationCount {
-    fn registered(&mut self, _: projection::Event<registration_count::Registered<'_>>) {
+impl Project<registration_count::Registered<'_>> for RegistrationCount {
+    fn project(&mut self, _: projection::Event<registration_count::Registered<'_>>) {
         self.count += 1;
     }
 }
@@ -118,24 +120,28 @@ impl registration_count::Project for RegistrationCount {
 
 /// Register an item. Rejected if the SKU is already present.
 #[derive(new, Action, Debug)]
-#[action(
-    projection(ItemPresent: ItemPresent::new(&this.sku))
-)]
+#[action(projections: {
+    item_present: ItemPresent::new(&self.sku),
+})]
 struct RegisterItem {
     #[new(into)]
     sku: String,
     qty: u8,
 }
 
-impl Act for RegisterItem {
+impl Act<register_item::Projections> for RegisterItem {
     type Err = Report<Error>;
 
-    fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
-        if context.item_present.present {
+    fn act(
+        &self,
+        events: &mut Events,
+        projections: &register_item::Projections,
+    ) -> Result<Self::Ok, Self::Err> {
+        if projections.item_present.present {
             return Err(Report::new(Error).attach("Item Already Registered"));
         }
 
-        context.append(&ItemRegistered::new(&self.sku, self.qty))?;
+        events.append(&ItemRegistered::new(&self.sku, self.qty))?;
 
         Ok(())
     }
@@ -143,23 +149,27 @@ impl Act for RegisterItem {
 
 /// Remove an item. Rejected if the SKU is not currently present.
 #[derive(new, Action, Debug)]
-#[action(
-    projection(ItemPresent: ItemPresent::new(&this.sku))
-)]
+#[action(projections: {
+    item_present: ItemPresent::new(&self.sku),
+})]
 struct RemoveItem {
     #[new(into)]
     sku: String,
 }
 
-impl Act for RemoveItem {
+impl Act<remove_item::Projections> for RemoveItem {
     type Err = Report<Error>;
 
-    fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
-        if !context.item_present.present {
+    fn act(
+        &self,
+        events: &mut Events,
+        projections: &remove_item::Projections,
+    ) -> Result<Self::Ok, Self::Err> {
+        if !projections.item_present.present {
             return Err(Report::new(Error).attach("Item Not Registered"));
         }
 
-        context.append(&ItemRemoved::new(&self.sku))?;
+        events.append(&ItemRemoved::new(&self.sku))?;
 
         Ok(())
     }
@@ -168,20 +178,24 @@ impl Act for RemoveItem {
 /// A read-only action: appends nothing, returns the folded registration count
 /// for a SKU. Used to assert projected state directly (`type Ok = u8`).
 #[derive(new, Action, Debug)]
-#[action(
-    projection(RegistrationCount: RegistrationCount::new(&this.sku))
-)]
+#[action(projections: {
+    registration_count: RegistrationCount::new(&self.sku),
+})]
 struct CountRegistrations {
     #[new(into)]
     sku: String,
 }
 
-impl Act for CountRegistrations {
+impl Act<count_registrations::Projections> for CountRegistrations {
     type Err = Report<Error>;
     type Ok = u8;
 
-    fn action(&mut self, context: &mut Self::Context) -> Result<Self::Ok, Self::Err> {
-        Ok(context.registration_count.count)
+    fn act(
+        &self,
+        _events: &mut Events,
+        projections: &count_registrations::Projections,
+    ) -> Result<Self::Ok, Self::Err> {
+        Ok(projections.registration_count.count)
     }
 }
 

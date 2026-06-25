@@ -273,15 +273,16 @@ impl ToTokens for TagInitialize<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let TagInitialize(prefix, tag) = *self;
 
-        // Every value is evaluated in place with the event bound as a receiver,
-        // then formatted by `tag!`. No actual closure is generated, so there is no
-        // higher-ranked-lifetime coercion (and so no `Cow`).
+        // Each value is evaluated with the event in scope as `self` (the tag/filter
+        // method takes `&self`), then formatted by `tag!`. No closure is generated
+        // for the expression form, so there is no higher-ranked-lifetime coercion
+        // (and no `Cow`).
         let value = match tag {
             // Bare field shorthand.
             Tag::Ident(field) => quote! { &self.#field },
-            // Closure: bind the receiver to the closure's *own* parameter name and
-            // evaluate its body — pure sugar for the `let`-block below, letting you
-            // name (or `_`-ignore) the receiver.
+            // Closure: bind the event to the closure's *own* parameter name and
+            // evaluate its body — sugar for naming (or `_`-ignoring) the receiver
+            // when `self` won't do (e.g. a different name, or a multi-statement body).
             Tag::Expr(Expr::Closure(closure)) => {
                 let body = &closure.body;
 
@@ -291,8 +292,8 @@ impl ToTokens for TagInitialize<'_> {
                     quote! { { #body } }
                 }
             }
-            // Expression with the event bound as `this` (`&Self`).
-            Tag::Expr(expr) => quote! { { let this = self; #expr } },
+            // A plain expression — `self` is the event.
+            Tag::Expr(expr) => quote! { #expr },
         };
 
         tokens.append_all(quote! {
@@ -329,7 +330,7 @@ mod tests {
     #[test]
     fn tag_value_forms_all_parse() {
         let args = parse(
-            "identifier: x, tags: { bare: field, borrowed: &this.field, call: this.compute(), \
+            "identifier: x, tags: { bare: field, borrowed: &self.field, call: this.compute(), \
              path: foo::BAR, closure: |e| e.compute() }",
         )
         .expect("value forms");

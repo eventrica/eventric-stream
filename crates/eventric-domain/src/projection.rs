@@ -14,16 +14,17 @@
 //!
 //! For each selection the derive generates, in a module named after the
 //! projection (`snake_case`), a **borrowed enum** with one variant per event
-//! type, and a `Project` trait with **one method per selection** taking that
-//! enum wrapped in an [`Event`] (so position/timestamp come along).
-//! The user implements that trait — one method per selection:
+//! type. The user folds each selection by implementing
+//! [`Project<Enum>`](Project) — one impl per selection, with that selection's
+//! enum (wrapped in an [`Event`], so position/timestamp come along) as the type
+//! argument:
 //!
 //! ```text
-//! impl course_capacity::Project for CourseCapacity {
-//!     fn capacity(&mut self, e: Event<course_capacity::Capacity<'_>>) {
+//! impl Project<course_capacity::Capacity<'_>> for CourseCapacity {
+//!     fn project(&mut self, e: Event<course_capacity::Capacity<'_>>) {
 //!         match e.event() {
-//!             Capacity::CourseDefined(ev)         => self.capacity = ev.capacity,
-//!             Capacity::CourseCapacityChanged(ev) => self.capacity = ev.new_capacity,
+//!             course_capacity::Capacity::CourseDefined(ev)         => self.capacity = ev.capacity,
+//!             course_capacity::Capacity::CourseCapacityChanged(ev) => self.capacity = ev.new_capacity,
 //!         }
 //!     }
 //! }
@@ -36,19 +37,21 @@
 //! ## Shaping inputs
 //!
 //! Each named selection is its own input channel: distinct read-models over the
-//! same event type are *separate named selections* (each its own method), while
-//! a single derived state folded from several event types is *one selection*
-//! whose method matches the enum. There is no "which selector won" arbitration
-//! — matching is set-valued, and the payload is decoded once and shared across
-//! every selection (and every same-type projection slot) that matched.
+//! same event type are *separate named selections* (each its own `Project`
+//! impl), while a single derived state folded from several event types is *one
+//! selection* whose `project` matches the enum. There is no "which selector
+//! won" arbitration — matching is set-valued, and the payload is decoded once
+//! and shared across every selection (and every same-type projection slot) that
+//! matched.
 //!
 //! ## Dispatch + the mask
 //!
 //! Each named selection is a separate [`Selection`] in the query, so it has its
 //! own positional bit in the stream's mask. The model layer de-positionalises
 //! that: [`Dispatch::dispatch`] receives just *this projection's* slice of the
-//! mask, and routes each set bit straight to its selection's method — no
-//! per-event re-test of the filters. [`Select::SELECTIONS`] is the slice width.
+//! mask, and routes each set bit straight to the matching
+//! `Project<Enum>::project` — no per-event re-test of the filters.
+//! [`Select::SELECTIONS`] is the slice width.
 
 use std::any::Any;
 
@@ -80,7 +83,7 @@ use crate::{
 
 /// A read-model built by folding selected events: the composite of [`Select`]
 /// (what events, as named selections), [`Recognize`] (type-match + decode), and
-/// [`Dispatch`] (fold into the matching selection's method). Derived by
+/// [`Dispatch`] (fold via the matching [`Project<Enum>`](Project)). Derived by
 /// `#[derive(Projection)]`.
 pub trait Projection: Dispatch + Recognize + Select {}
 
@@ -110,7 +113,8 @@ pub trait Recognize {
 // Dispatch
 
 /// Folds a recognised event into the projection, routing by `mask` — this
-/// projection's per-selection bit slice — to the matching selection method(s).
+/// projection's per-selection bit slice — to the matching
+/// [`Project<Enum>::project`](Project::project).
 pub trait Dispatch {
     /// Fold `event` into every selection whose bit is set in `mask` (the slice
     /// of the query mask owned by this projection, one bit per named
@@ -197,4 +201,21 @@ impl<T> Event<T> {
     pub fn timestamp(&self) -> Timestamp {
         self.timestamp
     }
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Project
+
+/// The fold for one named selection — implemented once per selection, with that
+/// selection's generated borrowed enum as the type argument (e.g. `impl
+/// Project<course_capacity::Capacity<'_>> for CourseCapacity`). The derive's
+/// [`Dispatch`] routes each matched event to the matching
+/// `Project<Enum>::project`, keyed by the mask. The enum's `match` is
+/// compile-time exhaustive, so adding or removing an event type in a selection
+/// forces the fold to be updated.
+pub trait Project<T> {
+    /// Fold the matched `event` — the selection's enum (a variant per event
+    /// type), with its position and timestamp — into this read-model.
+    fn project(&mut self, event: Event<T>);
 }

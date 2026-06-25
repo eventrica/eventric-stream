@@ -28,7 +28,7 @@
 //! ```
 //!
 //! See the [`Event`](macro@crate::event::Event) derive for the full
-//! `#[event(..)]` grammar and the tag-value forms (bare ident, `&this.expr`,
+//! `#[event(..)]` grammar and the tag-value forms (bare ident, `&self.expr`,
 //! closure, and `[list]` values for several tags under one prefix).
 
 use std::collections::BTreeSet;

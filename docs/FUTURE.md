@@ -57,23 +57,27 @@ wants to think through before building.
 - **Untested:** the `a..` / `..b` / `..` range lowerings, the 255 boundary, and
   multi-version OR-ing.
 
-## 2. Derive codegen ergonomics (in progress — Event + Projection done; Action pending)
+## 2. Derive codegen ergonomics (done — all three derives migrated)
 
 The full redesign of the three derives — a **declarative attribute grammar**,
-**named projection selectors** (per-selection event enums + a per-selection method
-surface), and the supporting groundwork — is specced in
-[`derives.md`](./derives.md). **Event and Projection are implemented**: the new
-`#[event(..)]` and `#[projection(selections: { .. })]` grammars (hand-parsed), with
-Projection generating per-selection borrowed enums + a `Project` trait and
-de-positionalising the mask. **Action is pending** — only its `#[action(..)]`
-grammar and `identity::<fn(&Self)>` constructor codegen remain; its `select`/`update`
-mask wiring was already updated. The redesign folded in (now realised for Projection)
-what were the deferred keyed-selectors and the codegen groundwork:
+**named projection selectors** (per-selection event enums + a parameterised
+`Project<Enum>` fold surface), and the supporting groundwork — is implemented and
+specced in [`derives.md`](./derives.md). All three derives are hand-parsed (no
+`darling`): the `#[event(..)]`, `#[projection(selections: { .. })]`, and
+`#[action(projections: { .. })]` grammars. Projection generates per-selection borrowed
+enums (the user folds each via the standard `Project<Enum>`) and de-positionalises the
+mask; Action generates a `Projections` struct in a snake_case submodule (built in
+`projections(&self)`) and the user implements the parameterised `Act<Projections>` —
+retiring the `identity::<fn(&Self)>` coercion and the deref-fused context. The two
+derives now share one rule: **implement a standard library trait parameterised by a
+generated type** (`Project<Enum>` / `Act<Projections>`); the macros only generate types
++ machinery. `self` is the receiver name throughout. The redesign realised the deferred
+keyed-selectors and the codegen groundwork:
 
 - named selectors + a **de-positionalised mask** (model-layer routing by selection,
   not by declaration-order index) — **done**;
-- a per-projection `Project` trait carrying the methods it implies rather than a bare
-  marker trait — **done**;
+- a typed per-selection fold surface — the standard `Project<Enum>`, one impl per
+  selection — rather than a bare marker trait — **done**;
 - collision-safe companion-name generation (a per-projection module of enums) — **done**.
 
 Still open, independent of that redesign:
@@ -86,6 +90,21 @@ Still open, independent of that redesign:
   but every test/example uses the default `Report<Error>` — plumbed, never
   exercised. (A `type Err = Report<Error>` default is a candidate ergonomic win,
   noted in `derives.md`.)
+- **Generated child modules don't re-root *generic arguments*.** Both derives put a
+  type in a `mod <snake>` and `super::`-prefix relative paths only at the head, not
+  inside angle brackets — so a *relative* generic argument (`Foo::<LocalType>::new(..)`
+  in an action's `projections:`, or a generic event type in a projection enum) emits
+  `super::Foo<LocalType>`, where `LocalType` fails to resolve in the child module.
+  Latent (no generic projections exist today); workaround is a crate-rooted arg
+  (`Foo::<crate::LocalType>::new(..)`). Fix = re-root recursively into `PathArguments`
+  in both `action::projection_field` and `projection::enum_field` (or switch both
+  child modules to `use super::*` and drop the re-rooting helpers).
+- **Action child-module vs Projection companion-module name clash.** Both derive a
+  `mod <snake_case_ident>` in the same namespace; an action and a projection (or two
+  actions) whose idents share a snake_case form collide with an opaque rustc error.
+  Very unlikely (an action is a command, a projection a read-model — rarely the same
+  name), and the same class as two same-named projections. Fix if it ever bites:
+  suffix the action's internal module (it's never named by user code).
 
 ## 3. Public surface & lints
 
