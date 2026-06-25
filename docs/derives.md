@@ -19,12 +19,6 @@ grammar — its `select`/`update` wiring was updated for the new per-selection m
 layout, but its `#[action(projection(Name: Ctor))]` attribute grammar (and the
 `identity::<fn(&Self)>` constructor codegen) are unchanged.
 
-**Today, for contrast:** the attributes use `darling`'s `FromMeta` conventions
-(`identifier(..)`, `tags(course(&this.id))`, `select(events(..), filter(..))`,
-`projection(Name: Ctor::new(..))`), and projections route by event type via one
-`impl Project<E>` per event type. The redesign below changes both the attribute
-grammar and the projection impl surface.
-
 ## Goals + principles
 
 Two independent axes, per derive: **(1) declaration expressiveness** — what the
@@ -125,7 +119,7 @@ pub struct CourseCapacity { /* … */ }
 
 **Generated, per projection** — a module (projection name, snake_case) holding one
 **borrowed enum per selection** (a variant per event type), and a trait with one
-**method per selection** taking that enum wrapped in a `ProjectionEvent` (so
+**method per selection** taking that enum wrapped in a `projection::Event` (so
 position/timestamp come along):
 
 ```rust
@@ -137,7 +131,7 @@ pub mod course_capacity {
 
     pub trait Project {
         // one method per selection:
-        fn capacity(&mut self, e: ProjectionEvent<Capacity<'_>>);
+        fn capacity(&mut self, e: projection::Event<Capacity<'_>>);
     }
 }
 ```
@@ -146,7 +140,7 @@ pub mod course_capacity {
 
 ```rust
 impl course_capacity::Project for CourseCapacity {
-    fn capacity(&mut self, e: ProjectionEvent<course_capacity::Capacity<'_>>) {
+    fn capacity(&mut self, e: projection::Event<course_capacity::Capacity<'_>>) {
         match e.event() {
             Capacity::CourseDefined(ev)         => self.capacity = ev.capacity,
             Capacity::CourseCapacityChanged(ev) => self.capacity = ev.new_capacity,
@@ -235,7 +229,7 @@ the codegen pattern rather than the one-off the archived note rightly deferred.
    SELECTIONS`)/`Recognize`/`Dispatch` impls. The mask is de-positionalised: each
    selection is its own `Selection`, the action flattens them and hands each
    projection its `mask[base..base+SELECTIONS]` slice. The **borrowed enum worked**
-   (no owned-clone fallback). `ProjectionEvent` now holds the enum by value
+   (no owned-clone fallback). `projection::Event` now holds the enum by value
    (`event()` accessor); `Project<E>` is gone. The obsolete `tags_map`/`tags_fold`
    (and the dead `util::List`) were deleted rather than relocated — the new filter
    parse reuses `TagEntry`/`TagInitialize` directly. All call sites migrated;
@@ -250,8 +244,8 @@ the codegen pattern rather than the one-off the archived note rightly deferred.
 ## Known risks / open at build time
 
 - **Borrowed-enum lifetimes** — **resolved.** The enum wraps `&E` downcast from the
-  decoded box and `ProjectionEvent<T>` holds it by value; the borrow is valid for
-  the duration of the dispatch call (the `&DispatchEvent` box outlives it), so no
+  decoded box and `projection::Event<T>` holds it by value; the borrow is valid for
+  the duration of the dispatch call (the `&Recognized` box outlives it), so no
   owned-clone fallback was needed.
 - **Error-message quality** — hand-rolled `syn` parsing means owning spans and
   messages that `darling` provided for free; budget for good diagnostics.

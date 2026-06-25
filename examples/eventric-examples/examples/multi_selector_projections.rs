@@ -12,8 +12,8 @@ use eventric_domain::{
     error::Error,
     event::Event,
     projection::{
+        self,
         Projection,
-        ProjectionEvent,
     },
 };
 use eventric_stream::stream::{
@@ -87,7 +87,7 @@ pub struct AccountBalance {
 }
 
 impl account_balance::Project for AccountBalance {
-    fn balance(&mut self, event: ProjectionEvent<account_balance::Balance<'_>>) {
+    fn balance(&mut self, event: projection::Event<account_balance::Balance<'_>>) {
         match event.event() {
             account_balance::Balance::MoneyDeposited(event) => {
                 self.balance += i64::try_from(event.amount).unwrap_or(i64::MAX);
@@ -117,7 +117,7 @@ pub struct DepositTotal {
 }
 
 impl deposit_total::Project for DepositTotal {
-    fn deposited(&mut self, event: ProjectionEvent<deposit_total::Deposited<'_>>) {
+    fn deposited(&mut self, event: projection::Event<deposit_total::Deposited<'_>>) {
         let deposit_total::Deposited::MoneyDeposited(event) = event.event();
         self.total += event.amount;
     }
@@ -135,7 +135,7 @@ pub struct WithdrawalTotal {
 }
 
 impl withdrawal_total::Project for WithdrawalTotal {
-    fn withdrawn(&mut self, event: ProjectionEvent<withdrawal_total::Withdrawn<'_>>) {
+    fn withdrawn(&mut self, event: projection::Event<withdrawal_total::Withdrawn<'_>>) {
         let withdrawal_total::Withdrawn::MoneyWithdrawn(event) = event.event();
         self.total += event.amount;
     }

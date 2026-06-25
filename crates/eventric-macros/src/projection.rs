@@ -292,7 +292,7 @@ impl Projection {
             quote! {
                 fn #method(
                     &mut self,
-                    event: ::eventric_domain::projection::ProjectionEvent<#enum_ident<'_>>,
+                    event: ::eventric_domain::projection::Event<#enum_ident<'_>>,
                 );
             }
         });
@@ -342,7 +342,7 @@ impl Projection {
                     &self,
                     event: &::eventric_stream::stream::operate::select::EventAndMask
                 ) -> ::std::result::Result<
-                    ::std::option::Option<::eventric_domain::projection::DispatchEvent>,
+                    ::std::option::Option<::eventric_domain::projection::Recognized>,
                     ::error_stack::Report<::eventric_domain::error::Error>
                 > {
                     let event = match event {
@@ -375,7 +375,7 @@ impl Projection {
                 fn dispatch(
                     &mut self,
                     mask: &[bool],
-                    event: &::eventric_domain::projection::DispatchEvent
+                    event: &::eventric_domain::projection::Recognized
                 ) {
                     #(#arms)*
                 }
@@ -479,7 +479,7 @@ impl ToTokens for RecognizeMatchArm<'_> {
                 == &<#event as ::eventric_domain::event::Identifier>::type_name()? =>
             {
                 ::std::option::Option::Some(
-                    ::eventric_domain::projection::DispatchEvent::from_event::<#event>(event)?
+                    ::eventric_domain::projection::Recognized::from_event::<#event>(event)?
                 )
             }
         });
@@ -524,7 +524,7 @@ impl ToTokens for DispatchArm<'_> {
                 if let ::std::option::Option::Some(matched) = matched {
                     <Self as #module::Project>::#method(
                         self,
-                        ::eventric_domain::projection::ProjectionEvent::new(
+                        ::eventric_domain::projection::Event::new(
                             matched,
                             event.position,
                             event.timestamp,

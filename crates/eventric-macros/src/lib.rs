@@ -147,7 +147,7 @@ pub fn event(input: TokenStream) -> TokenStream {
 ///
 /// For each selection it generates, in a module named after the projection
 /// (`snake_case`), a borrowed enum (one variant per event type) and a `Project`
-/// trait method taking it wrapped in a `ProjectionEvent`; the user implements
+/// trait method taking it wrapped in a `projection::Event`; the user implements
 /// that trait, one method per selection. See `eventric_domain::projection`.
 #[proc_macro_derive(Projection, attributes(projection))]
 pub fn projection(input: TokenStream) -> TokenStream {

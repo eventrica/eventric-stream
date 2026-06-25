@@ -13,9 +13,9 @@ use eventric_domain::{
         Events,
     },
     projection::{
+        self,
         Dispatch as _,
         Projection,
-        ProjectionEvent,
         Recognize as _,
         Select as _,
     },
@@ -67,7 +67,7 @@ struct Status {
 }
 
 impl status::Project for Status {
-    fn status(&mut self, event: ProjectionEvent<status::Status<'_>>) {
+    fn status(&mut self, event: projection::Event<status::Status<'_>>) {
         self.open = match event.event() {
             status::Status::Opened(_) => true,
             status::Status::Closed(_) => false,

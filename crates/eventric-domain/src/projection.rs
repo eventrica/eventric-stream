@@ -15,12 +15,12 @@
 //! For each selection the derive generates, in a module named after the
 //! projection (`snake_case`), a **borrowed enum** with one variant per event
 //! type, and a `Project` trait with **one method per selection** taking that
-//! enum wrapped in a [`ProjectionEvent`] (so position/timestamp come along).
+//! enum wrapped in an [`Event`] (so position/timestamp come along).
 //! The user implements that trait — one method per selection:
 //!
 //! ```text
 //! impl course_capacity::Project for CourseCapacity {
-//!     fn capacity(&mut self, e: ProjectionEvent<course_capacity::Capacity<'_>>) {
+//!     fn capacity(&mut self, e: Event<course_capacity::Capacity<'_>>) {
 //!         match e.event() {
 //!             Capacity::CourseDefined(ev)         => self.capacity = ev.capacity,
 //!             Capacity::CourseCapacityChanged(ev) => self.capacity = ev.new_capacity,
@@ -69,7 +69,7 @@ use fancy_constructor::new;
 
 use crate::{
     error::Error,
-    event::Event,
+    event,
 };
 
 // =================================================================================================
@@ -100,11 +100,11 @@ pub trait Select {
 // Recognize
 
 /// Matches a persisted event to this projection by hashed name and, if its type
-/// is one this projection folds, decodes it into a [`DispatchEvent`].
+/// is one this projection folds, decodes it into a [`Recognized`].
 pub trait Recognize {
-    /// Decode `event` into a [`DispatchEvent`] if its type is one this
+    /// Decode `event` into a [`Recognized`] if its type is one this
     /// projection folds, else `None`.
-    fn recognize(&self, event: &EventAndMask) -> Result<Option<DispatchEvent>, Report<Error>>;
+    fn recognize(&self, event: &EventAndMask) -> Result<Option<Recognized>, Report<Error>>;
 }
 
 // Dispatch
@@ -115,12 +115,12 @@ pub trait Dispatch {
     /// Fold `event` into every selection whose bit is set in `mask` (the slice
     /// of the query mask owned by this projection, one bit per named
     /// selection).
-    fn dispatch(&mut self, mask: &[bool], event: &DispatchEvent);
+    fn dispatch(&mut self, mask: &[bool], event: &Recognized);
 }
 
 // -------------------------------------------------------------------------------------------------
 
-// Dispatch Event
+// Recognized
 
 /// A decoded event ready to fold: its boxed payload (downcast into the matching
 /// selection's enum) plus the persisted position and timestamp. Decoded once
@@ -128,7 +128,7 @@ pub trait Dispatch {
 /// projection slot that matched.
 #[derive(new, Debug)]
 #[new(const_fn, vis(pub(crate)))]
-pub struct DispatchEvent {
+pub struct Recognized {
     /// The decoded payload, type-erased; downcast to the concrete event type.
     pub event: Box<dyn Any>,
     /// The event's position in the stream.
@@ -137,15 +137,15 @@ pub struct DispatchEvent {
     pub timestamp: Timestamp,
 }
 
-impl DispatchEvent {
+impl Recognized {
     /// Decode a persisted `event`'s payload into an `E` (via `revision`),
     /// paired with its position and timestamp. A decode failure carries the
     /// stored version and the revision this consumer handles.
     pub fn from_event<E>(event: &EventAndMask) -> Result<Self, Report<Error>>
     where
-        E: Event + 'static,
+        E: event::Event + 'static,
     {
-        let inner_event = revision::from_slice::<E>(event.event.data().as_ref())
+        let inner = revision::from_slice::<E>(event.event.data().as_ref())
             .change_context(Error)
             .attach_with(|| {
                 format!(
@@ -157,7 +157,7 @@ impl DispatchEvent {
             })?;
 
         Ok(Self::new(
-            Box::new(inner_event),
+            Box::new(inner),
             event.event.meta().position(),
             event.event.meta().timestamp(),
         ))
@@ -166,24 +166,24 @@ impl DispatchEvent {
 
 // -------------------------------------------------------------------------------------------------
 
-// Projection Event
+// Event
 
 /// A matched event handed to a selection method: the selection's borrowed enum
 /// (accessed via [`event`](Self::event)), with the persisted position and
 /// timestamp available alongside.
 #[derive(new, Debug)]
 #[new(vis(pub))]
-pub struct ProjectionEvent<T> {
-    event: T,
+pub struct Event<T> {
+    inner: T,
     position: Position,
     timestamp: Timestamp,
 }
 
-impl<T> ProjectionEvent<T> {
+impl<T> Event<T> {
     /// The matched event — the selection's enum (a variant per event type).
     #[must_use]
     pub fn event(&self) -> &T {
-        &self.event
+        &self.inner
     }
 
     /// The event's position in the stream.

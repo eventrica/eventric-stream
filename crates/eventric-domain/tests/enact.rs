@@ -22,8 +22,8 @@ use eventric_domain::{
         Identifier as _,
     },
     projection::{
+        self,
         Projection,
-        ProjectionEvent,
     },
 };
 use eventric_stream::{
@@ -86,7 +86,7 @@ struct ItemPresent {
 }
 
 impl item_present::Project for ItemPresent {
-    fn present(&mut self, event: ProjectionEvent<item_present::Present<'_>>) {
+    fn present(&mut self, event: projection::Event<item_present::Present<'_>>) {
         self.present = match event.event() {
             item_present::Present::ItemRegistered(_) => true,
             item_present::Present::ItemRemoved(_) => false,
@@ -109,7 +109,7 @@ struct RegistrationCount {
 }
 
 impl registration_count::Project for RegistrationCount {
-    fn registered(&mut self, _: ProjectionEvent<registration_count::Registered<'_>>) {
+    fn registered(&mut self, _: projection::Event<registration_count::Registered<'_>>) {
         self.count += 1;
     }
 }

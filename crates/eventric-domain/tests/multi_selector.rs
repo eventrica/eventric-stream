@@ -34,8 +34,8 @@ use eventric_domain::{
     error::Error,
     event::Event,
     projection::{
+        self,
         Projection,
-        ProjectionEvent,
     },
 };
 use eventric_stream::stream::Stream;
@@ -97,7 +97,7 @@ struct Balance {
 }
 
 impl balance::Project for Balance {
-    fn balance(&mut self, event: ProjectionEvent<balance::Balance<'_>>) {
+    fn balance(&mut self, event: projection::Event<balance::Balance<'_>>) {
         match event.event() {
             balance::Balance::Deposit(event) => {
                 self.net += i64::try_from(event.amount).expect("deposit fits i64");
@@ -134,12 +134,12 @@ struct ChannelTotals {
 }
 
 impl channel_totals::Project for ChannelTotals {
-    fn wire(&mut self, event: ProjectionEvent<channel_totals::Wire<'_>>) {
+    fn wire(&mut self, event: projection::Event<channel_totals::Wire<'_>>) {
         let channel_totals::Wire::Deposit(event) = event.event();
         self.wire += event.amount;
     }
 
-    fn card(&mut self, event: ProjectionEvent<channel_totals::Card<'_>>) {
+    fn card(&mut self, event: projection::Event<channel_totals::Card<'_>>) {
         let channel_totals::Card::Deposit(event) = event.event();
         self.card += event.amount;
     }
@@ -164,7 +164,7 @@ struct WireDeposits {
 }
 
 impl wire_deposits::Project for WireDeposits {
-    fn deposited(&mut self, event: ProjectionEvent<wire_deposits::Deposited<'_>>) {
+    fn deposited(&mut self, event: projection::Event<wire_deposits::Deposited<'_>>) {
         let wire_deposits::Deposited::Deposit(event) = event.event();
         self.count += 1;
         self.total += event.amount;
@@ -187,7 +187,7 @@ struct LargeDeposits {
 }
 
 impl large_deposits::Project for LargeDeposits {
-    fn deposited(&mut self, event: ProjectionEvent<large_deposits::Deposited<'_>>) {
+    fn deposited(&mut self, event: projection::Event<large_deposits::Deposited<'_>>) {
         let large_deposits::Deposited::Deposit(event) = event.event();
 
         // The amount threshold is not a tag, so it stays a payload check.
