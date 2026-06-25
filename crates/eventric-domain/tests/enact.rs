@@ -130,8 +130,6 @@ struct RegisterItem {
 }
 
 impl Act<register_item::Projections> for RegisterItem {
-    type Err = Report<Error>;
-
     fn act(
         &self,
         events: &mut Events,
@@ -158,8 +156,6 @@ struct RemoveItem {
 }
 
 impl Act<remove_item::Projections> for RemoveItem {
-    type Err = Report<Error>;
-
     fn act(
         &self,
         events: &mut Events,
@@ -187,7 +183,6 @@ struct CountRegistrations {
 }
 
 impl Act<count_registrations::Projections> for CountRegistrations {
-    type Err = Report<Error>;
     type Ok = u8;
 
     fn act(
@@ -196,6 +191,49 @@ impl Act<count_registrations::Projections> for CountRegistrations {
         projections: &count_registrations::Projections,
     ) -> Result<Self::Ok, Self::Err> {
         Ok(projections.registration_count.count)
+    }
+}
+
+// A custom `Act::Err`, to exercise the indirection every other action leaves at
+// its `Report<Error>` default. The `From<Report<Error>>` impl is what lets the
+// `?` on `events.append(..)` propagate a replay/append failure through the
+// custom type.
+#[derive(Debug)]
+struct Rejected(&'static str);
+
+impl From<Report<Error>> for Rejected {
+    fn from(_: Report<Error>) -> Self {
+        Rejected("domain error")
+    }
+}
+
+/// Like `RegisterItem`, but rejects with the custom `Rejected` error rather
+/// than the default `Report<Error>`.
+#[derive(new, Action, Debug)]
+#[action(projections: {
+    item_present: ItemPresent::new(&self.sku),
+})]
+struct RegisterItemStrict {
+    #[new(into)]
+    sku: String,
+    qty: u8,
+}
+
+impl Act<register_item_strict::Projections> for RegisterItemStrict {
+    type Err = Rejected;
+
+    fn act(
+        &self,
+        events: &mut Events,
+        projections: &register_item_strict::Projections,
+    ) -> Result<Self::Ok, Self::Err> {
+        if projections.item_present.present {
+            return Err(Rejected("already registered"));
+        }
+
+        events.append(&ItemRegistered::new(&self.sku, self.qty))?;
+
+        Ok(())
     }
 }
 
@@ -411,4 +449,21 @@ fn distinct_identifiers_do_not_collide() {
         .into();
 
     assert_eq!(registered, from_str);
+}
+
+// A custom `Act::Err` propagates through `enact` verbatim — the typed-error
+// indirection every other action leaves at its `Report<Error>` default.
+#[test]
+fn enact_returns_custom_error() {
+    let mut stream = stream();
+
+    assert!(stream.enact(RegisterItemStrict::new("widget", 1)).is_ok());
+
+    // The second registration is rejected, and `enact` hands back the action's own
+    // `Rejected` error type — not `Report<Error>`.
+    let err = stream
+        .enact(RegisterItemStrict::new("widget", 1))
+        .expect_err("second register rejected");
+
+    assert_eq!(err.0, "already registered");
 }

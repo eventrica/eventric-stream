@@ -1,0 +1,5 @@
+error: `#[event(..)]` is missing the required `identifier: <ident>` entry
+ --> tests/ui/event_missing_identifier.rs:4:1
+  |
+4 | #[event(tags: { item: sku })]
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

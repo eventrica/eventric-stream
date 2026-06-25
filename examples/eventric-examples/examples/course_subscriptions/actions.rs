@@ -42,8 +42,6 @@ pub struct DefineCourse {
 }
 
 impl Act<define_course::Projections> for DefineCourse {
-    type Err = Report<Error>;
-
     fn act(
         &self,
         events: &mut Events,
@@ -71,8 +69,6 @@ pub struct ChangeCourseCapacity {
 }
 
 impl Act<change_course_capacity::Projections> for ChangeCourseCapacity {
-    type Err = Report<Error>;
-
     fn act(
         &self,
         events: &mut Events,
@@ -108,8 +104,6 @@ pub struct SubscribeStudentToCourse {
 }
 
 impl Act<subscribe_student_to_course::Projections> for SubscribeStudentToCourse {
-    type Err = Report<Error>;
-
     fn act(
         &self,
         events: &mut Events,

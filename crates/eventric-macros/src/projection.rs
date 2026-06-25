@@ -399,7 +399,10 @@ fn variant(event: &Path) -> &Ident {
 
 // The enum's variant field type. The enum lives in a child module, so a
 // relative path is re-rooted at the parent with `super::`; a crate-rooted or
-// leading-`::` path is already absolute and used unchanged.
+// leading-`::` path is already absolute and used unchanged. (Events are
+// `#[revisioned]` concrete types, so a relative path here never carries a
+// generic argument that the head-only `super::` would leave unresolved — see
+// FUTURE.md §2.)
 fn enum_field(event: &Path) -> TokenStream {
     let absolute = event.leading_colon.is_some()
         || event

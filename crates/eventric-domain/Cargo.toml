@@ -8,6 +8,7 @@ revision.workspace          = true
 
 [dev-dependencies]
 assertables.workspace = true
+trybuild.workspace    = true
 
 [lints]
 workspace = true

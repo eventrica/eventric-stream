@@ -1,0 +1,5 @@
+error: unknown key `oops`; expected `identifier` or `tags`
+ --> tests/ui/event_unknown_key.rs:4:26
+  |
+4 | #[event(identifier: foo, oops: { item: sku })]
+  |                          ^^^^

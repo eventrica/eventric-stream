@@ -223,8 +223,6 @@ struct MakeDeposit {
 }
 
 impl Act<make_deposit::Projections> for MakeDeposit {
-    type Err = Report<Error>;
-
     fn act(
         &self,
         events: &mut Events,
@@ -251,8 +249,6 @@ struct MakeWithdrawal {
 }
 
 impl Act<make_withdrawal::Projections> for MakeWithdrawal {
-    type Err = Report<Error>;
-
     fn act(
         &self,
         events: &mut Events,
@@ -279,7 +275,6 @@ struct ReadBalance {
 }
 
 impl Act<read_balance::Projections> for ReadBalance {
-    type Err = Report<Error>;
     type Ok = Balance;
 
     fn act(
@@ -309,7 +304,6 @@ struct ReadChannelTotals {
 }
 
 impl Act<read_channel_totals::Projections> for ReadChannelTotals {
-    type Err = Report<Error>;
     type Ok = (u64, u64);
 
     fn act(
@@ -337,7 +331,6 @@ struct ReadDepositStats {
 }
 
 impl Act<read_deposit_stats::Projections> for ReadDepositStats {
-    type Err = Report<Error>;
     type Ok = (u32, u64, u32, u64);
 
     fn act(

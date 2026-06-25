@@ -158,8 +158,6 @@ pub struct Deposit {
 }
 
 impl Act<deposit::Projections> for Deposit {
-    type Err = Report<Error>;
-
     fn act(
         &self,
         events: &mut Events,
@@ -182,8 +180,6 @@ pub struct Withdraw {
 }
 
 impl Act<withdraw::Projections> for Withdraw {
-    type Err = Report<Error>;
-
     fn act(
         &self,
         events: &mut Events,

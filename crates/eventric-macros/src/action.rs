@@ -323,6 +323,9 @@ impl ToTokens for ProjectionInit<'_> {
 // The projections struct's field type. The struct lives in a child module, so a
 // relative projection type is re-rooted at the parent with `super::`; a
 // crate-rooted or leading-`::` path is already absolute and used unchanged.
+// (Projections are non-generic, so a relative path here never carries a generic
+// argument that the head-only `super::` would leave unresolved — see FUTURE.md
+// §2.)
 fn projection_field(ty: &Path) -> TokenStream {
     let absolute = ty.leading_colon.is_some()
         || ty

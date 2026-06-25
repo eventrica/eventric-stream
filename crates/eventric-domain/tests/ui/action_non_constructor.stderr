@@ -1,0 +1,5 @@
+error: projection constructor must be a `Type::new(..)` call, so the projection type can be inferred
+ --> tests/ui/action_non_constructor.rs:4:28
+  |
+4 | #[action(projections: { p: some_fn() })]
+  |                            ^^^^^^^^^

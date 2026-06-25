@@ -80,25 +80,22 @@ keyed-selectors and the codegen groundwork:
   selection — rather than a bare marker trait — **done**;
 - collision-safe companion-name generation (a per-projection module of enums) — **done**.
 
-Still open, independent of that redesign:
+Done since: `trybuild`/UI tests now pin each derive's parser diagnostics
+(`crates/eventric-domain/tests/ui/`), and `Act::Err` defaults to `Report<Error>` with
+a custom-`Err` action exercised in `tests/enact.rs`. Still open, independent of the
+redesign:
 
-- No `trybuild`/UI tests exist for any derive — a misuse surfaces as a downstream
-  compile error, not a targeted macro test. The new hand-rolled parsers are the
-  point at which to add them.
-- **The `Act::Err` indirection is untested.** An action may declare a custom error
-  type (`Act::Err: From<Report<Error>>`) that `Enactor::enact` returns verbatim,
-  but every test/example uses the default `Report<Error>` — plumbed, never
-  exercised. (A `type Err = Report<Error>` default is a candidate ergonomic win,
-  noted in `derives.md`.)
-- **Generated child modules don't re-root *generic arguments*.** Both derives put a
-  type in a `mod <snake>` and `super::`-prefix relative paths only at the head, not
-  inside angle brackets — so a *relative* generic argument (`Foo::<LocalType>::new(..)`
-  in an action's `projections:`, or a generic event type in a projection enum) emits
-  `super::Foo<LocalType>`, where `LocalType` fails to resolve in the child module.
-  Latent (no generic projections exist today); workaround is a crate-rooted arg
-  (`Foo::<crate::LocalType>::new(..)`). Fix = re-root recursively into `PathArguments`
-  in both `action::projection_field` and `projection::enum_field` (or switch both
-  child modules to `use super::*` and drop the re-rooting helpers).
+- **Generated child-module re-rooting is head-only — sufficient because the bug it
+  would have is unreachable.** Both derives put a type in a `mod <snake>` and
+  `super::`-prefix relative paths only at the head, not inside angle brackets — so a
+  *relative* generic argument would emit `super::Foo<LocalType>` with `LocalType`
+  unresolved in the child. But no such argument can arise: events are `#[revisioned]`
+  concrete types and the derives don't support generic projections, so a relative path
+  in a child module never carries a generic argument. (A `use super::*` in the child
+  modules — to drop the `enum_field`/`projection_field` helpers — was tried and
+  reverted: the glob pulls the parent's `use derive_more::Debug` in, making the
+  generated `#[derive(Debug)]` ambiguous.) Revisit (re-root recursively into
+  `PathArguments`) only if generic events/projections are ever supported.
 - **Action child-module vs Projection companion-module name clash.** Both derive a
   `mod <snake_case_ident>` in the same namespace; an action and a projection (or two
   actions) whose idents share a snake_case form collide with an opaque rustc error.

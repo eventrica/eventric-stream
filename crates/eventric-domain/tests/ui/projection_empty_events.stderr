@@ -1,0 +1,5 @@
+error: selection `thing` has an empty `events` list
+ --> tests/ui/projection_empty_events.rs:4:28
+  |
+4 | #[projection(selections: { thing: { events: [] } })]
+  |                            ^^^^^

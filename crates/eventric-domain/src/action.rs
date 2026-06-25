@@ -1,6 +1,107 @@
 //! Commands: the [`Action`] trait (with its [`Act`]/[`Context`]/[`Select`]/
 //! [`Update`] components), run by the model
 //! [`Enactor`](super::enactor::Enactor).
+//!
+//! # Example
+//!
+//! An action that reads an account-balance projection and appends a withdrawal
+//! only if funds suffice. The derive generates the `withdraw::Projections`
+//! struct (one field per entry, each built from the action's fields via
+//! `self`); you implement [`Act<Projections>`](Act):
+//!
+//! ```
+//! # #![allow(dead_code)]
+//! use error_stack::Report;
+//! use eventric_domain::{
+//!     action::{
+//!         Act,
+//!         Action,
+//!     },
+//!     error::Error,
+//!     event::{
+//!         Event,
+//!         Events,
+//!     },
+//!     projection::{
+//!         self,
+//!         Project,
+//!         Projection,
+//!     },
+//! };
+//! use fancy_constructor::new;
+//! use revision::revisioned;
+//!
+//! #[revisioned(revision = 1)]
+//! #[derive(Event)]
+//! #[event(identifier: money_deposited, tags: { account: account })]
+//! struct MoneyDeposited {
+//!     account: String,
+//!     amount: u64,
+//! }
+//!
+//! #[revisioned(revision = 1)]
+//! #[derive(new, Event)]
+//! #[event(identifier: money_withdrawn, tags: { account: account })]
+//! struct MoneyWithdrawn {
+//!     #[new(into)]
+//!     account: String,
+//!     amount: u64,
+//! }
+//!
+//! #[derive(new, Projection, Debug)]
+//! #[projection(selections: {
+//!     balance: { events: [MoneyDeposited, MoneyWithdrawn], filter: { account: account } },
+//! })]
+//! struct AccountBalance {
+//!     #[new(into)]
+//!     account: String,
+//!     #[new(default)]
+//!     balance: i64,
+//! }
+//!
+//! impl Project<account_balance::Balance<'_>> for AccountBalance {
+//!     fn project(&mut self, event: projection::Event<account_balance::Balance<'_>>) {
+//!         match event.event() {
+//!             account_balance::Balance::MoneyDeposited(e) => self.balance += e.amount as i64,
+//!             account_balance::Balance::MoneyWithdrawn(e) => self.balance -= e.amount as i64,
+//!         }
+//!     }
+//! }
+//!
+//! // The action declares one projection field, `account_balance`, built from its
+//! // own `account`. `act` reads it and stages a withdrawal into the events buffer.
+//! #[derive(Action)]
+//! #[action(projections: {
+//!     account_balance: AccountBalance::new(&self.account),
+//! })]
+//! struct Withdraw {
+//!     account: String,
+//!     amount: u64,
+//! }
+//!
+//! impl Act<withdraw::Projections> for Withdraw {
+//!     fn act(
+//!         &self,
+//!         events: &mut Events,
+//!         projections: &withdraw::Projections,
+//!     ) -> Result<Self::Ok, Self::Err> {
+//!         if projections.account_balance.balance < self.amount as i64 {
+//!             return Err(Report::new(Error).attach("insufficient funds"));
+//!         }
+//!
+//!         events.append(&MoneyWithdrawn::new(&self.account, self.amount))?;
+//!
+//!         Ok(())
+//!     }
+//! }
+//!
+//! fn main() {}
+//! ```
+//!
+//! [`Enactor::enact`](crate::enactor::Enactor::enact) runs it end to end: build
+//! the projections, replay the stream to fold them, run `act`, then append the
+//! buffered events under a DCB concurrency guard. The `course_subscriptions`
+//! example shows several actions run this way.
 
 use error_stack::Report;
 pub use eventric_macros::Action;
@@ -41,7 +142,9 @@ where
 {
     /// The error this action may fail with; must absorb a domain [`Report`]
     /// (`From<Report<Error>>`) so replay/append failures propagate through it.
-    type Err;
+    /// Defaults to `Report<Error>` (the common case); override for a custom
+    /// error.
+    type Err = Report<Error>;
     /// The success value (`()` by default).
     type Ok = ();
 

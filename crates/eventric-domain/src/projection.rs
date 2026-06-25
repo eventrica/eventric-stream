@@ -13,8 +13,11 @@
 //! ```
 //!
 //! For each selection the derive generates, in a module named after the
-//! projection (`snake_case`), a **borrowed enum** with one variant per event
-//! type. The user folds each selection by implementing
+//! projection (`snake_case`), a **borrowed enum** named after the selection
+//! (`UpperCamelCase`), with one variant per event type — so the fold target is
+//! `<projection_snake_case>::<SelectionUpperCamelCase>` (e.g. selection
+//! `capacity` on `CourseCapacity` ⇒ `course_capacity::Capacity`). The user
+//! folds each selection by implementing
 //! [`Project<Enum>`](Project) — one impl per selection, with that selection's
 //! enum (wrapped in an [`Event`], so position/timestamp come along) as the type
 //! argument:
@@ -52,6 +55,70 @@
 //! mask, and routes each set bit straight to the matching
 //! `Project<Enum>::project` — no per-event re-test of the filters.
 //! [`Select::SELECTIONS`] is the slice width.
+//!
+//! # Example
+//!
+//! A projection with one named selection (`capacity`) folding two event types
+//! into a single read-model. The derive generates the `course_capacity` module
+//! (the borrowed `Capacity` enum); you implement [`Project<Enum>`](Project):
+//!
+//! ```
+//! # #![allow(dead_code)]
+//! use eventric_domain::{
+//!     event::Event,
+//!     projection::{
+//!         self,
+//!         Project,
+//!         Projection,
+//!         Select,
+//!     },
+//! };
+//! use revision::revisioned;
+//!
+//! #[revisioned(revision = 1)]
+//! #[derive(Event)]
+//! #[event(identifier: course_defined, tags: { course: id })]
+//! struct CourseDefined {
+//!     id: String,
+//!     capacity: u8,
+//! }
+//!
+//! #[revisioned(revision = 1)]
+//! #[derive(Event)]
+//! #[event(identifier: course_capacity_changed, tags: { course: id })]
+//! struct CourseCapacityChanged {
+//!     id: String,
+//!     new_capacity: u8,
+//! }
+//!
+//! #[derive(Projection)]
+//! #[projection(selections: {
+//!     capacity: { events: [CourseDefined, CourseCapacityChanged], filter: { course: id } },
+//! })]
+//! struct CourseCapacity {
+//!     id: String,
+//!     capacity: u8,
+//! }
+//!
+//! impl Project<course_capacity::Capacity<'_>> for CourseCapacity {
+//!     fn project(&mut self, event: projection::Event<course_capacity::Capacity<'_>>) {
+//!         match event.event() {
+//!             course_capacity::Capacity::CourseDefined(e) => self.capacity = e.capacity,
+//!             course_capacity::Capacity::CourseCapacityChanged(e) => {
+//!                 self.capacity = e.new_capacity
+//!             }
+//!         }
+//!     }
+//! }
+//!
+//! // The derive generated one named selection, so the projection owns one mask bit.
+//! fn main() {
+//!     assert_eq!(CourseCapacity::SELECTIONS, 1);
+//! }
+//! ```
+//!
+//! The `multi_selector_projections` example folds projections like this against
+//! a real stream.
 
 use std::any::Any;
 

@@ -1,0 +1,5 @@
+error: tag `item` has an empty value list
+ --> tests/ui/event_empty_tag_list.rs:4:34
+  |
+4 | #[event(identifier: foo, tags: { item: [] })]
+  |                                  ^^^^

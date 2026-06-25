@@ -50,20 +50,60 @@ pub fn tag(input: TokenStream) -> TokenStream {
 
 // Action
 
-/// Derives the domain `Action` trait family from a declarative `#[action(..)]`
-/// attribute — generates the action's projections type (a struct in a
-/// `snake_case` submodule) and its select/update wiring.
+/// Derives the domain `Action` trait family (`Context`/`Select`/`Update`) for a
+/// command from a declarative `#[action(..)]` attribute — an action reads its
+/// projections, then decides what events (if any) to append.
+///
+/// It generates a `Projections` struct (in a module named after the action,
+/// `snake_case`) with one field per entry, plus the wiring that builds and
+/// folds it. You write the business logic by implementing the standard
+/// `Act<Projections>` trait, with the generated `Projections` struct as the
+/// type argument — mirroring how a projection implements
+/// [`Project<Enum>`](macro@Projection).
+///
+/// # Grammar
 ///
 /// ```text
 /// #[action(projections: {
-///     <field_name>: <Type>::new(..),   // field name is the projection-field key;
-/// })]                                  // the type is read from the constructor
+///     <field_name>: <Type>::new(..),   // field name keys the context field;
+///     // .. more ..                     // the projection type is read from the constructor
+/// })]                                  // (omit `projections` entirely for an action with none)
 /// ```
 ///
-/// Each entry names a projection field and its constructor (run with `self`
-/// bound to the action). `Act::act(&self, events, projections)` then stages
-/// output into the events buffer, reading the folded projections. Omit
-/// `projections` for an action with none. See `eventric_domain::action`.
+/// - Each entry pairs a **context-field name** with a **projection
+///   constructor**. The constructor runs with `self` bound to the action (so it
+///   can read the action's fields, e.g. `Balance::new(&self.account)`), and the
+///   projection type is inferred from the constructor's path — so it must be a
+///   `Type::new(..)`-style call. The explicit field name lets two slots of the
+///   same projection type coexist.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// #[derive(Action)]
+/// #[action(projections: {
+///     balance: AccountBalance::new(&self.account),
+/// })]
+/// struct Withdraw {
+///     account: String,
+///     amount: u64,
+/// }
+///
+/// impl Act<withdraw::Projections> for Withdraw {
+///     fn act(&self, events: &mut Events, projections: &withdraw::Projections)
+///         -> Result<Self::Ok, Self::Err>
+///     {
+///         if projections.balance.balance < self.amount as i64 {
+///             return Err(Report::new(Error).attach("insufficient funds"));
+///         }
+///         events.append(&Withdrawn::new(&self.account, self.amount))?;
+///         Ok(())
+///     }
+/// }
+/// ```
+///
+/// (A runnable version is in the `eventric_domain::action` module docs; the
+/// `course_subscriptions` example runs actions via `Enactor::enact`.)
 #[proc_macro_derive(Action, attributes(action))]
 pub fn action(input: TokenStream) -> TokenStream {
     emit_impl_or_error!(Action::new(&parse_macro_input!(input))).into()
@@ -148,20 +188,69 @@ pub fn event(input: TokenStream) -> TokenStream {
 // Projection
 
 /// Derives the domain `Projection` trait family
-/// (`Dispatch`/`Recognize`/`Select`) from a declarative `#[projection(..)]`
-/// attribute of **named selections**:
+/// (`Select`/`Recognize`/`Dispatch`) for a read-model from a declarative
+/// `#[projection(..)]` attribute of **named selections** — each a set of event
+/// types plus an optional tag filter.
+///
+/// For each selection it generates, in a module named after the projection
+/// (`snake_case`), a **borrowed enum** with one variant per event type. You
+/// fold each selection by implementing the standard `Project<Enum>` trait (one
+/// impl per selection), with that selection's generated enum as the type
+/// argument; the enum's `match` is **compile-time exhaustive**, so adding or
+/// removing an event type forces the fold to be updated rather than silently
+/// dropping or mis-folding events.
+///
+/// # Grammar
 ///
 /// ```text
 /// #[projection(selections: {
-///     <name>: { events: [<Type>, ..], filter: { <prefix>: <value>, .. } }, // filter optional
+///     <name>: {
+///         events: [<Type>, ..],               // required — the event types this selection folds
+///         filter: { <prefix>: <value>, .. },  // optional — tags scoping it to one entity
+///     },
+///     // .. more named selections ..
 /// })]
 /// ```
 ///
-/// For each selection it generates, in a module named after the projection
-/// (`snake_case`), a borrowed enum (one variant per event type). The user folds
-/// each selection by implementing the standard `Project<Enum>` trait (in
-/// `eventric_domain::projection`) — one impl per selection, with that
-/// selection's enum as the type argument. See `eventric_domain::projection`.
+/// - **`<name>`** keys the selection: it names the generated enum
+///   (`UpperCamelCase`) and owns one bit of the query mask. *Distinct*
+///   read-models over the same event type are *separate* selections (each its
+///   own `Project` impl); a *single* state folded from several event types is
+///   *one* selection whose `match` discriminates.
+/// - **`events`** (required) lists the event types folded into this selection.
+/// - **`filter`** (optional) scopes the selection by tags, reusing the
+///   [`Event`] derive's value forms (bare ident / `self`-expression / closure /
+///   `[list]`) — but here `self` is the **projection**, not the event (the
+///   filter is built in the projection's `select`, before any event is read),
+///   so a bare `account` is `&self.account`, reading the projection's own
+///   field.
+///
+/// # Example
+///
+/// ```rust,ignore
+/// // One selection folding two event types into a single running balance.
+/// #[derive(Projection)]
+/// #[projection(selections: {
+///     balance: { events: [Deposited, Withdrawn], filter: { account: account } },
+/// })]
+/// struct AccountBalance {
+///     account: String,
+///     balance: i64,
+/// }
+///
+/// impl Project<account_balance::Balance<'_>> for AccountBalance {
+///     fn project(&mut self, event: projection::Event<account_balance::Balance<'_>>) {
+///         match event.event() {
+///             account_balance::Balance::Deposited(e) => self.balance += e.amount as i64,
+///             account_balance::Balance::Withdrawn(e) => self.balance -= e.amount as i64,
+///         }
+///     }
+/// }
+/// ```
+///
+/// (A runnable version is in the `eventric_domain::projection` module docs; the
+/// `multi_selector_projections` example folds projections against a real
+/// stream.)
 #[proc_macro_derive(Projection, attributes(projection))]
 pub fn projection(input: TokenStream) -> TokenStream {
     emit_impl_or_error!(Projection::new(&parse_macro_input!(input))).into()

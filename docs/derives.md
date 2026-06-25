@@ -194,8 +194,8 @@ pub struct ChangeCourseCapacity { /* … */ }
   Events, projections: &Projections)` takes **two args** — stage output into the
   `events` buffer, reading the folded `projections` (immutable) to decide (a
   single-sided action `_`-prefixes whichever it doesn't use). `type Err` keeps the
-  custom-error hook; defaulting `type Err = Report<Error>` is a separate ergonomic
-  win, **out of scope here**.
+  custom-error hook but **defaults to `Report<Error>`**, so the common case omits it;
+  a custom `Err: From<Report<Error>>` is exercised by `tests/enact.rs`.
 
 Naming: `selections:` / `projections:` — **nouns naming what the derive *has***
 (the selections a projection declares; the projections an action uses). Chosen
@@ -289,10 +289,12 @@ the codegen pattern rather than the one-off the archived note rightly deferred.
   owned-clone fallback was needed.
 - **Error-message quality** — hand-rolled `syn` parsing means owning spans and
   messages that `darling` provided for free; budget for good diagnostics.
-- **`type Err` defaulting** on `Act` — a separate, deferred ergonomic question.
-- **No `trybuild`/UI tests** exist for any derive today; the new parsers are the
-  point at which to add them (a misuse should be a targeted macro error, not a
-  downstream compile error).
+- **`type Err` defaulting** on `Act` — ✅ done: defaults to `Report<Error>`; a custom
+  `Err` is exercised by `tests/enact.rs`.
+- **`trybuild`/UI tests** — ✅ done: `tests/ui/` pins each derive's targeted parser
+  diagnostic (missing/duplicate/unknown keys, empty lists, non-`Type::new`
+  constructor). Run `TRYBUILD=overwrite cargo test -p eventric-domain --test ui` to
+  regenerate the `.stderr` after an *intentional* diagnostic change.
 
 ## References
 

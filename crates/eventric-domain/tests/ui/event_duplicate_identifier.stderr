@@ -1,0 +1,5 @@
+error: duplicate `identifier`
+ --> tests/ui/event_duplicate_identifier.rs:4:26
+  |
+4 | #[event(identifier: foo, identifier: bar)]
+  |                          ^^^^^^^^^^

@@ -1,0 +1,5 @@
+error: duplicate projection field `p`
+ --> tests/ui/action_duplicate_field.rs:4:38
+  |
+4 | #[action(projections: { p: X::new(), p: Y::new() })]
+  |                                      ^

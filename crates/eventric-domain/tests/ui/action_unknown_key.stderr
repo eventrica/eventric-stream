@@ -1,0 +1,5 @@
+error: unknown key `oops`; expected `projections`
+ --> tests/ui/action_unknown_key.rs:4:10
+  |
+4 | #[action(oops: { p: X::new() })]
+  |          ^^^^

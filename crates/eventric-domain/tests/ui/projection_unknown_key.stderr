@@ -1,0 +1,5 @@
+error: unknown key `oops`; expected `selections`
+ --> tests/ui/projection_unknown_key.rs:4:14
+  |
+4 | #[projection(oops: { thing: { events: [Foo] } })]
+  |              ^^^^
