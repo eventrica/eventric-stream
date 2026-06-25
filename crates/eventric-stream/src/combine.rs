@@ -33,6 +33,14 @@ pub(crate) trait Seek<T> {
     /// (and unread) region is exactly the part that cannot affect the
     /// answer.
     fn seek(&mut self, target: T);
+
+    /// The reverse mirror of [`seek`](Self::seek): advance *from the back* so
+    /// the next item yielded by `next_back` is the first one `<= target` (a
+    /// no-op if already at or before `target`). Items strictly above
+    /// `target` are skipped without being read, with the same
+    /// (result-preserving) error-skipping consequence — it is what lets a
+    /// reverse intersection leapfrog symmetrically with the forward one.
+    fn seek_back(&mut self, target: T);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -43,9 +51,10 @@ pub(crate) trait Seek<T> {
 /// also supports forward [`Seek`] — replacing a plain peekable so the
 /// combinators can both peek *and* skip a child forward.
 ///
-/// Forward `seek` re-seeks the backend only while the cursor has never been
-/// driven from the back (`from_back`). Once a back element has been observed,
-/// re-seeking would discard that back progress, so it falls back to
+/// Each direction's seek re-seeks the backend only while the cursor has not
+/// been driven from the *other* end (`from_back` guards forward `seek`,
+/// `from_front` guards `seek_back`). Once the opposite end has been observed,
+/// re-seeking would discard that end's progress, so it falls back to
 /// single-stepping — always correct, just unoptimised (the index query is
 /// consumed in a single direction in practice; the fallback only guards the
 /// mixed-direction case the unit tests exercise).
@@ -60,6 +69,7 @@ where
     front: Option<I::Item>,
     #[debug("..")]
     back: Option<I::Item>,
+    from_front: bool,
     from_back: bool,
 }
 
@@ -72,11 +82,14 @@ where
             inner,
             front: None,
             back: None,
+            from_front: false,
             from_back: false,
         }
     }
 
     fn peek(&mut self) -> Option<&I::Item> {
+        self.from_front = true;
+
         if self.front.is_none() {
             self.front = self.inner.next().or_else(|| self.back.take());
         }
@@ -161,6 +174,41 @@ where
             }
         } else {
             self.inner.seek(target);
+        }
+    }
+
+    // The reverse mirror of `seek`: skip back so the next next_back yields the
+    // first item `<= target`.
+    fn seek_back(&mut self, target: T) {
+        // Mirror of `seek` with the comparison flipped: keep a cached back at/below
+        // target, drop a stale Ok back above it, keep an Err back for next_back.
+        let stale = match self.back.as_ref() {
+            Some(Ok(value)) => *value > target,
+            Some(Err(_)) => return,
+            None => false,
+        };
+
+        if stale {
+            self.back = None;
+        } else if self.back.is_some() {
+            return;
+        }
+
+        if self.from_front {
+            loop {
+                let lagging = match self.peek_back() {
+                    Some(Ok(value)) => *value > target,
+                    _ => false,
+                };
+
+                if lagging {
+                    self.next_back();
+                } else {
+                    break;
+                }
+            }
+        } else {
+            self.inner.seek_back(target);
         }
     }
 }
@@ -312,8 +360,12 @@ where
                                 *current = *value;
                                 converged = false;
                             }
+                            // Leapfrog (reverse): skip the lagging child straight
+                            // down to the candidate (the smallest back so far)
+                            // rather than single-stepping it down from above.
                             Ordering::Greater => {
-                                iter.next_back();
+                                let candidate = *current;
+                                iter.seek_back(candidate);
                                 converged = false;
                             }
                             Ordering::Equal => {}
@@ -359,6 +411,12 @@ where
     fn seek(&mut self, target: T) {
         for iter in &mut self.0 {
             iter.seek(target);
+        }
+    }
+
+    fn seek_back(&mut self, target: T) {
+        for iter in &mut self.0 {
+            iter.seek_back(target);
         }
     }
 }
@@ -553,6 +611,12 @@ where
             iter.seek(target);
         }
     }
+
+    fn seek_back(&mut self, target: T) {
+        for iter in &mut self.0 {
+            iter.seek_back(target);
+        }
+    }
 }
 
 // =================================================================================================
@@ -635,6 +699,27 @@ mod tests {
 
                     if skip > 0 {
                         iter.nth(skip - 1);
+                    }
+                }
+            }
+        }
+
+        fn seek_back(&mut self, target: u64) {
+            match self {
+                Self::And(iter) => iter.seek_back(target),
+                Self::Or(iter) => iter.seek_back(target),
+                // The reverse mirror: keep up to the last item `<= target` and drop
+                // the trailing run above it (including any trailing `Err`).
+                Self::Leaf(iter) => {
+                    let slice = iter.as_slice();
+                    let keep = slice
+                        .iter()
+                        .rposition(|value| matches!(value, Ok(value) if *value <= target))
+                        .map_or(0, |index| index + 1);
+                    let drop = slice.len() - keep;
+
+                    if drop > 0 {
+                        iter.nth_back(drop - 1);
                     }
                 }
             }
@@ -876,5 +961,60 @@ mod tests {
         let iter = and([dense, sparse]);
 
         assert_eq!(forward(iter), vec![100]);
+    }
+
+    // Seek (reverse) — the mirror of the forward cases above.
+    // -----------------------------------------------------------------------------
+
+    #[test]
+    fn seek_back_positions_leaf_at_last_at_or_before_target() {
+        let mut iter = leaf([1, 5, 9, 12]);
+
+        iter.seek_back(8);
+
+        // `backward` consumes via `next_back`; after seek_back(8) the largest item
+        // `<= 8` is 5, then 1.
+        assert_eq!(backward(iter), vec![5, 1]);
+    }
+
+    #[test]
+    fn seek_back_above_the_head_is_a_no_op() {
+        let mut iter = leaf([5, 6, 7]);
+
+        iter.seek_back(100);
+
+        assert_eq!(backward(iter), vec![7, 6, 5]);
+    }
+
+    // Reverse intersection of a long dense child with a short sparse one: the
+    // reverse leapfrog must skip the dense gaps downward without dropping a match.
+    #[test]
+    fn and_dense_with_sparse_intersects_via_seek_back() {
+        let iter = and([leaf(0..1_000), leaf([7, 250, 251, 999])]);
+
+        assert_eq!(backward(iter), vec![999, 251, 250, 7]);
+    }
+
+    // The reverse seek must thread through a nested OR, same as the forward one.
+    #[test]
+    fn and_of_or_with_sparse_intersects_via_seek_back() {
+        let evens = (0..1_000).filter(|n| n % 2 == 0);
+        let odds = (0..1_000).filter(|n| n % 2 == 1);
+        let iter = and([or([leaf(evens), leaf(odds)]), leaf([7, 250, 999])]);
+
+        assert_eq!(backward(iter), vec![999, 250, 7]);
+    }
+
+    // The reverse mirror of the error-skip contract: leapfrogging *down* skips
+    // entries strictly above the target without reading them, so a read error there
+    // (here above the candidate 0) is not surfaced.
+    #[test]
+    fn seek_back_does_not_surface_errors_in_the_skipped_region() {
+        let dense = leaf_results(vec![Ok(0), Err(Report::new(Error)), Ok(100)]);
+        let sparse = leaf([0]);
+
+        let iter = and([dense, sparse]);
+
+        assert_eq!(backward(iter), vec![0]);
     }
 }

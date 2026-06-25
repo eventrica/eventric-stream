@@ -218,7 +218,16 @@ mod tests {
             Type,
             Version,
         },
-        stream::Position,
+        stream::{
+            Position,
+            operate::{
+                Selection,
+                select::{
+                    Selector,
+                    TypeSelector,
+                },
+            },
+        },
         utils::temp_path,
     };
 
@@ -274,5 +283,53 @@ mod tests {
             assert_eq!(event.2.0, expected);
             expected += 1u64;
         }
+    }
+
+    // A reverse query with a `from` lower bound must keep that bound while
+    // leapfrogging: `seek_back` re-ranges each leaf to `[from ..= target]`, so a
+    // sub-`from` index entry can never be resurrected. Type `evt` is at {2, 7, 8}
+    // and tag `k:1` at {2, 7, 9}, so their intersection is {2, 7} — but `from(5)`
+    // excludes 2. Both leaves leapfrog down here, so a `seek_back` that dropped the
+    // lower bound would re-admit position 2.
+    #[test]
+    fn reverse_query_with_from_bound_keeps_the_lower_bound() {
+        let database = Database::builder(temp_path())
+            .temporary(true)
+            .open()
+            .unwrap();
+        let store = Store::open(&database).unwrap();
+
+        let events = vec![
+            event("other", &["t:x"]), // 0
+            event("other", &["t:x"]), // 1
+            event("evt", &["k:1"]),   // 2  type + tag, but below `from`
+            event("other", &["t:x"]), // 3
+            event("other", &["t:x"]), // 4
+            event("other", &["t:x"]), // 5
+            event("other", &["t:x"]), // 6
+            event("evt", &["k:1"]),   // 7  type + tag, at/above `from`
+            event("evt", &["t:x"]),   // 8  type only
+            event("other", &["k:1"]), // 9  tag only
+        ];
+
+        let mut next = Position::new(0);
+        store
+            .insert(&mut || database.batch(), events, &mut next)
+            .unwrap();
+
+        let selection = Selection::new([Selector::types_and_tags(
+            [TypeSelector::new("evt").unwrap()],
+            [Tag::new("k:1").unwrap()],
+        )]);
+
+        let positions = store
+            .iterate(&[selection], Some(Position::new(5)))
+            .rev()
+            .map(|event| event.unwrap().meta().position())
+            .collect::<Vec<_>>();
+
+        // Only the match at 7 (>= the `from` bound of 5), descending; position 2
+        // (a genuine type+tag match) stays excluded.
+        assert_eq!(positions, vec![Position::new(7)]);
     }
 }

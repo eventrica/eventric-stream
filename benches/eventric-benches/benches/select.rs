@@ -139,5 +139,41 @@ pub fn select_dense_and_sparse(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, select_dense_and_sparse);
+// The same query consumed in reverse (`.rev()`), to confirm the reverse path
+// leapfrogs symmetrically with the forward one rather than degrading to the old
+// single-step O(n).
+pub fn select_dense_and_sparse_reverse(c: &mut Criterion) {
+    let mut group = c.benchmark_group("select_dense_and_sparse_reverse");
+    group.sample_size(20);
+
+    for n in [10_000u64, 50_000, 100_000, 200_000] {
+        let mut stream = Stream::builder(eventric_stream::utils::temp_path())
+            .temporary(true)
+            .open()
+            .unwrap();
+
+        stream.append(seed(n), Condition::new()).unwrap();
+
+        let count = stream.select(query()).rev().map(Result::unwrap).count();
+        assert_eq!(count, MATCHES, "seed/query mismatch (reverse) at n={n}");
+
+        group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, _| {
+            b.iter(|| {
+                let count = stream.select(query()).rev().map(Result::unwrap).count();
+                assert_eq!(count, MATCHES);
+                count
+            });
+        });
+
+        drop(stream);
+    }
+
+    group.finish();
+}
+
+criterion_group!(
+    benches,
+    select_dense_and_sparse,
+    select_dense_and_sparse_reverse
+);
 criterion_main!(benches);

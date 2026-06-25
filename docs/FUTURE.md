@@ -116,6 +116,15 @@ redesign:
 
 ## 4. Storage / engine
 
+- **Parallelism / concurrency load testing.** The single-threaded retrieval cost
+  is now benchmarked (`benches/select.rs`) and the dense∩sparse intersection
+  leapfrogs (≈O(matches·log N)). What is *not* yet measured is behaviour under
+  concurrency: many `Proxy` readers + the single writer thread (`stream/concurrent/`)
+  under contention — read throughput while appends commit, the bounded write
+  channel's backpressure, and how the optimistic DCB append-conflict retry loop
+  behaves under write contention. A load/soak test harness (not a microbenchmark)
+  would surface lock/channel/IO contention the per-op benches cannot. Wanted, not
+  yet scheduled.
 - **The timestamp index is write-only** — it is built and maintained on every
   append but no read path consumes it. Either expose timestamp-range queries
   (the index is ready) or drop the index to save the write.

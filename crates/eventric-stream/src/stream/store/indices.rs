@@ -155,6 +155,15 @@ impl Seek<Position> for IndicesIter {
             Self::Types(iter) => iter.seek(target),
         }
     }
+
+    fn seek_back(&mut self, target: Position) {
+        match self {
+            Self::And(iter) => iter.seek_back(target),
+            Self::Or(iter) => iter.seek_back(target),
+            Self::Tags(iter) => iter.seek_back(target),
+            Self::Types(iter) => iter.seek_back(target),
+        }
+    }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -255,6 +264,7 @@ impl Tags {
         T: Iterator<Item = &'a Tag<u64>>,
     {
         AndIter::iter(tags.map(|tag| {
+            let lower = from.unwrap_or(Position::new(0));
             let iter = if let Some(from) = from {
                 let from: TagKey = TagKeyWriter(tag, &from).into();
                 let to: TagKey = TagKeyWriter(tag, &Position::MAX).into();
@@ -267,9 +277,10 @@ impl Tags {
                 self.keyspace.prefix(prefix)
             };
 
-            // Retain the keyspace + tag hash so `seek` can re-range the scan
-            // forward to an arbitrary position (the leapfrog skip).
-            TagsIter::new(self.keyspace.clone(), tag.clone(), iter).into()
+            // Retain the keyspace + tag hash so `seek`/`seek_back` can re-range the
+            // scan to an arbitrary position (the leapfrog skip); `lower` is the
+            // query's lower bound, preserved by the reverse re-range.
+            TagsIter::new(self.keyspace.clone(), tag.clone(), lower, iter).into()
         }))
     }
 }
@@ -284,6 +295,7 @@ pub struct TagsIter {
     #[debug("Keyspace")]
     keyspace: Keyspace,
     tag: Tag<u64>,
+    lower: Position,
     #[debug("Iter")]
     iter: fjall::Iter,
 }
@@ -299,13 +311,23 @@ impl TagsIter {
 }
 
 impl Seek<Position> for TagsIter {
-    // Re-range the scan to `[tag, target] ..= [tag, MAX]`, so the next item is the
+    // Re-range the scan to `[tag, target] .. [tag, MAX]`, so the next item is the
     // first position `>= target` for this tag — one LSM seek instead of stepping.
     fn seek(&mut self, target: Position) {
         let from: TagKey = TagKeyWriter(&self.tag, &target).into();
         let to: TagKey = TagKeyWriter(&self.tag, &Position::MAX).into();
 
         self.iter = self.keyspace.range(from..to);
+    }
+
+    // The reverse: re-range to `[tag, lower] ..= [tag, target]` (inclusive of
+    // target, preserving the query's lower bound), so the next `next_back` is the
+    // last position `<= target` for this tag.
+    fn seek_back(&mut self, target: Position) {
+        let from: TagKey = TagKeyWriter(&self.tag, &self.lower).into();
+        let to: TagKey = TagKeyWriter(&self.tag, &target).into();
+
+        self.iter = self.keyspace.range(from..=to);
     }
 }
 
@@ -482,6 +504,7 @@ impl Types {
         T: Iterator<Item = &'a TypeSelector<u64>>,
     {
         OrIter::iter(types.map(|ty| {
+            let lower = from.unwrap_or(Position::new(0));
             let iter = if let Some(from) = from {
                 let from: TypeKey = TypeKeyWriter(&ty.0, &from).into();
                 let to: TypeKey = TypeKeyWriter(&ty.0, &Position::MAX).into();
@@ -496,9 +519,10 @@ impl Types {
 
             let range = ty.1.clone();
 
-            // Retain the keyspace + type-name hash so `seek` can re-range forward;
+            // Retain the keyspace + type-name hash so `seek`/`seek_back` can
+            // re-range (with `lower` the query bound the reverse re-range keeps);
             // the version range rides along and is re-applied to the new scan.
-            TypesIter::new(self.keyspace.clone(), ty.0.clone(), iter, range).into()
+            TypesIter::new(self.keyspace.clone(), ty.0.clone(), lower, iter, range).into()
         }))
     }
 }
@@ -513,6 +537,7 @@ pub struct TypesIter {
     #[debug("Keyspace")]
     keyspace: Keyspace,
     name: Name<u64>,
+    lower: Position,
     #[debug("Iter")]
     iter: fjall::Iter,
     range: Range<Version>,
@@ -526,6 +551,15 @@ impl Seek<Position> for TypesIter {
         let to: TypeKey = TypeKeyWriter(&self.name, &Position::MAX).into();
 
         self.iter = self.keyspace.range(from..to);
+    }
+
+    // The reverse: re-range to `[name, lower] ..= [name, target]` (inclusive of
+    // target, preserving the query's lower bound); the version filter rides along.
+    fn seek_back(&mut self, target: Position) {
+        let from: TypeKey = TypeKeyWriter(&self.name, &self.lower).into();
+        let to: TypeKey = TypeKeyWriter(&self.name, &target).into();
+
+        self.iter = self.keyspace.range(from..=to);
     }
 }
 
