@@ -33,7 +33,10 @@
 //!
 //! #[revisioned(revision = 1)]
 //! #[derive(Event)]
-//! #[event(identifier: money_deposited, tags: { account: account })]
+//! #[event(
+//!     identifier: money_deposited,
+//!     tags: { account: account }
+//! )]
 //! struct MoneyDeposited {
 //!     account: String,
 //!     amount: u64,
@@ -41,7 +44,10 @@
 //!
 //! #[revisioned(revision = 1)]
 //! #[derive(new, Event)]
-//! #[event(identifier: money_withdrawn, tags: { account: account })]
+//! #[event(
+//!     identifier: money_withdrawn,
+//!     tags: { account: account }
+//! )]
 //! struct MoneyWithdrawn {
 //!     #[new(into)]
 //!     account: String,
@@ -50,7 +56,13 @@
 //!
 //! #[derive(new, Projection, Debug)]
 //! #[projection(selections: {
-//!     balance: { events: [MoneyDeposited, MoneyWithdrawn], filter: { account: account } },
+//!     balance: {
+//!         events: [
+//!             MoneyDeposited,
+//!             MoneyWithdrawn
+//!         ],
+//!         filter: { account: account }
+//!     },
 //! })]
 //! struct AccountBalance {
 //!     #[new(into)]

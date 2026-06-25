@@ -90,13 +90,17 @@ pub fn tag(input: TokenStream) -> TokenStream {
 /// }
 ///
 /// impl Act<withdraw::Projections> for Withdraw {
-///     fn act(&self, events: &mut Events, projections: &withdraw::Projections)
-///         -> Result<Self::Ok, Self::Err>
-///     {
+///     fn act(
+///         &self,
+///         events: &mut Events,
+///         projections: &withdraw::Projections
+///     ) -> Result<Self::Ok, Self::Err> {
 ///         if projections.balance.balance < self.amount as i64 {
 ///             return Err(Report::new(Error).attach("insufficient funds"));
 ///         }
+///
 ///         events.append(&Withdrawn::new(&self.account, self.amount))?;
+///         
 ///         Ok(())
 ///     }
 /// }
@@ -220,10 +224,7 @@ pub fn event(input: TokenStream) -> TokenStream {
 /// - **`events`** (required) lists the event types folded into this selection.
 /// - **`filter`** (optional) scopes the selection by tags, reusing the
 ///   [`Event`] derive's value forms (bare ident / `self`-expression / closure /
-///   `[list]`) — but here `self` is the **projection**, not the event (the
-///   filter is built in the projection's `select`, before any event is read),
-///   so a bare `account` is `&self.account`, reading the projection's own
-///   field.
+///   `[list]`) — a bare `account` is shorthand for `&self.account`.
 ///
 /// # Example
 ///
@@ -231,7 +232,13 @@ pub fn event(input: TokenStream) -> TokenStream {
 /// // One selection folding two event types into a single running balance.
 /// #[derive(Projection)]
 /// #[projection(selections: {
-///     balance: { events: [Deposited, Withdrawn], filter: { account: account } },
+///     balance: {
+///         events: [
+///             Deposited,
+///             Withdrawn
+///         ],
+///         filter: { account: account }
+///     },
 /// })]
 /// struct AccountBalance {
 ///     account: String,
