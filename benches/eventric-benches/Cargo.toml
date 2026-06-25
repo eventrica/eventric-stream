@@ -2,6 +2,10 @@
 harness = false
 name    = "append"
 
+[[bench]]
+harness = false
+name    = "select"
+
 [dependencies]
 
 [dev-dependencies]

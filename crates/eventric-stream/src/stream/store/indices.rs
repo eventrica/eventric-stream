@@ -29,6 +29,7 @@ use crate::{
     combine::{
         AndIter,
         OrIter,
+        Seek,
     },
     error::{
         Error,
@@ -138,6 +139,20 @@ impl Iterator for IndicesIter {
             Self::Or(iter) => iter.next(),
             Self::Tags(iter) => iter.next(),
             Self::Types(iter) => iter.next(),
+        }
+    }
+}
+
+impl Seek<Position> for IndicesIter {
+    // Skip every node forward to `target`: combinators seek their children, leaf
+    // scans re-seek the underlying fjall range. This is what `AndIter` calls to
+    // leapfrog a lagging child past a run of non-matching positions.
+    fn seek(&mut self, target: Position) {
+        match self {
+            Self::And(iter) => iter.seek(target),
+            Self::Or(iter) => iter.seek(target),
+            Self::Tags(iter) => iter.seek(target),
+            Self::Types(iter) => iter.seek(target),
         }
     }
 }
@@ -252,7 +267,9 @@ impl Tags {
                 self.keyspace.prefix(prefix)
             };
 
-            TagsIter::new(iter).into()
+            // Retain the keyspace + tag hash so `seek` can re-range the scan
+            // forward to an arbitrary position (the leapfrog skip).
+            TagsIter::new(self.keyspace.clone(), tag.clone(), iter).into()
         }))
     }
 }
@@ -264,6 +281,9 @@ impl Tags {
 #[derive(new, Debug)]
 #[new(const_fn)]
 pub struct TagsIter {
+    #[debug("Keyspace")]
+    keyspace: Keyspace,
+    tag: Tag<u64>,
     #[debug("Iter")]
     iter: fjall::Iter,
 }
@@ -275,6 +295,17 @@ impl TagsIter {
             Ok(key) => Ok(TagPositionReader(&key).into()),
             Err(err) => Err(err).change_context(Error).attach("failed to map next tag"),
         }
+    }
+}
+
+impl Seek<Position> for TagsIter {
+    // Re-range the scan to `[tag, target] ..= [tag, MAX]`, so the next item is the
+    // first position `>= target` for this tag — one LSM seek instead of stepping.
+    fn seek(&mut self, target: Position) {
+        let from: TagKey = TagKeyWriter(&self.tag, &target).into();
+        let to: TagKey = TagKeyWriter(&self.tag, &Position::MAX).into();
+
+        self.iter = self.keyspace.range(from..to);
     }
 }
 
@@ -465,7 +496,9 @@ impl Types {
 
             let range = ty.1.clone();
 
-            TypesIter::new(iter, range).into()
+            // Retain the keyspace + type-name hash so `seek` can re-range forward;
+            // the version range rides along and is re-applied to the new scan.
+            TypesIter::new(self.keyspace.clone(), ty.0.clone(), iter, range).into()
         }))
     }
 }
@@ -477,9 +510,23 @@ impl Types {
 #[derive(new, Debug)]
 #[new(const_fn)]
 pub struct TypesIter {
+    #[debug("Keyspace")]
+    keyspace: Keyspace,
+    name: Name<u64>,
     #[debug("Iter")]
     iter: fjall::Iter,
     range: Range<Version>,
+}
+
+impl Seek<Position> for TypesIter {
+    // Re-range the scan forward to `target` for this type name; the version filter
+    // is unaffected (it is applied per item in `next_map`).
+    fn seek(&mut self, target: Position) {
+        let from: TypeKey = TypeKeyWriter(&self.name, &target).into();
+        let to: TypeKey = TypeKeyWriter(&self.name, &Position::MAX).into();
+
+        self.iter = self.keyspace.range(from..to);
+    }
 }
 
 impl TypesIter {

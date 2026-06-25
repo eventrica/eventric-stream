@@ -10,12 +10,160 @@ use std::{
 };
 
 use derive_more::with_trait::Debug;
-use double_ended_peekable::{
-    DoubleEndedPeekable,
-    DoubleEndedPeekableExt,
-};
 use fancy_constructor::new;
 use smallvec::SmallVec;
+
+// =================================================================================================
+// Seek
+// =================================================================================================
+
+/// A sorted iterator that can skip forward to the first item `>= target` in one
+/// step, rather than being advanced one element at a time. Implemented by the
+/// index iterators (by re-seeking the underlying scan) — it is what lets
+/// [`AndIter`] leapfrog a lagging child over a long run of non-matching
+/// positions instead of single-stepping through every one of them.
+pub(crate) trait Seek<T> {
+    /// Advance so the next item yielded is the first one `>= target` (a no-op
+    /// if already at or past `target`).
+    ///
+    /// Items strictly below `target` are skipped *without being read*, so a
+    /// read error among them is not surfaced. This never changes a result:
+    /// a child is only sought up to the intersection's shared candidate,
+    /// and nothing below it can be in the intersection — so the skipped
+    /// (and unread) region is exactly the part that cannot affect the
+    /// answer.
+    fn seek(&mut self, target: T);
+}
+
+// -------------------------------------------------------------------------------------------------
+
+// Cursor
+
+/// A double-ended peeking wrapper (one-element front and back lookahead) that
+/// also supports forward [`Seek`] — replacing a plain peekable so the
+/// combinators can both peek *and* skip a child forward.
+///
+/// Forward `seek` re-seeks the backend only while the cursor has never been
+/// driven from the back (`from_back`). Once a back element has been observed,
+/// re-seeking would discard that back progress, so it falls back to
+/// single-stepping — always correct, just unoptimised (the index query is
+/// consumed in a single direction in practice; the fallback only guards the
+/// mixed-direction case the unit tests exercise).
+#[derive(Debug)]
+struct Cursor<I>
+where
+    I: DoubleEndedIterator,
+{
+    #[debug("..")]
+    inner: I,
+    #[debug("..")]
+    front: Option<I::Item>,
+    #[debug("..")]
+    back: Option<I::Item>,
+    from_back: bool,
+}
+
+impl<I> Cursor<I>
+where
+    I: DoubleEndedIterator,
+{
+    fn new(inner: I) -> Self {
+        Self {
+            inner,
+            front: None,
+            back: None,
+            from_back: false,
+        }
+    }
+
+    fn peek(&mut self) -> Option<&I::Item> {
+        if self.front.is_none() {
+            self.front = self.inner.next().or_else(|| self.back.take());
+        }
+
+        self.front.as_ref()
+    }
+
+    fn peek_back(&mut self) -> Option<&I::Item> {
+        self.from_back = true;
+
+        if self.back.is_none() {
+            self.back = self.inner.next_back().or_else(|| self.front.take());
+        }
+
+        self.back.as_ref()
+    }
+}
+
+impl<I> Iterator for Cursor<I>
+where
+    I: DoubleEndedIterator,
+{
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.peek();
+        self.front.take()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let (lower, upper) = self.inner.size_hint();
+        let cached = usize::from(self.front.is_some()) + usize::from(self.back.is_some());
+
+        (lower + cached, upper.map(|upper| upper + cached))
+    }
+}
+
+impl<I> DoubleEndedIterator for Cursor<I>
+where
+    I: DoubleEndedIterator,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.peek_back();
+        self.back.take()
+    }
+}
+
+impl<I, T, E> Cursor<I>
+where
+    I: DoubleEndedIterator<Item = Result<T, E>> + Seek<T>,
+    T: Copy + Ord,
+{
+    // Skip forward so the next peek/next yields the first item `>= target`.
+    fn seek(&mut self, target: T) {
+        // A cached front already at/after target stays put; a stale `Ok` front
+        // below target is dropped so the backend (or the single-step fallback) can
+        // advance past it; an `Err` front is left in place for `next` to surface.
+        let stale = match self.front.as_ref() {
+            Some(Ok(value)) => *value < target,
+            Some(Err(_)) => return,
+            None => false,
+        };
+
+        if stale {
+            self.front = None;
+        } else if self.front.is_some() {
+            return;
+        }
+
+        if self.from_back {
+            loop {
+                let lagging = match self.peek() {
+                    Some(Ok(value)) => *value < target,
+                    _ => false,
+                };
+
+                if lagging {
+                    self.next();
+                } else {
+                    break;
+                }
+            }
+        } else {
+            self.inner.seek(target);
+        }
+    }
+}
 
 // =================================================================================================
 // Combine
@@ -36,7 +184,7 @@ use smallvec::SmallVec;
 /// a macro — so the convergence logic stays easy to read and step through.
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
-pub(crate) struct AndIter<I, T, E>(Vec<DoubleEndedPeekable<I>>)
+pub(crate) struct AndIter<I, T, E>(Vec<Cursor<I>>)
 where
     I: DoubleEndedIterator<Item = Result<T, E>>,
     T: Copy + Debug + Ord + PartialOrd;
@@ -53,10 +201,7 @@ where
     where
         S: IntoIterator<Item = I>,
     {
-        let iters = iters
-            .into_iter()
-            .map(DoubleEndedPeekableExt::double_ended_peekable)
-            .collect();
+        let iters = iters.into_iter().map(Cursor::new).collect();
 
         I::from(AndIter::new(iters))
     }
@@ -64,7 +209,7 @@ where
 
 impl<I, T, E> Iterator for AndIter<I, T, E>
 where
-    I: DoubleEndedIterator<Item = Result<T, E>>,
+    I: DoubleEndedIterator<Item = Result<T, E>> + Seek<T>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     type Item = Result<T, E>;
@@ -101,8 +246,12 @@ where
                                 *current = *value;
                                 converged = false;
                             }
+                            // Leapfrog: skip the lagging child straight to the
+                            // candidate (the largest head so far) rather than
+                            // single-stepping it through every position below it.
                             Ordering::Less => {
-                                iter.next();
+                                let candidate = *current;
+                                iter.seek(candidate);
                                 converged = false;
                             }
                             Ordering::Equal => {}
@@ -137,7 +286,7 @@ where
 
 impl<I, T, E> DoubleEndedIterator for AndIter<I, T, E>
 where
-    I: DoubleEndedIterator<Item = Result<T, E>>,
+    I: DoubleEndedIterator<Item = Result<T, E>> + Seek<T>,
     T: Copy + Debug + Ord + PartialOrd,
 {
     #[inline]
@@ -195,9 +344,23 @@ where
 
 impl<I, T, E> FusedIterator for AndIter<I, T, E>
 where
-    I: DoubleEndedIterator<Item = Result<T, E>> + FusedIterator,
+    I: DoubleEndedIterator<Item = Result<T, E>> + FusedIterator + Seek<T>,
     T: Copy + Debug + Ord + PartialOrd,
 {
+}
+
+impl<I, T, E> Seek<T> for AndIter<I, T, E>
+where
+    I: DoubleEndedIterator<Item = Result<T, E>> + Seek<T>,
+    T: Copy + Debug + Ord + PartialOrd,
+{
+    // Seeking an intersection seeks every child: nothing below `target` can be in
+    // the intersection from here on.
+    fn seek(&mut self, target: T) {
+        for iter in &mut self.0 {
+            iter.seek(target);
+        }
+    }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -217,7 +380,7 @@ where
 /// comparison flipped) rather than macro-shared, for readability.
 #[derive(new, Debug)]
 #[new(const_fn, vis())]
-pub(crate) struct OrIter<I, T, E>(Vec<DoubleEndedPeekable<I>>)
+pub(crate) struct OrIter<I, T, E>(Vec<Cursor<I>>)
 where
     I: DoubleEndedIterator<Item = Result<T, E>>,
     T: Copy + Debug + Ord + PartialOrd;
@@ -234,10 +397,7 @@ where
     where
         S: IntoIterator<Item = I>,
     {
-        let iters = iters
-            .into_iter()
-            .map(DoubleEndedPeekableExt::double_ended_peekable)
-            .collect();
+        let iters = iters.into_iter().map(Cursor::new).collect();
 
         I::from(OrIter::new(iters))
     }
@@ -381,6 +541,20 @@ where
 {
 }
 
+impl<I, T, E> Seek<T> for OrIter<I, T, E>
+where
+    I: DoubleEndedIterator<Item = Result<T, E>> + Seek<T>,
+    T: Copy + Debug + Ord + PartialOrd,
+{
+    // Seeking a union seeks every child: the union from `target` onward is the
+    // union of each child from `target` onward.
+    fn seek(&mut self, target: T) {
+        for iter in &mut self.0 {
+            iter.seek(target);
+        }
+    }
+}
+
 // =================================================================================================
 // Tests
 // =================================================================================================
@@ -392,6 +566,7 @@ mod tests {
     use super::{
         AndIter,
         OrIter,
+        Seek,
     };
     use crate::error::{
         Error,
@@ -438,6 +613,30 @@ mod tests {
                 Self::And(iter) => iter.next_back(),
                 Self::Or(iter) => iter.next_back(),
                 Self::Leaf(iter) => iter.next_back(),
+            }
+        }
+    }
+
+    impl Seek<u64> for TestIter {
+        fn seek(&mut self, target: u64) {
+            match self {
+                Self::And(iter) => iter.seek(target),
+                Self::Or(iter) => iter.seek(target),
+                // A leaf is a sorted `Vec`: drop everything before the first item
+                // `>= target` — including any `Err` in that skipped run — so this
+                // stand-in matches the index layer's re-seek, which jumps past the
+                // unread region wholesale rather than stopping at an error in it.
+                Self::Leaf(iter) => {
+                    let slice = iter.as_slice();
+                    let skip = slice
+                        .iter()
+                        .position(|value| matches!(value, Ok(value) if *value >= target))
+                        .unwrap_or(slice.len());
+
+                    if skip > 0 {
+                        iter.nth(skip - 1);
+                    }
+                }
             }
         }
     }
@@ -597,5 +796,85 @@ mod tests {
     fn or_with_no_children_is_empty() {
         assert_eq!(forward(or(Vec::<TestIter>::new())), Vec::<u64>::new());
         assert_eq!(backward(or(Vec::<TestIter>::new())), Vec::<u64>::new());
+    }
+
+    // Seek
+    // -----------------------------------------------------------------------------
+
+    #[test]
+    fn seek_positions_leaf_at_first_at_or_after_target() {
+        let mut iter = leaf([1, 5, 9, 12]);
+
+        iter.seek(6);
+
+        assert_eq!(forward(iter), vec![9, 12]);
+    }
+
+    #[test]
+    fn seek_past_the_end_exhausts() {
+        let mut iter = leaf([1, 2, 3]);
+
+        iter.seek(100);
+
+        assert_eq!(forward(iter), Vec::<u64>::new());
+    }
+
+    #[test]
+    fn seek_below_the_head_is_a_no_op() {
+        let mut iter = leaf([5, 6, 7]);
+
+        iter.seek(2);
+
+        assert_eq!(forward(iter), vec![5, 6, 7]);
+    }
+
+    // Intersecting a long, dense child with a short, sparse one yields exactly the
+    // sparse positions — the leapfrog `seek` must skip the dense gaps without
+    // dropping or inventing a match.
+    #[test]
+    fn and_dense_with_sparse_intersects_via_seek() {
+        let iter = and([leaf(0..1_000), leaf([7, 250, 251, 999])]);
+
+        assert_eq!(forward(iter), vec![7, 250, 251, 999]);
+    }
+
+    // The seek path must thread through a nested OR: `(dense_a OR dense_b) AND
+    // sparse` is the index query's exact shape (type union AND tag).
+    #[test]
+    fn and_of_or_with_sparse_intersects_via_seek() {
+        let evens = (0..1_000).filter(|n| n % 2 == 0);
+        let odds = (0..1_000).filter(|n| n % 2 == 1);
+        let iter = and([or([leaf(evens), leaf(odds)]), leaf([7, 250, 999])]);
+
+        assert_eq!(forward(iter), vec![7, 250, 999]);
+    }
+
+    // Seeking while the cursor is also driven from the back (mixed direction) must
+    // stay correct via the single-step fallback.
+    #[test]
+    fn and_mixed_direction_with_seek_is_correct() {
+        let mut iter = and([leaf(0..100), leaf([10, 20, 30, 40, 50])]);
+
+        assert_eq!(iter.next().map(Result::unwrap), Some(10));
+        assert_eq!(iter.next_back().map(Result::unwrap), Some(50));
+        assert_eq!(iter.next().map(Result::unwrap), Some(20));
+        assert_eq!(iter.next_back().map(Result::unwrap), Some(40));
+        assert_eq!(iter.next().map(Result::unwrap), Some(30));
+        assert_eq!(iter.next().map(Result::unwrap), None);
+    }
+
+    // Per the `Seek` contract: leapfrogging skips entries strictly below the target
+    // without reading them, so a read error on a skipped entry is *not* surfaced
+    // (it could not be in the intersection). Here the dense child's `Err` sits
+    // between its head and the candidate (100); the intersection is the clean
+    // `[100]`. If the error leaked through, `forward`'s `unwrap` would panic.
+    #[test]
+    fn seek_does_not_surface_errors_in_the_skipped_region() {
+        let dense = leaf_results(vec![Ok(0), Err(Report::new(Error)), Ok(100)]);
+        let sparse = leaf([100]);
+
+        let iter = and([dense, sparse]);
+
+        assert_eq!(forward(iter), vec![100]);
     }
 }
