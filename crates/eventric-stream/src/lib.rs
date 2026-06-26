@@ -23,7 +23,7 @@
 #![deny(unsafe_code)]
 #![feature(exclusive_wrapper)]
 
-mod combine;
+mod iter;
 
 pub mod error;
 pub mod event;

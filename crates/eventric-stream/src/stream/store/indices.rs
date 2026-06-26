@@ -26,11 +26,6 @@ use fjall::{
 };
 
 use crate::{
-    combine::{
-        AndIter,
-        OrIter,
-        Seek,
-    },
     error::{
         Error,
         Result,
@@ -40,6 +35,11 @@ use crate::{
         Name,
         Tag,
         Version,
+    },
+    iter::{
+        Seek,
+        intersection::Intersection,
+        union::Union,
     },
     stream::{
         Metadata,
@@ -97,9 +97,9 @@ impl Indices {
     where
         S: IntoIterator<Item = &'a Selector<u64>>,
     {
-        OrIter::iter(selectors.into_iter().map(|selector| match selector {
+        Union::iter(selectors.into_iter().map(|selector| match selector {
             Selector(types, None) => self.types.iterate(types.iter(), from),
-            Selector(types, Some(tags)) => AndIter::iter([
+            Selector(types, Some(tags)) => Intersection::iter([
                 self.types.iterate(types.iter(), from),
                 self.tags.iterate(tags.iter(), from),
             ]),
@@ -113,8 +113,8 @@ impl Indices {
 
 #[derive(Debug, From)]
 pub enum IndicesIter {
-    And(AndIter<IndicesIter, Position, Report<Error>>),
-    Or(OrIter<IndicesIter, Position, Report<Error>>),
+    Intersection(Intersection<IndicesIter, Position, Report<Error>>),
+    Union(Union<IndicesIter, Position, Report<Error>>),
     Tags(TagsIter),
     Types(TypesIter),
 }
@@ -122,8 +122,8 @@ pub enum IndicesIter {
 impl DoubleEndedIterator for IndicesIter {
     fn next_back(&mut self) -> Option<Self::Item> {
         match self {
-            Self::And(iter) => iter.next_back(),
-            Self::Or(iter) => iter.next_back(),
+            Self::Intersection(iter) => iter.next_back(),
+            Self::Union(iter) => iter.next_back(),
             Self::Tags(iter) => iter.next_back(),
             Self::Types(iter) => iter.next_back(),
         }
@@ -135,8 +135,8 @@ impl Iterator for IndicesIter {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self {
-            Self::And(iter) => iter.next(),
-            Self::Or(iter) => iter.next(),
+            Self::Intersection(iter) => iter.next(),
+            Self::Union(iter) => iter.next(),
             Self::Tags(iter) => iter.next(),
             Self::Types(iter) => iter.next(),
         }
@@ -145,12 +145,12 @@ impl Iterator for IndicesIter {
 
 impl Seek<Position> for IndicesIter {
     // Skip every node forward to `target`: combinators seek their children, leaf
-    // scans re-seek the underlying fjall range. This is what `AndIter` calls to
-    // leapfrog a lagging child past a run of non-matching positions.
+    // scans re-seek the underlying fjall range. This is what `Intersection` calls
+    // to leapfrog a lagging child past a run of non-matching positions.
     fn seek(&mut self, target: Position) {
         match self {
-            Self::And(iter) => iter.seek(target),
-            Self::Or(iter) => iter.seek(target),
+            Self::Intersection(iter) => iter.seek(target),
+            Self::Union(iter) => iter.seek(target),
             Self::Tags(iter) => iter.seek(target),
             Self::Types(iter) => iter.seek(target),
         }
@@ -158,8 +158,8 @@ impl Seek<Position> for IndicesIter {
 
     fn seek_back(&mut self, target: Position) {
         match self {
-            Self::And(iter) => iter.seek_back(target),
-            Self::Or(iter) => iter.seek_back(target),
+            Self::Intersection(iter) => iter.seek_back(target),
+            Self::Union(iter) => iter.seek_back(target),
             Self::Tags(iter) => iter.seek_back(target),
             Self::Types(iter) => iter.seek_back(target),
         }
@@ -263,7 +263,7 @@ impl Tags {
     where
         T: Iterator<Item = &'a Tag<u64>>,
     {
-        AndIter::iter(tags.map(|tag| {
+        Intersection::iter(tags.map(|tag| {
             let lower = from.unwrap_or(Position::new(0));
             let iter = if let Some(from) = from {
                 let from: TagKey = TagKeyWriter(tag, &from).into();
@@ -503,7 +503,7 @@ impl Types {
     where
         T: Iterator<Item = &'a TypeSelector<u64>>,
     {
-        OrIter::iter(types.map(|ty| {
+        Union::iter(types.map(|ty| {
             let lower = from.unwrap_or(Position::new(0));
             let iter = if let Some(from) = from {
                 let from: TypeKey = TypeKeyWriter(&ty.0, &from).into();

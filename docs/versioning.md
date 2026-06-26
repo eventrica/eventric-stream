@@ -194,7 +194,7 @@ positions written as (v1,5),(v2,6),(v1,7) would scan as 5,7,6.
 
 The salvage is a **union of per-version sub-scans**: each `[name_hash][v][pos…]`
 *is* position-ordered for a fixed `v`, so a version range becomes up to 255
-single-version scans merged by the existing `OrIter` (a sorted merge; an event has
+single-version scans merged by the existing `Union` combinator (a sorted merge; an event has
 exactly one version, so it's a clean interleave with no dedup). It works, but it's
 an N-way merge, not a single scan — and it's only worth the cost when the version
 filter is **selective**; for "all/most versions" the current value-side filter is
