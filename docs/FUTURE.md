@@ -3,6 +3,11 @@
 Known-but-unplanned items: things we are *aware* of but have not committed to a
 plan for. A living list — add to it as things surface, prune as they land.
 
+Priorities here are weighed against the guiding vision in
+[`vision.md`](./vision.md); the forward *roadmap* (what's planned next —
+**reactions** as the gating building block, then multi-context composition) lives
+there (§9). This file is the *unplanned* residue.
+
 The structural work is **done**: the stream-core rewrite ([`REFACTOR.md`]), the
 crate consolidation ([`CONSOLIDATION.md`]), and the content-seam split
 ([`SPLIT.md`]) are complete — **three crates**: `eventric-stream` (content-agnostic
@@ -42,7 +47,10 @@ wants to think through before building.
   key (enabling a version-keyed range-scan). Decide its fate as part of the
   versioning design: keep it and **pin the semantics with a test + doc** (it has
   neither), or drop both. (`PartialEq<Range>` merely re-spells `Range::contains`,
-  so it is hard to justify either way.)
+  so it is hard to justify either way.) **Update:** [`vision.md`](./vision.md) §8
+  leans `Version` toward *informational-only* — not a selection dimension — which
+  removes the only justification (the version-keyed range-scan) and points toward
+  **drop**.
 - **A `revision`-mismatch decode failure stays the opaque `Error` type.** It now
   carries an informative attachment (the stored version + the revision this
   consumer handles), so it is *diagnosable*; a distinct error *type/variant* is

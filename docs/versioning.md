@@ -154,7 +154,8 @@ than truncating past 255). Consequences:
 - The dead `Version::default()` and the unused `Version` arithmetic
   (`Add`/`Sub`/…) were removed in the same change. (`MIN`/`MAX` stay; the
   `PartialEq`/`PartialOrd<Range>` impls stay — their fate is the deferred
-  *selection* decision in §7.)
+  *selection* decision in §7, now leaning toward *drop* (§8, per
+  [`vision.md`](./vision.md)'s informational-`Version` lean).)
 
 This is the one piece worth having built ahead of the rest: small, divergence-
 proof, and it makes `Version` mean something real for free.
@@ -241,12 +242,19 @@ needed once you accept reader-lags-writer (§3).
 3. **Modelling guidance, not code:** document the §3 "honest transform?" axis and
    the fat-event / explicit-context / one-fact-per-event discipline — it's the
    biggest lever and costs nothing to write down.
-4. **Decide consciously, don't drift into:** whether `eventric` must tolerate
-   **reader-lags-writer** (§3). This gates the runtime guard and everything in §7.
-5. **Justify-on-demand:** version-in-index *selection* (§7.1) — build only if a
-   concrete "query version N only" need appears; and only then does the
-   `Version`/`Range` trait question (§7's parenthetical, [`FUTURE.md`](./FUTURE.md)
-   §1) resolve.
+4. **Decided ([`vision.md`](./vision.md) §6, §9):** `eventric` *will* tolerate
+   **reader-lags-writer**, fail-closed — reject the operation rather than risk a wrong
+   success. The vision also *reframes* the surface: in-stream lag narrows to a
+   deploy-handover edge (an old reader briefly overlapping a new writer), while the
+   cross-version concern that actually matters moves to the inter-context **contract**
+   ([`vision.md`](./vision.md) §4). Still gates the runtime guard and §7; the concrete
+   mechanism is TBD.
+5. **Justify-on-demand (and now less likely):** version-in-index *selection* (§7.1) —
+   build only if a concrete "query version N only" need appears. [`vision.md`](./vision.md)
+   §8 leans `Version` toward *informational-only* (carrying the `revision` number for
+   evolution, **not** a selection dimension), which pushes this further toward "won't
+   build" and points the `Version`/`Range` trait question (§7's parenthetical,
+   [`FUTURE.md`](./FUTURE.md) §1) toward *drop*.
 6. **Deferred strategic axis:** owning the serialisation format (§6).
 
 The through-line: with `revision` (transform) + new-events (untransformable) +
