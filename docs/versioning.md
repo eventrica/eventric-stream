@@ -247,8 +247,10 @@ needed once you accept reader-lags-writer (§3).
    success. The vision also *reframes* the surface: in-stream lag narrows to a
    deploy-handover edge (an old reader briefly overlapping a new writer), while the
    cross-version concern that actually matters moves to the inter-context **contract**
-   ([`vision.md`](./vision.md) §4). Still gates the runtime guard and §7; the concrete
-   mechanism is TBD.
+   ([`vision.md`](./vision.md) §4). The contract-side mechanism is the public/private
+   membrane ([`boundary.md`](./boundary.md) §2 — version the stable public form, the
+   inbound translation absorbs the diff); the in-stream guard still gates the runtime
+   guard and §7, and is TBD.
 5. **Justify-on-demand (and now less likely):** version-in-index *selection* (§7.1) —
    build only if a concrete "query version N only" need appears. [`vision.md`](./vision.md)
    §8 leans `Version` toward *informational-only* (carrying the `revision` number for

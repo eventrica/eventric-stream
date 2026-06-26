@@ -88,7 +88,9 @@ reaction by an *event*. A reaction can maintain a view, emit a message, or **iss
 another command** — and a reaction that also reads projections becomes a de-facto
 **process manager / long-running coordinator**: itself just event-driven state with
 responsibilities. Reactions are what turn "an event store" into "a system" — they
-make behaviour autonomous and composable, not merely request-driven.
+make behaviour autonomous and composable, not merely request-driven. The **boundary**
+they live on — the edge layer of contracts, effects, and the public/private membrane —
+is designed in [`boundary.md`](./boundary.md).
 
 ## 3. The context model
 
@@ -315,7 +317,8 @@ eventric starts **personal**, and becomes more *only if it earns it*:
 
 - **Single context, complete** — events + projections + actions + **reactions** in one
   stream: the first *usable* rung, a whole single-context system end to end. Reactions
-  (§2) are the gating missing piece.
+  (§2) are the gating missing piece — their boundary/effects design is
+  [`boundary.md`](./boundary.md).
 - **Multi-context, soon after** — the channel + contracts, so contexts compose. *Not* a
   distant phase: composition/reuse is a primary proof marker, so multi-context follows
   close behind, not years later.
@@ -344,7 +347,10 @@ Deliberately unresolved — the vision exists partly so we can resolve these
   ([`versioning.md`](./versioning.md).)
 - **Contract versioning.** Given the contract is the versioned unit, what does
   versioning it look like — compatibility rules, negotiation, rejection on mismatch?
-  A separate set of decisions.
+  [`boundary.md`](./boundary.md) §2 supplies the core *mechanism* — the public/private
+  membrane: version the stable **public** form, and the inbound translation absorbs the
+  diff to the unstable **private** one. The remaining detail (compatibility rules,
+  negotiation) is still open.
 - **The rules a view-maintaining reaction plays by.** Views are reaction-maintained
   and eventually consistent (§7); the concrete rules — how a view is rebuilt/recreated,
   how staleness is bounded or signalled, what a Query is guaranteed — are not yet

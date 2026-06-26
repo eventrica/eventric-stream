@@ -5,8 +5,9 @@ plan for. A living list — add to it as things surface, prune as they land.
 
 Priorities here are weighed against the guiding vision in
 [`vision.md`](./vision.md); the forward *roadmap* (what's planned next —
-**reactions** as the gating building block, then multi-context composition) lives
-there (§9). This file is the *unplanned* residue.
+**reactions** (designed in [`boundary.md`](./boundary.md)) as the gating building
+block, then multi-context composition) lives there (§9). This file is the *unplanned*
+residue.
 
 The structural work is **done**: the stream-core rewrite ([`REFACTOR.md`]), the
 crate consolidation ([`CONSOLIDATION.md`]), and the content-seam split
@@ -34,7 +35,9 @@ suggested order of work — is in [`versioning.md`](./versioning.md).
 version to declare. That retired the old "model hardcodes `Version` 0" and "two
 orthogonal axes" items — schema revision and stream `Version` are now one notion.
 The remaining open question is the *breaking-change* story, which the maintainer
-wants to think through before building.
+wants to think through before building. (The distinct question of *cross-context
+contract* versioning has its mechanism in [`boundary.md`](./boundary.md) §2 — the
+public/private membrane — independent of this internal-event story.)
 
 - **Orphaned `Version`/`Range` comparison traits (a design decision, not dead
   code).** `impl PartialEq<Range<Self>>` / `impl PartialOrd<Range<Self>>` for
