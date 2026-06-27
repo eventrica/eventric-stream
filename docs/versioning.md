@@ -153,9 +153,9 @@ than truncating past 255). Consequences:
   — and that loss is the point.
 - The dead `Version::default()` and the unused `Version` arithmetic
   (`Add`/`Sub`/…) were removed in the same change. (`MIN`/`MAX` stay; the
-  `PartialEq`/`PartialOrd<Range>` impls stay — their fate is the deferred
-  *selection* decision in §7, now leaning toward *drop* (§8, per
-  [`vision.md`](./vision.md)'s informational-`Version` lean).)
+  `PartialEq`/`PartialOrd<Range>` impls have since been **dropped** — no caller,
+  and the informational-`Version` lean (§8) removed their only prospective use;
+  see §7.1 and [`FUTURE.md`](./FUTURE.md) §1.)
 
 This is the one piece worth having built ahead of the rest: small, divergence-
 proof, and it makes `Version` mean something real for free.
@@ -200,8 +200,9 @@ exactly one version, so it's a clean interleave with no dedup). It works, but it
 an N-way merge, not a single scan — and it's only worth the cost when the version
 filter is **selective**; for "all/most versions" the current value-side filter is
 simpler *and already correct*. So version-in-index is **justify-on-demand**, and
-the orphaned `PartialOrd<Range<Version>>` trait would only find its purpose
-(the three-way scan-advance primitive) *if* this is built.
+the `PartialOrd<Range<Version>>` trait that would have served it (the three-way
+scan-advance primitive) has since been **dropped** (it had no caller);
+reintroduce it only if this is ever built.
 
 ### 7.2 Disjoint ranges
 

@@ -39,21 +39,12 @@ wants to think through before building. (The distinct question of *cross-context
 contract* versioning has its mechanism in [`boundary.md`](./boundary.md) §2 — the
 public/private membrane — independent of this internal-event story.)
 
-- **Orphaned `Version`/`Range` comparison traits (a design decision, not dead
-  code).** `impl PartialEq<Range<Self>>` / `impl PartialOrd<Range<Self>>` for
-  `Version` (`event.rs`) were deliberately added (commit `7ce9c043`,
-  "implementing comparison traits for version range") as a version-range
-  primitive, but the filtering that shipped uses stdlib `Range::contains` (the
-  in-memory mask re-check), which bypasses them, so they have no caller today.
-  The three-way `PartialOrd<Range>` (below / inside / above the range) is
-  plausibly the right primitive *if* versioning moves `Version` into the index
-  key (enabling a version-keyed range-scan). Decide its fate as part of the
-  versioning design: keep it and **pin the semantics with a test + doc** (it has
-  neither), or drop both. (`PartialEq<Range>` merely re-spells `Range::contains`,
-  so it is hard to justify either way.) **Update:** [`vision.md`](./vision.md) §8
-  leans `Version` toward *informational-only* — not a selection dimension — which
-  removes the only justification (the version-keyed range-scan) and points toward
-  **drop**.
+- **Done — orphaned `Version`/`Range` comparison traits dropped.** `impl
+  PartialEq<Range<Self>>` / `impl PartialOrd<Range<Self>>` for `Version` had no
+  caller (the version filter uses stdlib `Range::contains`), and the
+  informational-`Version` lean ([`vision.md`](./vision.md) §8) removed their only
+  prospective use — a version-keyed range-scan — so both impls (and the now-unused
+  `Ordering`/`Range` imports in `event.rs`) were removed.
 - **A `revision`-mismatch decode failure stays the opaque `Error` type.** It now
   carries an informative attachment (the stored version + the revision this
   consumer handles), so it is *diagnosable*; a distinct error *type/variant* is
@@ -64,9 +55,12 @@ public/private membrane — independent of this internal-event story.)
 
 - **The `MAX` (255) sentinel is unqueryable:** the half-open default range and
   all `VersionSelector` lowerings cap the upper bound at the exclusive
-  `Version::MAX`, so version-255 events can be appended but never matched.
-- **Untested:** the `a..` / `..b` / `..` range lowerings, the 255 boundary, and
-  multi-version OR-ing.
+  `Version::MAX`, so version-255 events can be appended but never matched. Now
+  **pinned by a test** (`select.rs`) as a known limitation; a real fix is tied to
+  the version-as-selection question, which the vision leans toward dropping (§7.1
+  of [`versioning.md`](./versioning.md)).
+- **Tested** *(was untested)*: the `a..` / `..b` / `..` range lowerings and the 255
+  boundary (`select.rs`), and multi-version selection (`store.rs`).
 
 ## 2. Derive codegen ergonomics (done — all three derives migrated)
 
@@ -136,12 +130,13 @@ redesign:
   behaves under write contention. A load/soak test harness (not a microbenchmark)
   would surface lock/channel/IO contention the per-op benches cannot. Wanted, not
   yet scheduled.
-- **The timestamp index is write-only** — it is built and maintained on every
-  append but no read path consumes it. Either expose timestamp-range queries
-  (the index is ready) or drop the index to save the write.
-- **Tag count is capped at 255** (the `u8` length prefix in the events keyspace)
-  and **panics** if exceeded. Decide: document it as a hard limit, return an
-  error instead of panicking, or widen the prefix.
+- **The timestamp index is write-only** — built and maintained on every append, no
+  read path consumes it *yet*. **Decided: keep it** — a timestamp-range query read
+  path is anticipated; the index is ready for it. (Not dropped.)
+- **Tag count is capped at 255** (the `u8` length prefix in the events keyspace).
+  **Resolved:** an append carrying more than 255 tags is now **rejected with an
+  error** at `Store::insert` (tested), rather than panicking in the serializer —
+  whose cast is now an upstream-enforced invariant.
 - **Position-bounded index scans use an exclusive `Position::MAX` upper bound**
   (the same half-open/sentinel pattern as the version-`MAX` quirk), so an event
   at `Position(u64::MAX)` is unreachable via a `from(..)` scan. Marginal —

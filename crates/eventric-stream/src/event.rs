@@ -3,11 +3,7 @@
 //! `Event<M, T>` itself (candidate `Event<(), String>` before append, persisted
 //! `Event<Metadata, u64>` from a query).
 
-use std::{
-    cmp::Ordering,
-    collections::BTreeSet,
-    ops::Range,
-};
+use std::collections::BTreeSet;
 
 use derive_more::AsRef;
 use error_stack::ResultExt;
@@ -261,20 +257,4 @@ impl Version {
     pub const MAX: Self = Self::new(u8::MAX);
     /// The minimum version.
     pub const MIN: Self = Self::new(u8::MIN);
-}
-
-impl PartialEq<Range<Self>> for Version {
-    fn eq(&self, other: &Range<Self>) -> bool {
-        self >= &other.start && self < &other.end
-    }
-}
-
-impl PartialOrd<Range<Self>> for Version {
-    fn partial_cmp(&self, other: &Range<Self>) -> Option<Ordering> {
-        match self {
-            _ if self < &other.start => Some(Ordering::Less),
-            _ if self >= &other.end => Some(Ordering::Greater),
-            _ => Some(Ordering::Equal),
-        }
-    }
 }

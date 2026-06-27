@@ -76,7 +76,7 @@ impl From<EventWriter<'_>> for Vec<u8> {
 
         value.put_u64(ty.name().0); // Event Type Name (hash)
         value.put_u8(ty.version().0); // Event Type Version
-        value.put_u8(u8::try_from(tags.len()).expect("max tag count exceeded")); // Tags Len
+        value.put_u8(u8::try_from(tags.len()).expect("tag count > u8::MAX (rejected at append)")); // Tags Len
 
         for tag in tags {
             value.put_u64(tag.0); // Tag (hash)

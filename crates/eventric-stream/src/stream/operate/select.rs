@@ -337,3 +337,60 @@ impl From<VersionSelector> for Range<Version> {
         }
     }
 }
+
+// =================================================================================================
+// Tests
+// =================================================================================================
+
+#[cfg(test)]
+mod tests {
+    use std::ops::Range;
+
+    use super::VersionSelector;
+    use crate::event::Version;
+
+    fn lower(selector: VersionSelector) -> Range<Version> {
+        selector.into()
+    }
+
+    #[test]
+    fn lowers_a_bounded_range() {
+        assert_eq!(
+            lower((Version::new(1)..Version::new(3)).into()),
+            Version::new(1)..Version::new(3),
+        );
+    }
+
+    #[test]
+    fn lowers_range_from_to_max() {
+        assert_eq!(
+            lower((Version::new(2)..).into()),
+            Version::new(2)..Version::MAX
+        );
+    }
+
+    #[test]
+    fn lowers_range_to_from_min() {
+        assert_eq!(
+            lower((..Version::new(4)).into()),
+            Version::MIN..Version::new(4)
+        );
+    }
+
+    #[test]
+    fn lowers_the_full_range_to_min_max() {
+        assert_eq!(lower((..).into()), Version::MIN..Version::MAX);
+    }
+
+    // The full/default range is half-open at `Version::MAX`, so the 255 sentinel is
+    // unmatchable: a v255 event can be appended but never selected. Pinned as a
+    // known limitation (tied to the version-as-selection question —
+    // versioning.md §7.1).
+    #[test]
+    fn the_max_version_sentinel_is_unmatchable() {
+        let full: Range<Version> = VersionSelector::RangeFull.into();
+
+        assert!(!full.contains(&Version::MAX));
+        assert!(full.contains(&Version::new(254)));
+    }
+}
