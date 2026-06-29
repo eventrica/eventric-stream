@@ -16,11 +16,11 @@ workspace = true
 [package]
 authors.workspace    = true
 categories.workspace = true
-description          = "Eventric Domain"
+description          = "Eventric Model"
 edition.workspace    = true
 keywords.workspace   = true
 license.workspace    = true
-name                 = "eventric-domain"
+name                 = "eventric-model"
 readme.workspace     = true
 repository.workspace = true
 version.workspace    = true

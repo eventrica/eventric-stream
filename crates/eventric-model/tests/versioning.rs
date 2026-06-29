@@ -2,7 +2,7 @@
 //! schema number — the two cannot diverge (there is no separate version to
 //! declare or forget to bump).
 
-use eventric_domain::event::{
+use eventric_model::event::{
     Event,
     Events,
 };

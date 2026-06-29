@@ -261,13 +261,13 @@ impl Projection {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric_domain::projection::Projection for #ident {}
+            impl ::eventric_model::projection::Projection for #ident {}
         }
     }
 
     // The companion module: one borrowed enum per selection (a variant per event
     // type). The user folds each via `impl Project<Enum> for Self`; the standard
-    // `Project<T>` trait lives in `eventric_domain::projection`, not here.
+    // `Project<T>` trait lives in `eventric_model::projection`, not here.
     fn companion(&self) -> TokenStream {
         let module = self.module();
 
@@ -302,12 +302,12 @@ impl Projection {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric_domain::projection::Select for #ident {
+            impl ::eventric_model::projection::Select for #ident {
                 const SELECTIONS: usize = #count;
 
                 fn select(&self) -> ::std::result::Result<
                     ::std::vec::Vec<::eventric_stream::stream::operate::Selection>,
-                    ::error_stack::Report<::eventric_domain::error::Error>
+                    ::error_stack::Report<::eventric_model::error::Error>
                 > {
                     ::std::result::Result::Ok(::std::vec![
                         #(#selections),*
@@ -324,13 +324,13 @@ impl Projection {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric_domain::projection::Recognize for #ident {
+            impl ::eventric_model::projection::Recognize for #ident {
                 fn recognize(
                     &self,
                     event: &::eventric_stream::stream::operate::select::EventAndMask
                 ) -> ::std::result::Result<
-                    ::std::option::Option<::eventric_domain::projection::Recognized>,
-                    ::error_stack::Report<::eventric_domain::error::Error>
+                    ::std::option::Option<::eventric_model::projection::Recognized>,
+                    ::error_stack::Report<::eventric_model::error::Error>
                 > {
                     let event = match event {
                         #(#arms)*
@@ -358,11 +358,11 @@ impl Projection {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric_domain::projection::Dispatch for #ident {
+            impl ::eventric_model::projection::Dispatch for #ident {
                 fn dispatch(
                     &mut self,
                     mask: &[bool],
-                    event: &::eventric_domain::projection::Recognized
+                    event: &::eventric_model::projection::Recognized
                 ) {
                     #(#arms)*
                 }
@@ -432,7 +432,7 @@ impl ToTokens for SelectionExpr<'_> {
         let selector = if selection.filter.is_empty() {
             quote! {
                 ::eventric_stream::stream::operate::select::Selector::types(
-                    [#(<#event as ::eventric_domain::event::Specifier>::specifier()?),*]
+                    [#(<#event as ::eventric_model::event::Specifier>::specifier()?),*]
                 )
             }
         } else {
@@ -445,8 +445,8 @@ impl ToTokens for SelectionExpr<'_> {
 
             quote! {
                 ::eventric_stream::stream::operate::select::Selector::types_and_tags(
-                    [#(<#event as ::eventric_domain::event::Specifier>::specifier()?),*],
-                    [#(::error_stack::ResultExt::change_context(#tag, ::eventric_domain::error::Error)?),*]
+                    [#(<#event as ::eventric_model::event::Specifier>::specifier()?),*],
+                    [#(::error_stack::ResultExt::change_context(#tag, ::eventric_model::error::Error)?),*]
                 )
             }
         };
@@ -466,10 +466,10 @@ impl ToTokens for RecognizeMatchArm<'_> {
 
         tokens.append_all(quote! {
             _ if event.event.facets().ty().name()
-                == &<#event as ::eventric_domain::event::Identifier>::type_name()? =>
+                == &<#event as ::eventric_model::event::Identifier>::type_name()? =>
             {
                 ::std::option::Option::Some(
-                    ::eventric_domain::projection::Recognized::from_event::<#event>(event)?
+                    ::eventric_model::projection::Recognized::from_event::<#event>(event)?
                 )
             }
         });
@@ -511,9 +511,9 @@ impl ToTokens for DispatchArm<'_> {
                 };
 
                 if let ::std::option::Option::Some(matched) = matched {
-                    <Self as ::eventric_domain::projection::Project<#module::#enum_ident<'_>>>::project(
+                    <Self as ::eventric_model::projection::Project<#module::#enum_ident<'_>>>::project(
                         self,
-                        ::eventric_domain::projection::Event::new(
+                        ::eventric_model::projection::Event::new(
                             matched,
                             event.position,
                             event.timestamp,

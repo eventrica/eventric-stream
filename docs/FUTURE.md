@@ -11,9 +11,11 @@ residue.
 
 The structural work is **done**: the stream-core rewrite ([`REFACTOR.md`]), the
 crate consolidation ([`CONSOLIDATION.md`]), and the content-seam split
-([`SPLIT.md`]) are complete — **three crates**: `eventric-stream` (content-agnostic
-substrate, no `revision`) + `eventric-domain` (event-sourcing layer, its own
-`Error`) + `eventric-macros`, plus `eventric-examples` / `eventric-benches`.
+([`SPLIT.md`]) are complete, and the model/runtime split has since landed — **four
+library crates**: `eventric-stream` (content-agnostic substrate, no `revision`) +
+`eventric-model` (user-facing event-sourcing model) + `eventric-runtime` (the
+mechanism that runs it — the `Enactor`) + `eventric-macros`, plus
+`eventric-examples` / `eventric-benches`.
 `error-stack` throughout (one `Error` per runtime crate, `change_context`'d at the
 boundary), and the public surface carries no re-export lifts. Nothing below blocks
 that; these are the deferred design decisions and the smaller debt.
@@ -86,7 +88,7 @@ keyed-selectors and the codegen groundwork:
 - collision-safe companion-name generation (a per-projection module of enums) — **done**.
 
 Done since: `trybuild`/UI tests now pin each derive's parser diagnostics
-(`crates/eventric-domain/tests/ui/`), and `Act::Err` defaults to `Report<Error>` with
+(`crates/eventric-model/tests/ui/`), and `Act::Err` defaults to `Report<Error>` with
 a custom-`Err` action exercised in `tests/enact.rs`. Still open, independent of the
 redesign:
 
@@ -158,7 +160,7 @@ retiring the hardcoded-0 / two-axes items and removing the dead `Version`
 dep, a friendlier (version-bearing) `revision`-decode error, and tests pinning
 `revision` evolution (old bytes → defaulted field) and the non-empty minimal
 payload; and **the content-seam split** (`SPLIT.md`) — `eventric` → `eventric-stream`
-(content-agnostic, `revision`-free, compile-enforced) + `eventric-domain` (its own
+(content-agnostic, `revision`-free, compile-enforced) + `eventric-model` (its own
 `Error`, `change_context`'d from the stream) + unified `eventric-macros`; and the
 **`missing_docs` closure** — every public item across both crates documented,
 `#![deny(missing_docs)]` now holding uniformly (no `allow` escapes).

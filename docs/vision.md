@@ -102,7 +102,7 @@ is designed in [`boundary.md`](./boundary.md).
   and enforces *no* content rules (no schema, no versioning). Only *clients* of the
   stream interpret content. This is load-bearing (see §6), and is exactly why
   eventric is two crates — an opaque `eventric-stream` substrate and a content-aware
-  `eventric-domain` client.
+  `eventric-model` client.
 - A **node** is the runnable, deployable unit — a **process** that hosts **one
   Runtime and one-or-more contexts**, and talks to other nodes if configured.
 - The **Runtime** is the node-provided **mechanism substrate** — invocation,
@@ -184,7 +184,7 @@ asserted.
   worst possible outcome. When a client cannot fully and correctly interpret what it
   is processing (e.g. an event written at a revision it does not know), it must
   **reject the operation**, not best-effort it. This is precisely why versioning is a
-  *client* concern, enforced in `eventric-domain`, and never by the opaque substrate.
+  *client* concern, enforced in `eventric-model`, and never by the opaque substrate.
 - **Uniformity.** One way to build, throughout — the compounding-value argument of §1.
 - **Opacity at the substrate.** The stream is content-agnostic; meaning lives in the
   client. Compile-enforced (`eventric-stream` cannot `use revision`).
@@ -396,7 +396,7 @@ Deliberately unresolved — the vision exists partly so we can resolve these
 Decisions and priorities are weighed against this vision:
 
 - The **content-opacity + meaning-in-the-client** principle already shapes the crate
-  split, and says the versioning guard belongs in `eventric-domain`.
+  split, and says the versioning guard belongs in `eventric-model`.
 - **Reactions** are the highest-value missing building block: they unlock the full
   loop (process managers, inter-context emission), maintain materialised views (§7),
   and are a prerequisite for the platform/channel.

@@ -20,17 +20,16 @@ full effect algebra (publish / external / schedule), delivery semantics, the
 `#[derive(Reaction)]` macro, and an event-sourced reactor checkpoint. All wait until
 the slice validates the core.
 
-**Where it lives — and a prep step.** First, **split `eventric-domain` into
-`eventric-model` (user-facing: events, actions, projections, reactions + their traits
-and the derives' surface) and `eventric-runtime` (the mechanism: the `Enactor`, the new
-`Reactor`, the effect interpreter)** — the crate structure catching up to the
-node/runtime/context model (vision §3). Dependency is one-way:
-`eventric-runtime` → `eventric-model` → `eventric-stream`; you depend on
-`eventric-model` (+ macros) to *write*, and bring `eventric-runtime` to *run*.
-`eventric-runtime` is the seed of a family (channel, observability, scheduling become
-their own crates over time). The slice's **`React` trait lands in `eventric-model`, the
-`Reactor` in `eventric-runtime`** — which is why the split goes *first*. Then the new
-`reaction.rs` (hand-written impls first; derive later) and the `Reactor` land natively.
+**Where it lives.** **Done — `eventric-domain` is split** into `eventric-model`
+(user-facing: events, actions, projections, reactions + their traits and the derives'
+surface) and `eventric-runtime` (the mechanism: the `Enactor`, the coming `Reactor`,
+the effect interpreter) — the crate structure caught up to the node/runtime/context
+model (vision §3). Dependency is one-way: `eventric-runtime` → `eventric-model` →
+`eventric-stream`; you depend on `eventric-model` (+ macros) to *write*, and bring
+`eventric-runtime` to *run*. `eventric-runtime` is the seed of a family (channel,
+observability, scheduling become their own crates over time). So the slice's **`React`
+trait lands in `eventric-model`, the `Reactor` in `eventric-runtime`** natively — the
+new `reaction.rs` is hand-written impls first, derive later.
 
 *Aspiration (deferred):* once the `Enactor` moves out, `eventric-model`'s only stream
 coupling is the **DCB vocabulary** (query/identity types), not execution — arguably
@@ -170,8 +169,8 @@ keep, where does the reactor design strain? Whatever the slice teaches flows bac
 
 ## Rough sequence
 
-**Split** `eventric-domain` → `eventric-model` + `eventric-runtime` → scaffolding +
-decisions → **Phase A** (trait, reactor, view, example, tests) → *pause,
+**Split done** (`eventric-model` + `eventric-runtime`) → scaffolding + decisions →
+**Phase A** (trait, reactor, view, example, tests) → *pause,
 reflect, update boundary.md* → **Phase B** (command effect, routing, loop, example,
 tests) → *pause, reflect, update boundary.md* → decide the next increment (the derive
 macro? the event-sourced checkpoint? the first contract?).

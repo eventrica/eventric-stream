@@ -1,8 +1,8 @@
-//! `eventric-domain` is the event-sourcing UX over the content-agnostic
+//! `eventric-model` is the event-sourcing UX over the content-agnostic
 //! `eventric-stream` substrate: an [`event::Event`] model whose payloads
 //! (de)serialise via `revision`, [`projection::Projection`]s that fold selected
-//! events into read-model state, and [`action::Action`]s (commands) run by an
-//! [`enactor::Enactor`] under a single DCB
+//! events into read-model state, and [`action::Action`]s (commands) run by the
+//! `eventric-runtime` `Enactor` under a single DCB
 //! [`eventric_stream::stream::operate::Condition`].
 //!
 //! This crate knows about *content* (it (de)serialises payloads); the substrate
@@ -17,11 +17,10 @@
 #![feature(associated_type_defaults)]
 
 pub mod action;
-pub mod enactor;
 pub mod error;
 pub mod event;
 pub mod projection;
 
 // =================================================================================================
-// Eventric Domain
+// Eventric Model
 // =================================================================================================

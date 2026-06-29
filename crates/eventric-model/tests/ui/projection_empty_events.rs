@@ -1,4 +1,4 @@
-use eventric_domain::projection::Projection;
+use eventric_model::projection::Projection;
 
 #[derive(Projection)]
 #[projection(selections: { thing: { events: [] } })]

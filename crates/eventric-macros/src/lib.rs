@@ -1,6 +1,6 @@
 //! Procedural macros for the eventric workspace: the `tag!` function-like macro
 //! and the `Event`/`Action`/`Projection` derives. `tag!` is re-exported from
-//! `eventric-stream` and the three derives from `eventric-domain`, so consumers
+//! `eventric-stream` and the three derives from `eventric-model`, so consumers
 //! never name this crate directly.
 
 #![allow(clippy::multiple_crate_versions)]
@@ -106,7 +106,7 @@ pub fn tag(input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// (A runnable version is in the `eventric_domain::action` module docs; the
+/// (A runnable version is in the `eventric_model::action` module docs; the
 /// `course_subscriptions` example runs actions via `Enactor::enact`.)
 #[proc_macro_derive(Action, attributes(action))]
 pub fn action(input: TokenStream) -> TokenStream {
@@ -185,7 +185,7 @@ pub fn action(input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// (A runnable version is in the `eventric_domain::event` module docs.)
+/// (A runnable version is in the `eventric_model::event` module docs.)
 #[proc_macro_derive(Event, attributes(event))]
 pub fn event(input: TokenStream) -> TokenStream {
     emit_impl_or_error!(Event::new(&parse_macro_input!(input))).into()
@@ -260,7 +260,7 @@ pub fn event(input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
-/// (A runnable version is in the `eventric_domain::projection` module docs; the
+/// (A runnable version is in the `eventric_model::projection` module docs; the
 /// `multi_selector_projections` example folds projections against a real
 /// stream.)
 #[proc_macro_derive(Projection, attributes(projection))]

@@ -298,7 +298,7 @@ the codegen pattern rather than the one-off the archived note rightly deferred.
   `Err` is exercised by `tests/enact.rs`.
 - **`trybuild`/UI tests** — ✅ done: `tests/ui/` pins each derive's targeted parser
   diagnostic (missing/duplicate/unknown keys, empty lists, non-`Type::new`
-  constructor). Run `TRYBUILD=overwrite cargo test -p eventric-domain --test ui` to
+  constructor). Run `TRYBUILD=overwrite cargo test -p eventric-model --test ui` to
   regenerate the `.stderr` after an *intentional* diagnostic change.
 
 ## References

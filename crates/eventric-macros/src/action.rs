@@ -168,7 +168,7 @@ impl Action {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric_domain::action::Action for #ident {}
+            impl ::eventric_model::action::Action for #ident {}
         }
     }
 
@@ -196,7 +196,7 @@ impl Action {
             }
 
             #[automatically_derived]
-            impl ::eventric_domain::action::Context for #ident {
+            impl ::eventric_model::action::Context for #ident {
                 type Projections = #module::Projections;
 
                 fn projections(&self) -> Self::Projections {
@@ -215,13 +215,13 @@ impl Action {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric_domain::action::Select for #ident {
+            impl ::eventric_model::action::Select for #ident {
                 fn select(
                     &self,
                     projections: &Self::Projections
                 ) -> ::std::result::Result<
                     ::std::vec::Vec<::eventric_stream::stream::operate::Selection>,
-                    ::error_stack::Report<::eventric_domain::error::Error>
+                    ::error_stack::Report<::eventric_model::error::Error>
                 > {
                     // Each projection contributes one `Selection` per named
                     // selection; flattened in projection order, they are the mask
@@ -229,7 +229,7 @@ impl Action {
                     let mut selections = ::std::vec::Vec::new();
 
                   #(selections.extend(
-                        ::eventric_domain::projection::Select::select(&projections.#field_name)?
+                        ::eventric_model::projection::Select::select(&projections.#field_name)?
                     );)*
 
                     ::std::result::Result::Ok(selections)
@@ -246,12 +246,12 @@ impl Action {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric_domain::action::Update for #ident {
+            impl ::eventric_model::action::Update for #ident {
                 fn update(
                     &self,
                     projections: &mut Self::Projections,
                     event: &::eventric_stream::stream::operate::select::EventAndMask
-                ) -> ::std::result::Result<(), ::error_stack::Report<::eventric_domain::error::Error>> {
+                ) -> ::std::result::Result<(), ::error_stack::Report<::eventric_model::error::Error>> {
                     // Walk the mask one projection-block at a time: each projection
                     // owns `SELECTIONS` consecutive bits. Decode once (shared across
                     // projections of the same event type) and hand each projection
@@ -260,19 +260,19 @@ impl Action {
                     let mut base = 0usize;
 
                   #({
-                        let count = <#field_type as ::eventric_domain::projection::Select>::SELECTIONS;
+                        let count = <#field_type as ::eventric_model::projection::Select>::SELECTIONS;
                         let mask = &::std::convert::AsRef::<[bool]>::as_ref(&event.mask)[base..base + count];
 
                         if mask.contains(&true) {
                             if dispatch_event.is_none() {
-                                dispatch_event = ::eventric_domain::projection::Recognize::recognize(
+                                dispatch_event = ::eventric_model::projection::Recognize::recognize(
                                     &projections.#field_name,
                                     event,
                                 )?;
                             }
 
                             if let ::std::option::Option::Some(dispatch_event) = dispatch_event.as_ref() {
-                                ::eventric_domain::projection::Dispatch::dispatch(
+                                ::eventric_model::projection::Dispatch::dispatch(
                                     &mut projections.#field_name,
                                     mask,
                                     dispatch_event,

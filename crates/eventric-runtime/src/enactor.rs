@@ -2,19 +2,18 @@
 //! [`Condition`] — replay, decide, append-or-reject.
 
 use error_stack::ResultExt as _;
-use eventric_stream::stream::operate::{
-    Condition,
-    append::Append,
-    select::Select,
-};
-
-use crate::{
+use eventric_model::{
     action::{
         Act,
         Action,
     },
     error::Error,
     event::Events,
+};
+use eventric_stream::stream::operate::{
+    Condition,
+    append::Append,
+    select::Select,
 };
 
 // =================================================================================================

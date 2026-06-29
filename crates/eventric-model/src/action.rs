@@ -1,6 +1,5 @@
 //! Commands: the [`Action`] trait (with its [`Act`]/[`Context`]/[`Select`]/
-//! [`Update`] components), run by the model
-//! [`Enactor`](super::enactor::Enactor).
+//! [`Update`] components), run by the `eventric-runtime` `Enactor`.
 //!
 //! # Example
 //!
@@ -12,7 +11,7 @@
 //! ```
 //! # #![allow(dead_code)]
 //! use error_stack::Report;
-//! use eventric_domain::{
+//! use eventric_model::{
 //!     action::{
 //!         Act,
 //!         Action,
@@ -110,7 +109,7 @@
 //! fn main() {}
 //! ```
 //!
-//! [`Enactor::enact`](crate::enactor::Enactor::enact) runs it end to end: build
+//! The `eventric-runtime` `Enactor::enact` runs it end to end: build
 //! the projections, replay the stream to fold them, run `act`, then append the
 //! buffered events under a DCB concurrency guard. The `course_subscriptions`
 //! example shows several actions run this way.
@@ -135,8 +134,8 @@ use crate::{
 
 /// A command over the stream: the composite of [`Act`] (business logic),
 /// [`Context`] (its projections), [`Select`] (what to replay), and [`Update`]
-/// (folding replayed events). Derived by `#[derive(Action)]` and run by an
-/// [`Enactor`](crate::enactor::Enactor).
+/// (folding replayed events). Derived by `#[derive(Action)]` and run by the
+/// `eventric-runtime` `Enactor`.
 pub trait Action: Context + Act<Self::Projections> + Select + Update {}
 
 // Act
@@ -145,9 +144,8 @@ pub trait Action: Context + Act<Self::Projections> + Select + Update {}
 /// what events (if any) to append. Implemented with the action's generated
 /// `Projections` struct as the type argument (e.g.
 /// `impl Act<make_deposit::Projections> for MakeDeposit`), mirroring how a
-/// projection implements `Project<Enum>` — the
-/// [`Enactor`](crate::enactor::Enactor) supplies the argument from
-/// [`Context::Projections`].
+/// projection implements `Project<Enum>` — the `eventric-runtime` `Enactor`
+/// supplies the argument from [`Context::Projections`].
 pub trait Act<P>
 where
     Self::Err: From<Report<Error>>,

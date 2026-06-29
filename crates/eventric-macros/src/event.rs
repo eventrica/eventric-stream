@@ -188,7 +188,7 @@ impl Event {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric_domain::event::Event for #ident {}
+            impl ::eventric_model::event::Event for #ident {}
         }
     }
 
@@ -198,7 +198,7 @@ impl Event {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric_domain::event::Identifier for #ident {
+            impl ::eventric_model::event::Identifier for #ident {
                 fn identifier() -> &'static str {
                     #identifier
                 }
@@ -223,17 +223,17 @@ impl Event {
 
         quote! {
             #[automatically_derived]
-            impl ::eventric_domain::event::Tags for #ident {
+            impl ::eventric_model::event::Tags for #ident {
                 fn tags(&self) -> ::std::result::Result<
                     ::std::vec::Vec<::eventric_stream::event::Tag<::std::string::String>>,
-                    ::error_stack::Report<::eventric_domain::error::Error>
+                    ::error_stack::Report<::eventric_model::error::Error>
                 > {
                     let mut tags = ::std::vec::Vec::with_capacity(#tag_count);
 
                     #(tags.push(
                         ::error_stack::ResultExt::change_context(
                             #tag,
-                            ::eventric_domain::error::Error,
+                            ::eventric_model::error::Error,
                         )?
                     );)*
 

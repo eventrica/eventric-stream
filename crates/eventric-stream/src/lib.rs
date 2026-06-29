@@ -11,7 +11,7 @@
 //! [`error`] and [`utils`] alongside.
 //!
 //! The higher-level event-sourcing UX — events, projections, and actions —
-//! lives in the companion `eventric-domain` crate, which is built on this one.
+//! lives in the companion `eventric-model` crate, which is built on this one.
 //! The `tag!` macro is re-exported here (from `eventric-macros`) at
 //! [`event::tag`].
 

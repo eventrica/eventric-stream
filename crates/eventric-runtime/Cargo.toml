@@ -1,9 +1,11 @@
 [dependencies]
+error-stack.workspace     = true
+eventric-model.workspace  = true
+eventric-stream.workspace = true
+
+[dev-dependencies]
+assertables.workspace       = true
 derive_more.workspace       = true
-error-stack.workspace       = true
-eventric-model.workspace    = true
-eventric-runtime.workspace  = true
-eventric-stream.workspace   = true
 fancy_constructor.workspace = true
 revision.workspace          = true
 
@@ -13,11 +15,11 @@ workspace = true
 [package]
 authors.workspace    = true
 categories.workspace = true
-description          = "Eventric Examples"
+description          = "Eventric Runtime"
 edition.workspace    = true
 keywords.workspace   = true
 license.workspace    = true
-name                 = "eventric-examples"
+name                 = "eventric-runtime"
 readme.workspace     = true
 repository.workspace = true
 version.workspace    = true

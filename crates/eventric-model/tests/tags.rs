@@ -1,4 +1,4 @@
-use eventric_domain::event::{
+use eventric_model::event::{
     Event,
     Tags as _,
 };

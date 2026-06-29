@@ -430,26 +430,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "eventric-domain"
-version = "0.1.0"
-dependencies = [
- "assertables",
- "derive_more",
- "error-stack",
- "eventric-macros",
- "eventric-stream",
- "fancy_constructor",
- "revision",
- "trybuild",
-]
-
-[[package]]
 name = "eventric-examples"
 version = "0.1.0"
 dependencies = [
  "derive_more",
  "error-stack",
- "eventric-domain",
+ "eventric-model",
+ "eventric-runtime",
  "eventric-stream",
  "fancy_constructor",
  "revision",
@@ -464,6 +451,33 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "eventric-model"
+version = "0.1.0"
+dependencies = [
+ "assertables",
+ "derive_more",
+ "error-stack",
+ "eventric-macros",
+ "eventric-stream",
+ "fancy_constructor",
+ "revision",
+ "trybuild",
+]
+
+[[package]]
+name = "eventric-runtime"
+version = "0.1.0"
+dependencies = [
+ "assertables",
+ "derive_more",
+ "error-stack",
+ "eventric-model",
+ "eventric-stream",
+ "fancy_constructor",
+ "revision",
 ]
 
 [[package]]

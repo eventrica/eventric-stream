@@ -64,7 +64,7 @@
 //!
 //! ```
 //! # #![allow(dead_code)]
-//! use eventric_domain::{
+//! use eventric_model::{
 //!     event::Event,
 //!     projection::{
 //!         self,

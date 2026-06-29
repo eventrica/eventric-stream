@@ -25,12 +25,11 @@
 
 use derive_more::Debug;
 use error_stack::Report;
-use eventric_domain::{
+use eventric_model::{
     action::{
         Act,
         Action,
     },
-    enactor::Enactor as _,
     error::Error,
     event::{
         Event,
@@ -42,6 +41,7 @@ use eventric_domain::{
         Projection,
     },
 };
+use eventric_runtime::enactor::Enactor as _;
 use eventric_stream::stream::Stream;
 use fancy_constructor::new;
 use revision::revisioned;

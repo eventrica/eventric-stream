@@ -1,4 +1,4 @@
-use eventric_domain::event::Event;
+use eventric_model::event::Event;
 
 #[derive(Event)]
 #[event(identifier: foo, identifier: bar)]

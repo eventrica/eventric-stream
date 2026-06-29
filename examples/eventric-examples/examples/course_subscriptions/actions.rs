@@ -1,6 +1,6 @@
 use derive_more::Debug;
 use error_stack::Report;
-use eventric_domain::{
+use eventric_model::{
     action::{
         Act,
         Action,

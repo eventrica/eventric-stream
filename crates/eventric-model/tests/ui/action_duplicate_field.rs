@@ -1,4 +1,4 @@
-use eventric_domain::action::Action;
+use eventric_model::action::Action;
 
 #[derive(Action)]
 #[action(projections: { p: X::new(), p: Y::new() })]

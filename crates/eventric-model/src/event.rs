@@ -6,7 +6,7 @@
 //! attribute that declares its `identifier` and its `tags`:
 //!
 //! ```
-//! use eventric_domain::event::{
+//! use eventric_model::event::{
 //!     Event,
 //!     Identifier as _,
 //! };
