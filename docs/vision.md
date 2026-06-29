@@ -85,14 +85,15 @@ Four core concepts. Three exist in basic form today; one is the key missing piec
 
 The action/reaction symmetry is deliberate: an action is triggered by a *command*, a
 reaction by an *event*. A reaction can maintain a view, emit a message, or **issue
-another command** — and a reaction that also reads projections becomes a de-facto
-**process manager / long-running coordinator**: itself just event-driven state with
-responsibilities. Reactions are what turn "an event store" into "a system" — they
+another command** — and a *set* of single-event reactions sharing a **projection**
+(their coordination state) composes into a **process-manager pattern**, conjectured to
+be *emergent* (reactions + projections, plus scheduling for time) rather than a
+primitive of its own. Reactions are what turn "an event store" into "a system" — they
 make behaviour autonomous and composable, not merely request-driven. The **boundary**
 they live on — the edge layer of contracts, effects, and the public/private membrane —
 is designed in [`boundary.md`](./boundary.md).
 
-## 3. The context model
+## 3. Context, node, and runtime
 
 - A **bounded context** (in the DDD sense) maps, under DCB, to **one stream** — the
   consistency *outer boundary*. Everything in a stream can be strongly consistent
@@ -102,12 +103,28 @@ is designed in [`boundary.md`](./boundary.md).
   stream interpret content. This is load-bearing (see §6), and is exactly why
   eventric is two crates — an opaque `eventric-stream` substrate and a content-aware
   `eventric-domain` client.
-- Practically (leaning, not fixed): **one context = one process**, single-writer,
-  with resilience from **near-zero-downtime restart** rather than in-context
-  replication. Everything for a context happens in its process. That single ordered
-  log is a real bottleneck — logical and physical — and so a genuine scaling ceiling:
-  a *high* one (the systems of §1's realistic aim live well beneath it), and the
-  deliberate price of the strong, *precise* consistency a single log buys (§8).
+- A **node** is the runnable, deployable unit — a **process** that hosts **one
+  Runtime and one-or-more contexts**, and talks to other nodes if configured.
+- The **Runtime** is the node-provided **mechanism substrate** — invocation,
+  communication, observation — that *runs* user code but is not user code. It is the
+  thing that exposes a handler or runs a reaction on an event; the action `Enactor`,
+  the reaction reactor, the channel, and the observability layer are its components.
+- **Single writer per context** is the consistency invariant; **co-location is
+  deployment, nothing more.** A node may host several contexts, but each remains a
+  *fully sealed, single-writer* boundary — separate stream, separate writer,
+  communicating only via its contract (in-memory when co-located). Resilience comes
+  from **near-zero-downtime restart**, not in-context replication. That single ordered
+  log per context is the real (logical and physical) scaling ceiling — a *high* one
+  (the systems of §1's realistic aim live well beneath it), and the deliberate price
+  of the strong, *precise* consistency a single log buys (§8).
+- **Location transparency** decouples deployment from domain: user code speaks only
+  contracts (commands/queries/events to and from *named* contexts) and can neither
+  observe nor assume whether a counterpart is co-located or remote — the Runtime
+  resolves the transport (in-memory local, channel remote). It is **transport**
+  transparency, not **semantic** transparency: a cross-context call is fallible
+  request-response and an event is async *regardless* of location, so user code
+  already handles those realities. The payoff: build a whole system in one node (all
+  in-memory) and distribute it across nodes by **configuration, with no code change**.
 
 ## 4. Two kinds of event, and the contract
 
@@ -139,11 +156,16 @@ eventric is not just a context engine; it aspires to be a **platform**. Two pill
   mechanism). Owning the channel is a deliberate choice: it is what makes
   platform-wide visibility possible. The channels are *part of the platform*, not an
   external concern bolted on.
-- **Observability/introspection is baked in at the substrate.** Standing up an
-  eventric system should give you, for free: what event types exist, which are most
-  common, where the hot/busy parts are, what is in flight — and rich visualisation
-  and tooling over all of it. Plausibly **self-hosted**: the platform's own state
-  modelled as eventric events and projections.
+- **Observability/introspection is baked in at the substrate — in two layers.**
+  *Statically:* because every action and reaction declares both its **trigger**
+  (`From<Command>` / `From<Event>`) and, via a **typed effects/events buffer**, the
+  commands/events it **emits**, the *whole system topology is derivable at build time*
+  — a graph of `command → action → events → reactions → …`, visualisable and checkable
+  (orphan events, cycles, contract-vs-emissions) before anything runs. *At runtime:*
+  standing up a system gives you, for free, what event types exist, which are most
+  common, where the hot/busy parts are, what is in flight — the actual flow overlaid on
+  the static map via the message envelope. Plausibly **self-hosted**: the platform's
+  own state modelled as eventric events and projections.
 
 The self-hosting idea is the strongest internal consistency check on the whole
 thesis: if eventric can build *itself* — its tooling, its observability —

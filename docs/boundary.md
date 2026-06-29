@@ -108,6 +108,16 @@ verb-messages; handlers are bound at the routing, never conveyed.*
 This also keeps observability honest — every command is a first-class, traceable thing,
 with no bypass that would put a blind spot at the internal hops.
 
+The buffer is **typed by its output set**: a handler declares the commands/events it can
+emit (`Emits`), and the staging API accepts only those — so what a handler emits is
+**explicit and cannot drift** from what it declares (the type-enforced choice, not a
+hand-maintained list). Two things fall out, given triggers are already explicit
+(`From<Input>`): a context's *emitted-events* facet of the contract (§2) is the **union**
+of its handlers' declared outputs (derived, not hand-maintained), and the **whole system
+topology is statically derivable** — `command → action → events → reactions → …` — for
+visualisation and build-time checks (orphan events, cycles). That is the static half of
+§5's observability; the runtime overlay (the envelope) shows which edges actually fire.
+
 Shape note: request-response effects (command, query, external call) are **awaited calls
 with returns**, through mediated capabilities (so still testable/observable);
 fire-and-forget effects (publish a public event) are pure staged data. That is the
@@ -146,6 +156,13 @@ But **transport is the adapter's job**, chosen by locality (ports-vs-adapters):
 So the uniform model costs nothing locally: a reaction commanding its own context uses
 the **private** command in-memory; only genuine edge crossings pay translation +
 transport. **"One path everywhere" does not mean "network-everywhere."**
+
+This is **location transparency** (vision §3): user code never names a transport, only
+a *target context*, and cannot observe whether that target is co-located or remote —
+the **Runtime** (the node's mechanism layer) resolves it. It is transport-transparent,
+not semantic-transparent: a cross-context command is fallible and an event async
+*regardless* of location. So a system can be built in one node (all in-memory) and
+distributed across nodes by configuration, with no code change.
 
 ## 7. Where the logic sits
 
@@ -222,15 +239,19 @@ foreign: A's Event[pub] ⤳ B adapter translate → update B's local read-model 
 replayable. Under the maximally-uniform stance, a view-store write is itself just a
 private command to a view adapter.
 
-## 9. The loop, and stateful reactions
+## 9. The loop, and the process-manager pattern
 
 A command returns its *immediate* result; if the *work* is long-running, the eventual
 completion arrives later as a **published fact** (`OrderShipped`) the issuer reacts to — a
-real event, not a control-flow outcome. A reaction that awaits such an outcome must
-**remember it issued the command** and react again when the fact arrives — a **process
-manager / coordinator** (vision §2). Its durable state, **including its checkpoint**, is
-itself event-sourced — private events in a stream, not a CRUD side-table (uniformity §1;
-self-hosting §5). The boundary is effectful, but its *memory* is event-centric.
+real event, not a control-flow outcome. A reaction that awaits such an outcome doesn't
+hold the loop open — it simply reacts again when the fact arrives. Coordinating a
+multi-step flow this way is the **process-manager pattern**, and (conjecture — vision §2)
+it is *emergent*, not a primitive: a set of **single-event reactions** sharing a
+**projection** as their coordination state. That state is therefore already
+event-sourced — it *is* a projection over the flow's events, with no separate state to
+persist (uniformity §1; self-hosting §5). *(Distinct from this: the **reactor's own
+progress checkpoint** — how far it has tailed — is runtime bookkeeping, its persistence a
+separate concern.)* The boundary is effectful, but its *memory* is event-centric.
 
 ## 10. Open questions / forks
 
