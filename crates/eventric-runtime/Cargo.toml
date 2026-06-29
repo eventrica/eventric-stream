@@ -2,12 +2,12 @@
 error-stack.workspace     = true
 eventric-model.workspace  = true
 eventric-stream.workspace = true
+revision.workspace        = true
 
 [dev-dependencies]
 assertables.workspace       = true
 derive_more.workspace       = true
 fancy_constructor.workspace = true
-revision.workspace          = true
 
 [lints]
 workspace = true

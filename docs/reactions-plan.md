@@ -109,8 +109,16 @@ simplest real effect (`MaintainView`), and a basic read.*
 6. **Tests** — incremental fold correctness; replay-from-zero rebuilds the same view
    (idempotence); checkpoint advance + resume.
 
-**Milestone A:** a reaction tails the stream and keeps a queryable view current — the
-reactor and trait proven.
+**Milestone A — done.** A reaction tails the stream and keeps a queryable view
+current; the reactor and trait are proven. Landed: `eventric-model::reaction`
+(`React: From<Self::Event>` + `react(&self, effects: &mut Effects<View>)`, with
+`View`/`Delta` and a `MaintainView`-staging `Effects` buffer) and
+`eventric-runtime::reactor::Reactor` (selects by the event's `Specifier`, decodes via
+`revision::from_slice`, builds via `From`, applies the staged deltas, in-memory
+checkpoint), with an end-to-end test (`tests/react.rs`) covering fold, checkpoint
+resume, and replay idempotence. *Finding:* `Effects<V>` is currently typed to one
+`View`'s delta (the simplest shape) — the pluggable, multi-kind effect set generalises
+in Phase B when `IssueCommand` joins `MaintainView`.
 
 ## Phase B — the in-memory command-issuing loop
 
@@ -169,8 +177,7 @@ keep, where does the reactor design strain? Whatever the slice teaches flows bac
 
 ## Rough sequence
 
-**Split done** (`eventric-model` + `eventric-runtime`) → scaffolding + decisions →
-**Phase A** (trait, reactor, view, example, tests) → *pause,
-reflect, update boundary.md* → **Phase B** (command effect, routing, loop, example,
+**Split done** → scaffolding + decisions → **Phase A done** (trait, reactor, view,
+test) → *pause, reflect* → **Phase B** (command effect, routing, loop, example,
 tests) → *pause, reflect, update boundary.md* → decide the next increment (the derive
 macro? the event-sourced checkpoint? the first contract?).
