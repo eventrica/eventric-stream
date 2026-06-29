@@ -20,9 +20,24 @@ full effect algebra (publish / external / schedule), delivery semantics, the
 `#[derive(Reaction)]` macro, and an event-sourced reactor checkpoint. All wait until
 the slice validates the core.
 
-**Where it lives:** `eventric-domain` — a new `reaction.rs` alongside
-`action` / `event` / `projection` / `enactor`, plus a `Reactor` runtime. Hand-written
-reaction impls first; the derive comes later, once the shape is proven.
+**Where it lives — and a prep step.** First, **split `eventric-domain` into
+`eventric-model` (user-facing: events, actions, projections, reactions + their traits
+and the derives' surface) and `eventric-runtime` (the mechanism: the `Enactor`, the new
+`Reactor`, the effect interpreter)** — the crate structure catching up to the
+node/runtime/context model (vision §3). Dependency is one-way:
+`eventric-runtime` → `eventric-model` → `eventric-stream`; you depend on
+`eventric-model` (+ macros) to *write*, and bring `eventric-runtime` to *run*.
+`eventric-runtime` is the seed of a family (channel, observability, scheduling become
+their own crates over time). The slice's **`React` trait lands in `eventric-model`, the
+`Reactor` in `eventric-runtime`** — which is why the split goes *first*. Then the new
+`reaction.rs` (hand-written impls first; derive later) and the `Reactor` land natively.
+
+*Aspiration (deferred):* once the `Enactor` moves out, `eventric-model`'s only stream
+coupling is the **DCB vocabulary** (query/identity types), not execution — arguably
+correct to keep (the model *speaks* DCB). Full stream-independence (model-owned
+vocabulary + runtime lowering → substrate-agnostic) is achievable but marginal;
+revisit only if substrate-swappability becomes a goal, possibly motivating a thin
+vocabulary-vs-execution split of `eventric-stream`.
 
 ## The trait shape (the key proposal)
 
@@ -121,12 +136,19 @@ process — the core loop is real.
 
 ## Key decisions (with leans)
 
-- **View-update model — the one open item.** Because the reaction is *event-only* (no
-  current-view input), view-maintenance leans toward **deltas**: `react` stages a
-  `MaintainView` delta the runtime applies, rather than read-modify-write (which needs
-  the current view *as an input* — that arrives with projections, later). Open: the
-  delta's exact form (a small typed-op vocabulary, or something the runtime applies
-  generically), and whether event-only-delta suffices before projection-read RMW.
+- **View-update model — decided: a delta.** `react` stages a `MaintainView` **delta**
+  the runtime applies (not read-modify-write, which would need the current view *as an
+  input* — that arrives with projections, later). The delta's exact *form* is kept
+  **deliberately minimal for now** — the simplest thing that serves the first example,
+  not a delta-op vocabulary — and is expected to fall out of the pluggable-effect
+  direction below rather than be designed up front.
+- **Effects are pluggable, not a closed enum (leaning).** Rather than a fixed `enum
+  Effect { … }`, effects look likely to be a **pluggable** set — an `Effect` trait with
+  an interpreter per kind — so new effects (and `MaintainView`'s delta-apply) plug in
+  uniformly. The slice stays *simple* (`MaintainView` first, `IssueCommand` next) but
+  shapes the mechanism as **extensible from the start**, not a closed enum we'd rip up.
+  Resolves boundary's "is the effect algebra closed?" toward *open*, and composes with
+  the typed `Emits` buffer (the output set just includes the pluggable kinds).
 - **A1 vs A2 — resolved (A2).** View-maintenance uses the real `React` + effects shape
   (a `MaintainView` effect), not a bare persisted `Projection` — validating the design
   is the slice's purpose, and effects-as-messages is exercised from Phase A.
@@ -148,7 +170,8 @@ keep, where does the reactor design strain? Whatever the slice teaches flows bac
 
 ## Rough sequence
 
-Scaffolding + decisions → **Phase A** (trait, reactor, view, example, tests) → *pause,
+**Split** `eventric-domain` → `eventric-model` + `eventric-runtime` → scaffolding +
+decisions → **Phase A** (trait, reactor, view, example, tests) → *pause,
 reflect, update boundary.md* → **Phase B** (command effect, routing, loop, example,
 tests) → *pause, reflect, update boundary.md* → decide the next increment (the derive
 macro? the event-sourced checkpoint? the first contract?).

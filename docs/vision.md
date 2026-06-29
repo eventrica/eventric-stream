@@ -108,7 +108,13 @@ is designed in [`boundary.md`](./boundary.md).
 - The **Runtime** is the node-provided **mechanism substrate** — invocation,
   communication, observation — that *runs* user code but is not user code. It is the
   thing that exposes a handler or runs a reaction on an event; the action `Enactor`,
-  the reaction reactor, the channel, and the observability layer are its components.
+  the reaction reactor, the channel, and the observability layer are its components. In
+  the workspace it is **`eventric-runtime`**, distinct from the user-facing model
+  **`eventric-model`** (events, actions, projections, reactions + their traits); the
+  runtime depends on the model, never the reverse, and grows into a *family* of crates
+  (channel, observability, scheduling) over time. The model's only remaining substrate
+  coupling is the DCB *vocabulary* (not its execution); full substrate-independence is
+  possible but a deferred, marginal call.
 - **Single writer per context** is the consistency invariant; **co-location is
   deployment, nothing more.** A node may host several contexts, but each remains a
   *fully sealed, single-writer* boundary — separate stream, separate writer,

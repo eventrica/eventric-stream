@@ -276,6 +276,10 @@ separate concern.)* The boundary is effectful, but its *memory* is event-centric
   bindings + a context-level derive assembling the contract descriptor + routers +
   serialisation. Commands/queries reuse the Event derive's `Identifier` + `revision`
   machinery.
+- **Pluggable effect set (leaning).** Effects look likely to be an `Effect` trait + an
+  interpreter per kind — *extensible*, not a closed enum — so new effects (and adapters)
+  plug in uniformly. Kept simple for the slice (`MaintainView`, then `IssueCommand`),
+  shaped as extensible from the start; composes with the typed `Emits` buffer (§4).
 
 ## 11. Summary
 
