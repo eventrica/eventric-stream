@@ -1,246 +1,381 @@
 # eventric — Runtime
 
-**Status: v0.2, skeleton (adversarially reviewed).** The design of the **runtime**
-— the mechanism that drives a *context* deterministically: how appended events are
-processed, in what order, under what consistency, and how it invokes actions,
-reactions, and effects. A skeleton to refine, not a settled design; it carries leans
-and open forks, and a v0.1 review pass already corrected several over-claims (noted
-inline). Companion to [`vision.md`](./vision.md) (the *why* — node/runtime/context,
-§3), [`boundary.md`](./boundary.md) (the edge: contracts, effects-as-messages,
-verbs), and [`reactions-plan.md`](./reactions-plan.md) (the slice that proved the
-*pieces*). The runtime lives in the `eventric-runtime` crate.
+**Status: v0.3 — processing model resolved (pending two confirmations).** The
+design of the **runtime**: the mechanism that drives a *context* — how appended
+events are processed, in what order, under what consistency, and how it invokes
+actions, reactions, and effects. Since v0.2 a **deep dive** (four candidate
+processing models, each adversarially reviewed, then synthesised) plus the dialogue
+decisions below have settled the runtime onto a **single-threaded** design ("the
+Drain", §3). Companion to [`vision.md`](./vision.md) (the *why* — node/runtime/
+context §3), [`boundary.md`](./boundary.md) (the edge: contracts, effects, verbs),
+and [`reactions-plan.md`](./reactions-plan.md) (the slice that proved the *pieces*).
+Lives in `eventric-runtime`.
+
+### Where this stands (read this first)
+
+- **Decided:** fold-on-demand, no held state (§2); the Drain — one thread, one FIFO
+  work-deque, lag-gated intake, no run-to-completion (§3); the **reads-vs-effects**
+  lifecycle (§4); propose/dispose with strict **per-event as-of-trigger** visibility
+  (§5); emergent position-ordered firing (§7); resume-not-restart crash model (§11).
+- **⚑ Proposed, pending your confirmation (§6):** reaction commands are
+  **asynchronous and blind to disposition**, *not* synchronous — this **reverses**
+  the earlier "reaction command is sync" assumption; the justification is strong but
+  it is yours to ratify.
+- **⚑ Open fork, yours to call (§7):** the **queue discipline** — *FIFO-merge*
+  (lean) vs *cascade-priority*.
+- **Build gaps + residual risks:** §12, §13, §14.
 
 ---
 
 ## 1. What the runtime is
 
-The runtime is the **deterministic driver** of a single context. A context is one
-stream, one writer (vision §3), one total order. Within it, the stream is the only
-source of **truth** *and* the only source of **order**.
+The runtime is the **deterministic driver** of a single context: one stream, one
+writer (vision §3), one total order. The stream is the only source of **truth** and
+**order**. The determinism is precise — and narrower than it first looks:
 
-The determinism is precise — and narrower than it first looks:
-
-- **Read-state is a function of the stream prefix.** Projections and (idempotent)
-  views fold the prefix in position order, so re-processing the same stream
-  reproduces the same read-state. This is the valuable, true replay guarantee.
+- **Read-state is a function of the stream prefix.** Projections/views are folds of
+  the prefix in position order, so re-processing the same stream reproduces the same
+  read-state and the same reaction *proposals*. This is the real replay guarantee.
 - **The written stream is *not* reproducible from an earlier prefix.** What gets
-  appended depends on *exogenous inputs* (external/cross-context commands — §9) and
-  on actions reading **as-of-head** at dispatch time (§4). So the runtime does **not**
-  guarantee "re-running would make the same decisions and write the same stream" —
-  only that, given the stream as written, all read-state and all reaction *proposals*
-  replay identically. *(v0.1 over-claimed decision-reproducibility; corrected.)*
+  appended depends on *exogenous inputs* (external/cross-context commands — §3, §12)
+  and on actions reading **as-of-head** (§5). So the runtime does **not** promise
+  "re-running writes the same stream" — only that, given the stream as written, all
+  read-state and reaction proposals replay identically.
 
-## 2. The spine — a single ordered frontier
+## 2. State — fold-on-demand, nothing held *(decided)*
 
-The runtime advances a **single frontier** through the stream in **position order**.
-At each event, in order, it:
+**The runtime holds no derived state.** Every projection and every view is a **fold
+over the stream prefix, computed on demand** — to `[..=p]` for a reaction (§5), to
+head for an action (§5). Held/incremental projection state is a **later mechanical
+cache** (a performance lever, §3 throughput), never part of the logical model.
 
-1. **folds** the event into the projections/views that select it; *then*
-2. **fires** every reaction registered for that event type.
+Consequence: there is no "projection vs materialised view" distinction in the model —
+**a view is just a fold you run when you read it.** This demotes `MaintainView` out of
+the baseline effect set (§9): maintaining a held view is exactly the deferred cache,
+not a primitive. A reaction therefore never *maintains reads*; **views derive
+(folds); reactions cause (effects, §6).** Phase A's view-maintaining reaction is
+reclassified as an optimisation demo, not the model.
 
-(Step order is **fold-then-fire** — a reaction sees read-state *including* its
-triggering event. This is part of the spine, not an open fork.) Reactions **propose
-effects** (§7); the *command* effects among them run actions (via the `Enactor`),
-which append new events at the **head**. The frontier reaches those in turn.
+The only state the runtime keeps is its **progress** (the fire-checkpoint) plus the
+durability needed for crash-safety (§11) — and the checkpoint is *not* stream-derivable
+(§11, parked idea).
 
-Because the stream itself is the FIFO queue, there is no separate work queue, and a
-reaction's consequences are just *later events* processed when the frontier arrives.
-This makes the cascade **breadth-first** by construction; depth-first (drain a
-reaction's whole consequence-cascade before its sibling event) would require
-processing tail positions before lower ones — out of position order — so the spine
-**excludes** it. One logical thread, FIFO by position.
+## 3. The processing model — "the Drain" *(decided; one fork open, §7)*
 
-**Liveness — not "quiescence".** A *closed* internal cascade must terminate (§10.9).
-But a *live* context's head never stops (external input keeps arriving), so the
-property is not "chase the head to quiescence" but **bounded frontier lag** — the
-frontier keeps pace with the head. Sustained input that outruns a single thread, and
-non-terminating cascades, are real failure modes the spine must address (§10.9), not
-assume away.
+One **context thread** — the **sole appender and sole firer** — drains a single
+heterogeneous **FIFO work-deque** holding: external/cross-context commands,
+reaction-issued commands, and per-position reaction-fires. **No run-to-completion.**
+Each iteration: dequeue one item; if it is a *fire*, fold the position's reactions'
+as-of-trigger projections on demand and interpret their staged effects (push local
+commands to the deque tail, hand publishes/external/cross-context messages to the
+durable outbox, §11); if it is a *command*, enact it in-thread (fold as-of-head,
+decide, append under the DCB guard as one atomic fjall batch) and advance the
+fire-checkpoint.
 
-## 3. The event lifecycle — replayable vs once-only
+- **Loop boundary.** The cut **is the stream**: *touches-only-local-stream* ⇒ inside
+  the one thread; *touches-the-world* ⇒ outside (inbound adapters, the bounded ingress
+  channel, the outbox drainer, query-serving on cloned `Reader`s), conversing with the
+  loop solely through durable **ingress** (in) and durable **outbox** (out). The
+  Writer lives *only* on the loop thread, so single-writer-per-context is structural.
+- **Ingress — lag-gated single pull.** One bounded channel is the single entry for
+  *all* command origins (origin is an envelope field, not a second mechanism —
+  boundary §6, one command path). The loop pulls **exactly one** external command per
+  iteration, **gated on frontier lag** (`head − checkpoint`), so the bounded channel
+  genuinely **fails closed** and propagates backpressure — it does *not* drain into an
+  unbounded deque. Reaction-issued local commands skip the channel and push to the
+  deque tail. Reads bypass everything (cloned `Reader`s); writes and fires never bypass.
+- **No quiescence; bounded lag.** A deep cascade cannot starve ingress (new cascade
+  fires queue behind the one admitted external command per iteration), so the live
+  property is **bounded frontier lag**, not a quiescent point — which is precisely why
+  the model is *not* run-to-completion (contrast §13's strict-RTC candidate).
+- **Throughput.** One core's worth of fold+fire+enact per context — the deliberate
+  single-writer ceiling (vision §3); scale is **across contexts**, never within one.
+  Reads scale out on cloned `Reader`s off-thread.
 
-The thing to **nail down and prove** — and the line is **effect character, not
-fold-vs-fire mechanism** *(v0.1 mis-cut this; corrected)*:
+**Why single-threaded (justification).** The two *decoupled* (multi-threaded) models
+scored worse on crash-safety and simplicity; their only real win — pipelined
+throughput — is **deferrable with no semantic change**: because as-of-trigger folds
+touch only the immutable prefix, the fold/fire side can later be split from the
+enact/append side across the "committed-stream membrane" (a lagging fold thread
+changes *when* a reaction fires, never *what* it sees). So pipelining is a documented
+**escape hatch** (§12), not the base model. The *strict run-to-completion* model buys
+whole-stream reproducibility — which §1 explicitly disclaims we need — at the price of
+catastrophic liveness (a non-terminating cascade wedges the *whole* context) and a
+return to quiescence. The Drain gets fairness and bounded lag while staying single-
+threaded and simple.
 
-- **Replayable** (pure, no external/durable side effect): an in-memory **projection**
-  fold, and a **materialised view** maintained by an *idempotent* `MaintainView`
-  delta. These can be rebuilt by re-processing the prefix.
-- **Once-only + checkpointed** (impure/external): a **command** issued, an event
-  **published**, an external **call**. Re-running these on a rebuild re-issues
-  real-world effects — they must fire roughly once and **not** be replayed blindly.
+## 4. The event lifecycle — reads vs effects *(decided; reframed)*
 
-The line cuts **through** reactions: a view-maintaining reaction is replayable (its
-effect is a pure delta); a command-issuing reaction is once-only. A naïvely
-non-idempotent view delta (a bare `+= 1`) is *not* freely replayable — it double-counts
-— so it needs a keyed/idempotent application or its own per-view checkpoint.
+The lifecycle line is **effect character, not fold-vs-fire mechanism** (v0.2 mis-cut
+this):
 
-**Crash-consistency for the once-only effects.** Fire a command, die before advancing
-the **checkpoint**, restart re-fires → a duplicate. The honest guarantee is
-**at-least-once dispatch + idempotent effect**, not magic exactly-once. And — *(v0.1
-unsound; corrected)* — **the DCB append guard does not absorb this.** The guard is a
-compare-and-swap against the action's *own* read at head; it rejects concurrent
-conflict, it does **not** deduplicate a replayed command (on re-fire the action
-re-reads the new head, which already holds its first effect, sees no conflict, and
-appends a second). Duplicate-absorption must live in **the action's decision** (its
-selection covers its own prior output, so a redo no-ops) or in an **explicit
-idempotency key**. The envelope's **causation id** (boundary §5) is the natural key:
-"has position *p* already fired?" is answerable from the stream itself — does an event
-*caused-by p* exist? — which doubles as a stream-derived progress signal.
+- **Reads** (pure folds, no external/durable side effect): projections and views.
+  **Free, replayable, recomputable anytime, no checkpoint.** (§2: there is nothing
+  held to get out of sync.)
+- **Effects** (impure/external): a **command** issued, an event **published**, an
+  external **call**. These must fire ~once and **not** be replayed blindly on a
+  rebuild.
 
-## 4. Consistency — propose vs dispose
+The line cuts **through** reactions: a reaction's *reads* are free folds; its
+*effects* are once-only. The honest crash guarantee for effects is **at-least-once +
+idempotent = effectively-once** (§11), never magic exactly-once.
+
+## 5. Consistency — propose vs dispose *(decided)*
 
 Reactions and actions read at **different points**, and the asymmetry is load-bearing:
 
 - **Reactions read as-of-trigger** — a reaction fired at position *p* sees read-state
-  folded up to *p*: the world *as of the event it reacts to*. This is **forced** by
-  the §1 read-state replay invariant, not a free choice. It is **free** for bounded,
-  global projections (just the state while the frontier sits on *p*), but **not** free
-  for *per-instance*, tag-keyed projections (one state per live order/student/…, an
-  unbounded set the frontier cannot hold resident) — those are folded **on demand** at
-  trigger time, a real cost bounded by the result (§6, §10.7).
-- **Actions read as-of-head** — an action is a **write**; it must be consistent with
-  the real head it appends against (read head, append under the **DCB guard**).
+  folded over **`prefix[0..=p]`**, the world *as of its own event in the total order*.
+  This is **forced** by the §1 replay invariant. Two refinements that matter:
+  - **Per-event, not per-batch.** Even when an action committed `[E1,E2,E3]`
+    atomically, E1's reaction sees `[..=p]` and **not** E2/E3 (later positions). Each
+    reaction sees the prefix up to *itself*. (The coherent alternative — *batch
+    visibility*, where every reaction in an append sees the whole batch — is
+    **rejected**: it would make the unit of consistency the append, so a reaction's
+    view would depend on what *else* its triggering action happened to commit.)
+  - **Implementation discipline.** This forces **fold-and-fire strictly
+    position-by-position, interleaved** (fold E1 → fire E1 → fold E2 → …), *never*
+    batch-fold-then-batch-fire (which would leak the rest of the batch into the
+    earlier event's reaction). With fold-on-demand (§2) it is also explicit: the fold
+    is bounded to `[..=p]`, leak-proof by construction.
+- **Actions read as-of-head** — an action is a *write*; it must be consistent with the
+  real head it appends against (read head, append under the **DCB guard**).
 
 Hence **reactions propose, actions dispose.** A reaction says "I want this" from its
-local, deterministic view; the action enforces consistency at the write and **may
+local as-of-trigger view; the action enforces consistency at the write and **may
 reject**. This asymmetry is **correctness-coherent** (the action is always consistent
-with what it appends against) but is **not a determinism guarantee**: because the
-action reads as-of-head, what it writes depends on the dispatch-time head and the
-firing order of co-triggered reactions (§5).
+with what it appends against) but is **not a determinism guarantee** — the written
+stream depends on the dispatch-time head and the firing order of co-triggered
+reactions (§7). (Illustration: E1's reaction's *command* runs an action reading
+as-of-head — already `p+2` — so the **action** sees E2/E3 even though the reaction
+that proposed it did not. The split is doing real work.)
 
-A reaction is **structurally blind to the disposition** — it staged effect *data* and
-returned before the runtime interpreted it, so it cannot branch on a rejection. What
-*happens* to a rejected/failed reaction-command, and what recovers it, is open
-(§10.10).
+## 6. Reaction commands — async + blind ⚑ *(proposed, pending confirmation)*
 
-## 5. Ordering — settled and open
+**Recommendation: reaction commands are asynchronous, enqueued, and blind to
+disposition** — the Enactor's `Result` returns to the **runtime** (bookkeeping /
+dead-letter, §11), never into `react()`. This **reverses** the earlier "reaction
+command is sync" assumption. The reasoning:
 
-The spine settles the big ones: **position-order FIFO**, hence **breadth-first**
-cascade (§2), and **fold-then-fire** (§2). The genuine remaining forks:
+- **"Synchronous" (timing) and "blind to disposition" (data-flow) are orthogonal.**
+  `react()` stages a Command *message* and returns; its stack frame is gone before the
+  runtime disposes the command (later, when the work item is dequeued — genuinely
+  distinct propose/dispose moments). So even an eagerly-run command cannot hand a
+  result *back into* the reaction.
+- **A sync result buys nothing usable.** Under a *single writer* a local command
+  **cannot be DCB-rejected** — nothing writes between the action's read and its append
+  — so the disposition a sync call would return is *always* "accepted." The one place
+  rejection is real (**cross-context**) is exactly where you *cannot* block (a remote
+  await on the single thread is head-of-line blocking + distributed deadlock — §10).
+  So sync is empty locally and unavailable remotely.
+- **Meaningful outcomes are facts.** Because rejections are written *nowhere* (boundary
+  §3: only facts are events), any flow-relevant negative outcome of a
+  reaction-commanded action **must be emitted as a fact** the reaction re-observes by
+  being re-triggered (a `PaymentDeclined`). Only *non-fact* dispositions (a
+  cross-context DCB conflict, an infra failure) stay runtime-only, for the dead-letter
+  channel (§11). This is exactly what makes the **process-manager-as-pattern** work
+  (issue command → react to the resulting fact → carry coordination state in a
+  projection), and it is consistent with the vision.
 
-- **Multiple reactions on one event.** Their *reads* are order-free (all see the same
-  as-of-trigger state), but their *commands* are not: dispatched actions read
-  as-of-head in sequence, so the second action sees the first's append. Order is
-  therefore **semantically significant through as-of-head dispatch** (not merely via a
-  shared projection) — a **stable, declared firing order** is required for
-  reproducibility. "Independent reactions are order-free" is false once they command.
-- **Multiple effects within one reaction** (e.g. `[Command A, Command B]`): their
-  interpretation order, whether they are an atomic group, and partial-failure policy
-  are unspecified — and a single per-event checkpoint **cannot express partial
-  progress** through a multi-effect fire (§10.3).
-- **Processing transaction boundary.** An action appends *N* events atomically. *Lean:
-  processing them (folds + fires) is independent per event in position order* —
-  atomicity is a *write* property (the append batch), not a *processing* one.
+This corrects boundary §8.1's "← Result returned to the reaction" to "returned to the
+**runtime** that staged on the reaction's behalf." **Cross-context** reaction-commands
+are necessarily async-out (to the outbox; any reply returns as a later inbound
+fact/command). *Local-inline is what single-threading makes safe; remote-async is what
+it makes necessary.*
 
-## 6. Reactions gain projections
+## 7. Ordering — emergent, and the one open fork ⚑
 
-A reaction today sees only its triggering event (the slice's event-only shape). That
-is insufficient — a reaction usually decides from accumulated state. Giving reactions
-projections makes them **symmetric with actions**:
+- **Serialization point = the single dequeue.** The dequeue+commit sequence *is* the
+  one total order.
+- **Ascending fire-order is emergent**, not a priority queue: positions are assigned at
+  append by the same thread that pushes each `Fire{p}` before its next dequeue, so a
+  plain FIFO deque preserves position order (single-appender + same-thread
+  append-then-enqueue).
+- **Co-triggered reactions need a stable, declared firing order.** Their *reads* are
+  order-free (all see the same as-of-trigger state), but their *commands* are not — the
+  second action reads the first's append as-of-head, so order is semantically
+  significant *through as-of-head dispatch*. "Independent reactions are order-free" is
+  false once they command.
+- **Fold-then-fire and breadth-first** are preserved (the stream *is* the FIFO
+  work-queue; `enact` only appends at head, the frontier still advances `p, p+1, …`).
+  These are consequences of the spine, not open forks.
+- **Outbound order** must be pinned by a strict-FIFO outbox drainer (so a downstream
+  context's ingress is not reordered).
+
+**⚑ The one genuine decision — queue discipline (yours to call):**
+- **FIFO-merge** *(lean — mine and the synthesis's)*: one merged queue; an external
+  command *may* interpose between a trigger at *p* and the command it caused. **Fair,
+  bounded acceptance latency.** Its named cost — interposed external state "polluting"
+  the co-triggered command's as-of-head read, so the written stream is non-reproducible
+  — is, I argue, **already paid**: §1 disclaims whole-stream reproducibility, and the
+  "drift" is just propose/dispose working as designed (the reaction proposed as-of-
+  trigger; the action disposes as-of-head, including whatever is at head).
+- **Cascade-priority:** drain a cascade's reaction-commands before admitting new
+  external work. Cascade stays contiguous, stream closer to reproducible — but it
+  reintroduces **head-of-line blocking / quiescence**, which §3 rejected, and grows
+  external acceptance latency without bound.
+
+Through the lens of decisions already made it tilts to FIFO-merge (its downside is
+already accepted; cascade-priority's is one we rejected) — but it materially changes
+latency and determinism character, so it must be a **conscious, documented** choice.
+
+## 8. Reactions gain projections *(decided)*
+
+A reaction reads projections (it is not event-only), making it **symmetric** with an
+action:
 
 - **action** = (command + projections) → events
 - **reaction** = (event + projections) → effects
 
-Same projection machinery, read **as-of-trigger** (§4). A *set* of single-event
-reactions sharing a (tag-keyed, per-instance) projection is the **process-manager
-pattern** (vision §2) — and it is exactly those per-instance projections that are
-unbounded and folded on demand rather than held resident (§4).
+Same fold machinery, read **as-of-trigger** (§5). A *set* of single-event reactions
+sharing a **tag-keyed, per-instance** projection is the **process-manager pattern**
+(vision §2) — and those per-instance projections are the *unbounded* ones folded on
+demand (§2), never held resident.
 
-## 7. Effects — pluggable and introspectable
+## 9. Effects — pluggable and introspectable
 
 Effects must be **pluggable**: we cannot enumerate every effect future contexts need.
 The lean (shared with boundary §10, reactions-plan — **still a lean, not committed**)
 is a **trait-based `Effect`** rather than a closed enum, each carrying static metadata
-(kind, target type). The runtime holds an **interpreter per effect kind**; staging an
-effect is data, interpreting it is the runtime's job. The static **topology graph**
-(boundary §4–5) comes primarily from the typed **`Emits`** buffer (a handler declares
-what it can emit, so emissions can't drift) — the per-effect metadata supplements it.
+(kind, target). The runtime holds an **interpreter per effect kind**; staging an effect
+is data, interpreting it is the runtime's job. The static **topology graph** comes
+primarily from the typed **`Emits`** buffer (boundary §4 — declared emissions that
+cannot drift); per-effect metadata supplements it.
 
-The verb-trio from the boundary (Command / Query / Event) plus the view effect:
+The baseline set (note: **`MaintainView` is *not* here** — a view is a fold, §2/§4):
+- **Command** — route to its action (`From<Command>`) and enact (settled;
+  `reactions-plan.md`).
+- **Event (publish)** — emit a public event (the third verb; **deferred**, named so the
+  Command/Query/Event trio stays intact).
+- **Query** — *emit* a synchronous read request (**provisional / at-risk**, §10).
 
-- **Command** — route to its action and enact (settled; `reactions-plan.md`).
-- **Event (publish)** — emit a public event (the third verb; **deferred**, but named
-  here so the trio stays intact).
-- **Query** — *emit* a synchronous read request (**provisional / at-risk** — see §8).
-- **MaintainView** — apply a (idempotent) delta to a read-model.
+*Open:* the `Effect` trait's shape; interpreter registration/dispatch; whether built-ins
+share the trait or sit beside it; trait-vs-enum (still a lean). (We say **fire** for
+invoking a reaction, reserving *dispatch* for the existing mask-routing / command-
+routing senses.)
 
-*Open:* the `Effect` trait's exact shape; interpreter registration/dispatch; whether
-built-ins share the trait or sit beside it; trait-vs-enum (still a lean). (We use
-**fire** for invoking a reaction, reserving *dispatch* for the existing mask-routing
-and command-routing senses.)
+## 10. Query as an effect (provisional)
 
-## 8. Query as an effect (provisional)
+A **query effect** is the *emit* side: a reaction/action asks (e.g. another context),
+awaits a reply, uses it. **Provisional** — the one effect that strains the model:
+- **Liveness.** Blocking the single thread on an external reply **head-of-line-blocks
+  the whole context**; a slow/down service freezes it (fail-open, against vision §6);
+  and two contexts querying each other synchronously is a **distributed deadlock**. A
+  blocking call in the loop is therefore likely wrong; an **async exchange** (issue →
+  suspend the causal flow → resume on the reply) is the candidate shape.
+- **Determinism.** A reply is not in the stream, so a reaction branching on it is not a
+  function of the prefix. Recording the raw reply *as an event* would violate boundary
+  §3 (results are returns, only facts are events) and freeze a stale read into the log.
+  If a reply must be captured for replay, it is runtime bookkeeping or a context-
+  *asserted* fact (`ObservedXAtP`), never the raw reply.
 
-A **query effect** is the **emit** side: a reaction/action asks (e.g. another
-context), awaits a reply, uses it. It is **provisional** — the one effect that strains
-the spine in two ways:
+Distinct from the **inbound** side (a context *serving* a query, vision §2), which is
+**deferred**.
 
-- **Liveness.** Blocking the single frontier on an external reply **head-of-line-blocks
-  the entire context** (no folds, fires, or appends until it returns); a slow/down
-  service freezes the context (a fail-open hole, against vision §6); and two contexts
-  querying each other synchronously is a **distributed deadlock** (boundary §3/§8.2
-  make cross-context calls synchronous between single-threaded frontiers). A blocking
-  call inside the spine is therefore likely wrong; an **async exchange** (issue →
-  suspend that causal flow → resume on the reply) is a candidate shape.
-- **Determinism.** A reply is not in the stream, so a reaction that branches on it is
-  not a function of the prefix (§1). Recording the raw reply **as an event** would
-  violate boundary §3 (*results are returns; only facts are events*) and freeze a
-  stale read into the permanent log. If a reply must be captured for replay, it would
-  be runtime/envelope bookkeeping or a context-*asserted* fact (`ObservedXAtP`), never
-  the raw reply.
+## 11. Crash & recovery *(decided)*
 
-Both are open (§10.6). Distinct from the **inbound** side — a context *serving* a
-query against its own read-models (the surface's Q, vision §2) — which is **deferred**.
+`fjall` is the only durable truth (atomic batch appends, no position gaps, no torn
+reads). **Resume, don't restart:** re-fold all replayable read-state from the prefix
+(free, §2/§4), then re-fire once-only from `checkpoint+1` to head.
 
-## 9. Where the code stands
+Durable state the model requires (none of it exists on today's substrate — §12):
+- a **per-position fire-checkpoint** — **must be persisted**; it is *not* reliably
+  stream-derivable (a no-op fire and a view-only fire leave no caused-by event — this
+  is why the "stream-derived / fully-stateless checkpoint" idea is **parked**, see
+  below);
+- a **durable ingress log** for accepted-but-not-yet-appended external commands (else a
+  crash is fail-*open*, against vision §6);
+- a **durable outbox** for publish/external/cross-context effects.
 
-- **`Reactor<R>` is a stepping-stone, not the driver.** It drives one reaction over
-  its own matching events (`drive`, looping until drained). That proved the mechanism
-  (fire → stage effects → route a command to its action → enact) but its per-reaction
-  iteration **reorders relative to the stream**; the real driver replaces it with the
-  single-frontier loop (§2). Its `MAX_PASSES` runaway guard goes with it — and a count
-  guard cannot undo a divergent cascade already committed to an append-only log (§10.9).
-- **The `Enactor` stays** — the action-cycle mechanism (fold projections, decide,
-  append under the DCB guard). The runtime *invokes* it both to interpret a command
-  effect **and** to serve **inbound** commands (boundary §6's single command path —
-  external/cross-context commands are exogenous, not prefix-derived; §10.12).
-- **Next code increment:** the real driver — one frontier, position order,
-  fold-then-fire, incremental projections, the replayable/once-only checkpoint split
-  (§3) — once the forks below are settled enough.
+**Effectively-once = at-least-once dispatch + idempotent effect.** Dedup is **scoped by
+effect kind**: a **command** effect dedups from the stream via a **causation id**
+`(p, k)` — "does an event caused-by `(p,k)` exist?"; **publish/external-call** effects
+leave no local event, so they dedup at the **outbox**, keyed by `(p,k)` at the
+consumer. The **DCB guard does *not* dedup a replay** (it is a concurrency guard, not a
+dedup) — absorption lives in the action's idempotent decision or the explicit causation
+key. A multi-effect fire is the checkpoint grain, so a mid-fire crash re-runs the whole
+fire → **each effect must be individually idempotent**.
 
-## 10. Open questions
+> **Parked idea — stream-derived (zero-state) checkpoint.** Explored: derive "has *p*
+> fired?" purely from causation tags, making the runtime fully stateless. Parked
+> because it covers only local-command effects: **no-op and view-only fires leave no
+> trace** (so it cannot be a resume pointer, only a dedup guard), and **external
+> effects leave no local event** (so they need the outbox anyway). Recorded so we do
+> not re-derive it.
 
-1. *(Settled — recorded for clarity)* Cascade is **breadth-first** and step order is
-   **fold-then-fire**; both are forced by the spine (§2), not live forks.
-2. **Within-reaction effects:** ordering, atomicity, and partial-failure of a
-   reaction's multiple staged effects — and that one per-event checkpoint cannot
-   express partial fire progress (§5).
-3. **Multiple reactions on one event:** the stable, declared firing order (significant
-   through as-of-head dispatch, §5).
-4. **Effect model:** the `Effect` trait shape; interpreter registration/dispatch;
-   metadata surfacing vs the `Emits` topology graph; built-ins-share-trait-or-beside;
-   trait-vs-closed-enum (still a lean) (§7).
-5. **Query effect:** blocking-in-spine vs async exchange; determinism; capturing a
-   reply for replay without polluting the fact-log (§8).
-6. **Projection maintenance (split):** *reaction-read* projections are continuous
-   incremental for bounded/global (forced/free, §4) but on-demand for per-instance;
-   *action-read* is a fresh fold at head. Confirm and cost the incremental side.
-7. **Checkpoint:** durability; granularity (single frontier position vs per-reaction
-   fire-progress); **reaction onboarding** — a newly deployed reaction catches up over
-   history (re-firing → stale commands) or starts at head (skips history)? The
-   replayable kind can rebuild from zero; the once-only kind cannot.
-8. **Liveness:** closed-cascade termination (likely **static cycle detection** via the
-   topology graph as the primary defense, since a runtime count-guard cannot un-commit
-   events); **backpressure** when the head outpaces the frontier; **frontier lag**
-   (head − frontier) as first-class introspection (the runtime overlay of vision §5).
-9. **Rejected/failed reaction-command:** dropped, retried, dead-lettered? What
-   re-triggers a decision, given the reaction is blind to the disposition (§4)?
-   Reconcile with boundary §8.1's synchronous-return depiction of the local case.
-10. **Startup/recovery:** where fold-only rebuild ends and live fold+fire begins (the
-    fire-checkpoint), distinct from the steady-state maintenance question (#6).
-11. **Inbound seam:** how external and cross-context commands enter the single ordered
-    frontier and serialise against reaction-issued commands (their *resulting events*
-    keep replay sound; the inputs themselves are exogenous) (§1, §9).
-12. **Time-triggered firing** (a timeout: "if X hasn't happened within T") has no event
-    and no position, so it does **not** fit the position-ordered frontier — forward-ref
-    the deferred `Schedule` effect (boundary §10).
+## 12. Where the code stands + build gaps
+
+- **`Reactor<R>` is a stepping-stone, retired by the Drain.** Its per-reaction `drive`
+  loop (and `MAX_PASSES`) reorders relative to the stream; the single position-ordered
+  frontier replaces it (optionally woken by a commit watermark rather than polling).
+- **The `Enactor` stays** — the action cycle (fold as-of-head, decide, append under
+  DCB). The runtime invokes it both to interpret a command effect **and** to serve
+  **inbound** commands (boundary §6's one command path — external/cross-context
+  commands are *exogenous*, not prefix-derived).
+- **Build gaps the model implies (do not exist today):**
+  1. an **upper-bounded fold** — firing at *p* must fold `[..=p]` (`take_while pos<=p`);
+     today's `Condition` carries only a lower `from` bound. **Load-bearing.**
+  2. a **causation id** on events (they carry only position + timestamp now) — for
+     command-effect dedup; naturally modelled as a **tag** so the existing tag index
+     answers it (and it doubles as cause→effect traceability).
+  3. **durable ingress log + outbox + per-position checkpoint** (the §11 crash story).
+  4. an **external-command idempotency key** has no natural source (no triggering
+     position) → caller-supplied.
+
+## 13. The candidate models considered (justification record)
+
+The deep dive designed four models, reviewed each adversarially (scores: ordering /
+determinism / throughput / simplicity / sync-support / crash-safety), and synthesised
+the Drain from the field:
+
+- **Strict run-to-completion** (single thread, inline-sync local commands) —
+  4/4/3/4/4/3. Buys whole-stream reproducibility; **rejected** — catastrophic liveness
+  (a runaway cascade wedges the entire context, undefendable statically) and a return
+  to quiescence §3 rejected, for reproducibility §1 says we don't need. *Grafted:* the
+  timing-vs-data-flow sync reframe (§6); causation-dedup scoped by effect kind (§11);
+  resume-not-restart (§11).
+- **Single-thread unified FIFO ("the Drain")** — 4/4/3/4/4/4. **Recommended base.**
+  Best-balanced; honours bounded-lag; clean sync resolution; its raw flaws
+  (backpressure, cross-context, vestigial-DCB) were all graftable fixes. *Grafted:*
+  emergent fire-order; lag-gated single-pull intake; immutable-prefix safety; per-
+  external reply oneshot + frontier-lag as a backpressure/introspection signal.
+- **Decoupled writer + tailing reactor (async)** — 3/4/3/3/2/2. Buys pipelined
+  write-latency; **deferred not adopted** — reactor starvation under load, an
+  at-least-once claim that is at-*most*-once in a crash window (in-memory queue +
+  decoupled checkpoint). *Grafted:* the committed-stream-membrane as the **deferred
+  pipelining escape hatch** (§3); retiring `Reactor::drive`/`MAX_PASSES` (§12).
+- **Decoupled + synchronous (bicameral)** — 3/3/3/2/3/2. Engaged sync hardest, but its
+  marquee value **collapses**: the position-based DCB guard is **inert under a single
+  serial writer**, so the local conflict-rejection that sync exists to deliver can
+  never fire, while sync is barred cross-context where conflicts are real. *Grafted:*
+  non-fact dispositions are invisible to the fact path → the runtime **dead-letter**
+  channel + the "meaningful negatives are facts" discipline (§6); the acyclic-wait
+  invariant.
+
+## 14. Status & open items
+
+**Decided:** §2 fold-on-demand / no held state · §3 the Drain (single thread, FIFO
+deque, lag-gated intake, no RTC) · §4 reads-vs-effects · §5 propose/dispose +
+per-event as-of-trigger · §7 emergent ordering · §11 resume-not-restart + effectively-
+once.
+
+**⚑ Awaiting you:**
+1. **Confirm §6** — reaction commands async + blind (reverses the sync assumption).
+2. **Decide §7** — queue discipline: FIFO-merge (lean) vs cascade-priority.
+
+**Residual open / risk (post-decision):**
+- Cascade non-termination has **no sound static defense** (halting problem); best is
+  build-time topology cycle-detection (best-effort) + a runtime **divergence budget**
+  that dead-letters — *containment, not prevention*. Under FIFO-merge a runaway appends
+  junk but does not wedge the context.
+- **Per-fire on-demand fold is on the critical path** — for a long-lived per-instance
+  projection folded on every triggering event this is ~`O(fires × history)` over the
+  instance's life (each fold bounded-by-result, but the *repetition* is the cost). The
+  only fix — the held/incremental cache — is explicitly **deferred** (§2/§3).
+- The **query effect** shape (§10) — blocking-vs-async, determinism, reply capture.
+- The **`Effect` trait** shape and registration (§9); trait-vs-enum still a lean.
+- **Startup/recovery** precise sequencing (where fold-only rebuild ends and live
+  fold+fire begins) and **reaction onboarding** (a new reaction: catch-up vs
+  start-at-head) — fold rebuilds free; once-only effects cannot.
+- **Time-triggered firing** (a timeout) has no position, so it sits *outside* the
+  position frontier — forward-ref the deferred `Schedule` effect (boundary §10).
