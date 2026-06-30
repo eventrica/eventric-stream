@@ -1,5 +1,7 @@
 //! Commands: the [`Action`] trait (with its [`Act`]/[`Context`]/[`Select`]/
-//! [`Update`] components), run by the `eventric-runtime` `Enactor`.
+//! [`Update`] components), run by the `eventric-runtime` `Enactor`; and the
+//! [`Command`] trait — a command message routed to the action that handles it
+//! (the reactor's command→action registry).
 //!
 //! # Example
 //!
@@ -202,4 +204,35 @@ pub trait Update: Context {
         projections: &mut Self::Projections,
         event: &EventAndMask,
     ) -> Result<(), Report<Error>>;
+}
+
+// =================================================================================================
+// Commands
+// =================================================================================================
+
+// DefaultAction
+
+/// An [`Action`] with the default result shape — `Ok = ()` and
+/// `Err = Report<Error>`. Blanket-implemented for any such action; this is the
+/// form a [`Command`] routes to and the reactor enacts.
+pub trait DefaultAction:
+    Action + Act<<Self as Context>::Projections, Ok = (), Err = Report<Error>>
+{
+}
+
+impl<A> DefaultAction for A where
+    A: Action + Act<<A as Context>::Projections, Ok = (), Err = Report<Error>>
+{
+}
+
+// Command
+
+/// A command message: a request routed to the [`Action`] that handles it. The
+/// routing *is* the type — the action is built from the command via `From`
+/// (mirroring `From<Event>` for a reaction). A typed, compile-time "registry":
+/// one entry per command type. A reaction issues commands; the reactor builds
+/// each command's action and enacts it.
+pub trait Command: Sized {
+    /// The action that handles this command, built from it.
+    type Action: DefaultAction + From<Self>;
 }

@@ -138,8 +138,27 @@ in Phase B when `IssueCommand` joins `MaintainView`.
 5. **Tests** — the loop runs end-to-end; it terminates (bounded example); a guard
    against runaway loops.
 
-**Milestone B:** event → reaction → command → action → event runs autonomously in one
-process — the core loop is real.
+**Milestone B — done (typed registry).** Event → reaction → command → action →
+event runs autonomously in one process — the core loop is real. Landed:
+`Effects<V, C = ()>` grew its second effect kind (`issue_command` alongside
+`maintain_view`, drained via `into_parts`); `React` gained `type Command` (default
+`()`) and `type View` now defaults to a unit `NoView`, so a reaction declares only the
+effect kinds it uses. The **command→action routing is a typed, compile-time registry**:
+`action::Command { type Action: DefaultAction + From<Self> }` — the action is built
+*from* the command (command ≠ action, joined by `From<Command>`, mirroring
+`From<Event>` for a reaction), and `DefaultAction` (a blanket marker for an action with
+the default `Ok = ()` / `Err = Report<Error>` shape) lets the reactor enact generically.
+`Reactor::drive` (read-write: `Append + Select`, `R::Command: Command`) builds each
+staged command's action and **enacts it via the `Enactor`** — the whole action cycle
+(fold projections, decide, append under the DCB guard) — looping until drained, bounded
+by a runaway guard (`Reactor::run` stays read-only, view-only). `tests/command.rs`
+proves the full loop with a real projection-based decision *inside* the action (a
+capacity check: two requests for a capacity-one course → one confirmation).
+
+*Still open:* (1) `run` vs `drive` are two methods (read-only vs read-write) — unify?
+(2) the registry is per-command-type (`Command::Action`) — fine for the in-process loop;
+a cross-context contract may want an explicit, dynamic registry later. (3) effects
+beyond `MaintainView`/`IssueCommand` (the pluggable interpreter) are still future.
 
 ## Key decisions (with leans)
 
@@ -178,6 +197,7 @@ keep, where does the reactor design strain? Whatever the slice teaches flows bac
 ## Rough sequence
 
 **Split done** → scaffolding + decisions → **Phase A done** (trait, reactor, view,
-test) → *pause, reflect* → **Phase B** (command effect, routing, loop, example,
-tests) → *pause, reflect, update boundary.md* → decide the next increment (the derive
+test) → **Phase B done** (`issue_command` effect, typed command→action registry,
+`drive` enacts via the `Enactor`, loop + guard, full-cycle test) → *pause, reflect,
+update boundary.md* → decide the next increment (the derive
 macro? the event-sourced checkpoint? the first contract?).

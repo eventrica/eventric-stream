@@ -109,6 +109,14 @@ redesign:
   Very unlikely (an action is a command, a projection a read-model — rarely the same
   name), and the same class as two same-named projections. Fix if it ever bites:
   suffix the action's internal module (it's never named by user code).
+- **`#[action(projections: {})]` (no projections) doesn't compile.** A
+  precondition-free action — one that just appends, reading nothing — is legitimate
+  (and the natural target of a reaction's `IssueCommand`), but the generated `update`
+  emits an `Option` the empty projection set never pins (`E0282`), and `select`
+  binds an unused-`mut` empty `Vec`. Fix: emit empty-friendly `select`/`update`
+  bodies when there are no projections. Until then a command's action needs at least
+  one projection (the reactions Phase-B test gives its action a real capacity
+  projection, which is the more realistic shape anyway).
 
 ## 3. Public surface & lints
 

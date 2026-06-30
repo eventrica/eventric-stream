@@ -1,9 +1,10 @@
 //! Reactions: the [`React`] trait — a single-event handler built from its
-//! triggering event (via `From`) that stages effects. The first (and, for now,
-//! only) effect is a [`View`]-maintaining delta; the reaction never reads the
-//! view (it reacts to its event alone — the *event-only* shape), and the
-//! runtime applies the staged deltas. Reactions are driven by the
-//! `eventric-runtime` reactor.
+//! triggering event (via `From`) that stages effects: [`View`]-maintaining
+//! deltas and/or commands to issue. The reaction reads no state (the
+//! *event-only* shape); the runtime applies the deltas and dispatches the
+//! commands. Driven by the `eventric-runtime` reactor. A reaction declares only
+//! the effect kinds it uses — [`View`] defaults to [`NoView`] and `Command` to
+//! `()`.
 
 use crate::event::Event;
 
@@ -24,26 +25,42 @@ pub trait View: Default {
     fn apply(&mut self, delta: Self::Delta);
 }
 
+/// The unit view, for a reaction that maintains none (the [`React::View`]
+/// default).
+#[derive(Debug, Default)]
+pub struct NoView;
+
+impl View for NoView {
+    type Delta = ();
+
+    fn apply(&mut self, (): ()) {}
+}
+
 // Effects
 
-/// The buffer a reaction stages effects into. For now it carries only
-/// `MaintainView` deltas (the sole effect kind); a pluggable, multi-kind effect
-/// set is a later step.
-pub struct Effects<V>
+/// The buffer a reaction stages effects into: `MaintainView` deltas (the
+/// runtime applies them to the view) and commands to issue (`C`, the runtime
+/// dispatches them). A fully heterogeneous, pluggable effect set is a later
+/// step — for now these are the two kinds.
+pub struct Effects<V, C = ()>
 where
     V: View,
 {
     deltas: Vec<V::Delta>,
+    commands: Vec<C>,
 }
 
-impl<V> Effects<V>
+impl<V, C> Effects<V, C>
 where
     V: View,
 {
     /// An empty buffer. (Constructed by the runtime, once per reaction.)
     #[must_use]
     pub fn new() -> Self {
-        Self { deltas: Vec::new() }
+        Self {
+            deltas: Vec::new(),
+            commands: Vec::new(),
+        }
     }
 
     /// Stage a `MaintainView` effect: a `delta` for the runtime to apply to the
@@ -52,15 +69,20 @@ where
         self.deltas.push(delta);
     }
 
-    /// Take the staged deltas, in stage order. (Drained by the runtime after
-    /// the reaction has run.)
+    /// Stage an `IssueCommand` effect: a `command` for the runtime to dispatch.
+    pub fn issue_command(&mut self, command: C) {
+        self.commands.push(command);
+    }
+
+    /// Take the staged effects, in stage order — the view deltas and the
+    /// commands. (Drained by the runtime after the reaction has run.)
     #[must_use]
-    pub fn into_deltas(self) -> Vec<V::Delta> {
-        self.deltas
+    pub fn into_parts(self) -> (Vec<V::Delta>, Vec<C>) {
+        (self.deltas, self.commands)
     }
 }
 
-impl<V> Default for Effects<V>
+impl<V, C> Default for Effects<V, C>
 where
     V: View,
 {
@@ -73,14 +95,18 @@ where
 
 /// A reaction: handles **one** event type, built from it via `From`, staging
 /// effects. The event-only shape — it reacts to the triggering event alone,
-/// reading no state; the runtime applies the staged deltas to its [`View`].
+/// reading no state; the runtime applies the staged view deltas and dispatches
+/// the staged commands.
 pub trait React: From<Self::Event> {
     /// The single event type this reaction reacts to.
     type Event: Event;
 
-    /// The view this reaction maintains.
-    type View: View;
+    /// The view this reaction maintains (none, by default).
+    type View: View = NoView;
+
+    /// The command this reaction issues (none, by default).
+    type Command = ();
 
     /// React to the triggering event (captured by `From`), staging effects.
-    fn react(&self, effects: &mut Effects<Self::View>);
+    fn react(&self, effects: &mut Effects<Self::View, Self::Command>);
 }
